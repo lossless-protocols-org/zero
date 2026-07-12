@@ -40,6 +40,7 @@
     "react-i18next": "^17.0.8",
     "react-native": "0.84.1",
     "react-native-actions-sheet": "^10.1.2",
+    "react-native-biometrics": "^3.0.1",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-get-random-values": "^2.0.0",

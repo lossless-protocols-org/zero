@@ -197,7 +197,13 @@
     "exportSuccess": "Your data is successfully exported in Downloads folder",
     "exportError": "There is an error in exporting your data",
     "storagePermission": "You need to manually give permission for the storage to download your data",
-    "language": "Language"
+    "language": "Language",
+    "appLock": "App Lock",
+    "appLockSubtitle": "Unlock with biometrics",
+    "appLockPrompt": "Unlock Zero",
+    "appLockNotAvailable": "Biometric authentication is not available on this device",
+    "appLockEnabled": "App lock enabled",
+    "appLockDisabled": "App lock disabled"
   },
   "sheets": {
     "selectTheme": "Select Theme",

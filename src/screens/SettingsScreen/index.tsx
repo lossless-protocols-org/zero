@@ -71,6 +71,9 @@ const SettingsScreen = () => {
     allData,
     handleExportResult,
     requestStorageViaDialog,
+    isAppLockEnabled,
+    isBiometricAvailable,
+    toggleAppLock,
   } = useSettings();
 
   const handleOpenCurrencySheet = useCallback(() => {
@@ -209,6 +212,27 @@ const SettingsScreen = () => {
               });
             }}
           />
+          {isBiometricAvailable ? (
+            <>
+              <View style={[gs.mx16, {height: 1, backgroundColor: colors.secondaryAccent}]} />
+              <SettingsRow
+                colors={colors}
+                icon="fingerprint"
+                label={t('settings.appLock')}
+                subtitle={t('settings.appLockSubtitle')}
+                onPress={() => toggleAppLock()}
+                valueNode={
+                  <View
+                    style={[
+                      gs.size16,
+                      gs.roundedFull,
+                      {backgroundColor: isAppLockEnabled ? colors.accentGreen : colors.secondaryText},
+                    ]}
+                  />
+                }
+              />
+            </>
+          ) : null}
         </View>
 
         <PrimaryText

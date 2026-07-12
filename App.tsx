@@ -11,6 +11,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {ThemeProvider} from './src/context/ThemeContext';
 import {DialogProvider} from './src/context/DialogContext';
+import {AppLockProvider} from './src/context/AppLockContext';
 import {SheetProvider} from 'react-native-actions-sheet';
 import ErrorBoundary from './src/components/atoms/ErrorBoundary';
 import PrimaryText from './src/components/atoms/PrimaryText';
@@ -71,11 +72,13 @@ const App = () => {
             <PersistGate loading={null} persistor={persistor}>
               <ThemeProvider>
                 <DialogProvider>
-                  <SheetProvider>
-                    <NavigationContainer ref={setNavigationRef}>
-                      <MainStack />
-                    </NavigationContainer>
-                  </SheetProvider>
+                  <AppLockProvider>
+                    <SheetProvider>
+                      <NavigationContainer ref={setNavigationRef}>
+                        <MainStack />
+                      </NavigationContainer>
+                    </SheetProvider>
+                  </AppLockProvider>
                 </DialogProvider>
               </ThemeProvider>
             </PersistGate>

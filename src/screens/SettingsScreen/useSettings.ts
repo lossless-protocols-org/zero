@@ -11,6 +11,7 @@ import {
 import {useCallback, useEffect} from 'react';
 import {getAppVersion} from '../../utils/getVersion';
 import {useTheme, ThemeMode} from '../../context/ThemeContext';
+import {useAppLock} from '../../context';
 import {useDialog} from '../../context/DialogContext';
 import StorageService from '../../utils/asyncStorageService';
 import {updateUserById, updateCurrencyById, deleteAllData} from '../../watermelondb/services';
@@ -29,6 +30,7 @@ const useSettings = () => {
   const allData = useSelector(selectAllData);
 
   const {colors, themeMode, setThemeMode} = useTheme();
+  const {isAppLockEnabled, isBiometricAvailable, toggleAppLock} = useAppLock();
   const {showDialog, showAlert} = useDialog();
   const appVersion = getAppVersion();
 
@@ -201,6 +203,9 @@ const useSettings = () => {
     allData,
     handleExportResult,
     requestStorageViaDialog,
+    isAppLockEnabled,
+    isBiometricAvailable,
+    toggleAppLock,
   };
 };
 

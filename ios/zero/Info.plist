@@ -35,6 +35,8 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Zero uses Face ID to protect your financial data</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

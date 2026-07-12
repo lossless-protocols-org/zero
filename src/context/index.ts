@@ -8,3 +8,5 @@ export {
 } from './ThemeContext';
 
 export {DialogProvider, useDialog} from './DialogContext';
+
+export {AppLockProvider, useAppLock} from './AppLockContext';
