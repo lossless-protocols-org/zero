@@ -97,8 +97,8 @@ android {
         applicationId "com.anotherwhy.zero"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 19
-        versionName "2.6.6"
+        versionCode 20
+        versionName "2.6.7"
     }
 
     // 16 KB page size support (required for Android 15+ / Play submissions):

@@ -1,6 +1,6 @@
 {
   "name": "zero",
-  "version": "2.6.6",
+  "version": "2.6.7",
   "private": true,
   "author": "anotherwhy technologies",
   "homepage": "https://anotherwhy.com",
@@ -44,16 +44,16 @@
     "react-native": "0.86.2",
     "react-native-actions-sheet": "^10.1.2",
     "react-native-fs": "^2.20.0",
-    "react-native-gesture-handler": "3.1.0",
+    "react-native-gesture-handler": "3.4.0",
     "react-native-get-random-values": "^2.0.0",
     "react-native-localize": "^3.7.0",
     "react-native-mmkv": "^4.3.2",
     "react-native-nitro-modules": "0.36.4",
-    "react-native-reanimated": "^4.5.3",
+    "react-native-reanimated": "4.5.5",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.26.2",
     "react-native-svg": "^15.15.5",
-    "react-native-worklets": "^0.11.3",
+    "react-native-worklets": "0.11.4",
     "react-redux": "^9.3.0",
     "redux": "^5.0.1",
     "redux-persist": "^6.0.0",
@@ -93,5 +93,8 @@
     "react-native-reanimated": "Must move in lockstep with react-native-worklets (peer: 0.10.x - 0.11.x) and peers react-native \"0.83 - 0.86\" — that peer is what caps this app at RN 0.86.x.",
     "react-native-gesture-handler": "v3 is REQUIRED by RN 0.86: v2.x imports react-native/Libraries/Renderer/shims/ReactNative, which 0.86 removed.",
     "lucide-react-native": "v1.x ships an .mjs bundle the RN jest preset resolves but jest cannot parse; jest.config.js maps it to the CJS build. All 334 icon imports in IconRegistry.ts were verified present in 1.28."
+  },
+  "patchedDependencies": {
+    "react-native-reanimated@4.5.5": "patches/react-native-reanimated@4.5.5.patch"
   }
 }

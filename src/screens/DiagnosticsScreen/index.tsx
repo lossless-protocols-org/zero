@@ -1,4 +1,4 @@
-import {ScrollView, Share, TouchableOpacity, View} from 'react-native';
+import {Platform, ScrollView, Share, TouchableOpacity, View} from 'react-native';
 import React, {useCallback, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import PrimaryView from '../../components/atoms/PrimaryView';
@@ -8,7 +8,7 @@ import Icon from '../../components/atoms/Icons';
 import EmptyState from '../../components/atoms/EmptyState';
 import useThemeColors from '../../hooks/useThemeColors';
 import {useDialog} from '../../context/DialogContext';
-import {clearErrorLog, getErrorLog} from '../../utils/errorLog';
+import {clearErrorLog, formatErrorReport, getErrorLog} from '../../utils/errorLog';
 import {getAppVersion} from '../../utils/getVersion';
 import {goBack} from '../../utils/navigationUtils';
 import {formatDate} from '../../utils/dateUtils';
@@ -28,13 +28,15 @@ const DiagnosticsScreen = () => {
   // Nothing is sent automatically: this hands the text to the OS share sheet
   // only when the user taps, and only they choose where it goes.
   const handleShare = useCallback(async () => {
-    const payload = [
-      `zero v${getAppVersion()}`,
-      ...entries.map(
-        entry =>
-          `[${entry.timestamp}] ${entry.fatal ? 'FATAL' : 'ERROR'}: ${entry.message}\n${entry.stack}`,
-      ),
-    ].join('\n\n');
+    // Same text the post-crash prompt shares, so reports look alike whoever sends them.
+    const constants = Platform.constants as {Brand?: string; Model?: string; Release?: string};
+    const payload = formatErrorReport(entries, {
+      appVersion: getAppVersion(),
+      os: Platform.OS,
+      osVersion: constants.Release ?? String(Platform.Version),
+      brand: constants.Brand,
+      model: constants.Model,
+    });
     try {
       await Share.share({message: payload, title: t('diagnostics.title')});
     } catch (error) {

@@ -14,6 +14,7 @@ import {DialogProvider} from './src/context/DialogContext';
 import {SheetProvider} from 'react-native-actions-sheet';
 import ErrorBoundary from './src/components/atoms/ErrorBoundary';
 import MigrationWarningBanner from './src/components/atoms/MigrationWarningBanner';
+import CrashReportPrompt from './src/components/atoms/CrashReportPrompt';
 import {initBackend} from './src/backend';
 import {getDatabaseError} from './src/watermelondb/database';
 import {appendErrorLog} from './src/utils/errorLog';
@@ -101,6 +102,7 @@ const App = () => {
                     <NavigationContainer ref={setNavigationRef}>
                       <View style={dbStyles.appRoot}>
                         <MigrationWarningBanner />
+                        <CrashReportPrompt />
                         <MainStack />
                       </View>
                     </NavigationContainer>

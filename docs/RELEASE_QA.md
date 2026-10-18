@@ -36,6 +36,11 @@ cd android && ./gradlew assembleDebug
 ## 4. Critical flows (both platforms)
 
 - [ ] Fresh install → onboarding → name → categories → currency → first expense
+- [ ] **Tap the header back arrow (not the hardware back key) on every screen
+      that has one**: Add/Edit category, Add/Edit debt, Add/Edit person, a
+      person's debts, Reports → category drill-down, Reports → day drill-down,
+      Settings, Diagnostics. v2.6.6 crashed on six of these (`goBack` invoked
+      with the press event); the hardware key does not exercise that path.
 - [ ] Add / edit / delete an expense; confirm the daily-budget line is right
       **when editing** (it must not double-count the amount being edited)
 - [ ] Delete a transaction and let the 3s undo window elapse → stays deleted

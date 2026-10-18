@@ -329,6 +329,12 @@
     "swipeHint": "Swipe left or right to edit or delete",
     "gotIt": "Got it"
   },
+  "crashReport": {
+    "message": "zero closed unexpectedly last time. A report with the error and your device model is ready — no transactions, names or amounts. Share it with the developer?",
+    "share": "Share",
+    "notNow": "Not now",
+    "shareTitle": "zero crash report"
+  },
   "diagnostics": {
     "title": "Diagnostics",
     "subtitle": "Recent errors recorded on this device. Nothing is sent anywhere.",

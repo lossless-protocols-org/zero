@@ -33,5 +33,18 @@ target 'zero' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Xcode 27 only supports iOS 15.0+. A few podspecs (RNSVG, RNLocalize,
+    # safe-area-context) still declare 12.4 for their resource-bundle targets,
+    # which Xcode reports as "deployment target is set to 12.4, but the range of
+    # supported ... is 15.0 to 27.1". Lift every pod target to the app minimum.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |build_configuration|
+        current = build_configuration.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current.nil? || Gem::Version.new(current) < Gem::Version.new(min_ios_version_supported)
+          build_configuration.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version_supported
+        end
+      end
+    end
   end
 end

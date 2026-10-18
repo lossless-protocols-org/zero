@@ -8,6 +8,8 @@ pathIgnorePatterns = [
   # react-native ships Flow-typed sources (`import typeof ...`) that bun
   # cannot parse; the App render smoke test is jest-only.
   "__tests__/**",
+  # imports @react-navigation/native → react-native Flow sources bun cannot parse; jest-only
+  "src/utils/__tests__/navigationUtils.test.ts",
   # vendored third-party docs, not our tests
   "references/**",
 ]

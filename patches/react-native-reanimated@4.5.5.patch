@@ -1,0 +1,22 @@
+diff --git a/android/src/main/java/com/swmansion/reanimated/NodesManager.kt b/android/src/main/java/com/swmansion/reanimated/NodesManager.kt
+index 67a85b8ee0dccd089482bb511ec7a00f987a17d3..7f5ea6e43f4bb44715db0bcca7f0066f0fbdd98d 100644
+--- a/android/src/main/java/com/swmansion/reanimated/NodesManager.kt
++++ b/android/src/main/java/com/swmansion/reanimated/NodesManager.kt
+@@ -205,6 +205,17 @@ class NodesManager(
+             // Events can be dispatched from any thread so we have to make sure handleEvent is run from
+             // the UI thread.
+             if (UiThreadUtil.isOnUiThread()) {
++                // zero: upstream PR software-mansion/react-native-reanimated#10895 (unreleased as of
++                // 4.5.5). An event no worklet waits for stops here instead of being serialized, passed
++                // to native and triggering performOperationsRespectingDrawPass(). react-native-svg
++                // dispatches SvgOnLayoutEvent synchronously from onDraw for every element; with this
++                // app's SVG icon in every list row that path ran on every frame and is the chain in
++                // every Play Console ANR trace (synchronouslyUpdateUIProps$lambda$6 → Log.w). The
++                // off-UI-thread branch below already performs this exact check.
++                val uiEventName = mCustomEventNamesResolver.resolveCustomEventName(event.eventName) ?: event.eventName
++                if (!mNativeProxy!!.isAnyHandlerWaitingForEvent(uiEventName, event.viewTag)) {
++                    return
++                }
+                 // Ensure draw-pass tracking is attached before event handling; the backend reads
+                 // isInDrawPass during receiveEvent.
+                 mDrawPassDetector.initialize()
