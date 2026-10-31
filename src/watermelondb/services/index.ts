@@ -1,9 +1,5 @@
 // User Service
-export {
-  createUser,
-  updateUserById,
-  getAllUsers,
-} from './userService';
+export {createUser, updateUserById, getAllUsers} from './userService';
 
 // Category Service
 export {
@@ -11,6 +7,7 @@ export {
   softDeleteCategoryById,
   updateCategoryById,
   getAllCategoriesByUserId,
+  getCategoryById,
 } from './categoryService';
 export type {CategoryData} from './categoryService';
 
@@ -19,22 +16,16 @@ export {
   createExpense,
   updateExpenseById,
   deleteExpenseById,
-  getAllExpensesByUserId,
-  getAllExpensesByUserIdWithCategory,
   getAllExpensesByDate,
   getAllExpensesByMonth,
   getAllExpensesByCategoryAndMonth,
   getAvailableExpenseYears,
+  getExpenseById,
 } from './expenseService';
 export type {ExpenseData, ExpenseWithCategory} from './expenseService';
 
 // Currency Service
-export {
-  createCurrency,
-  updateCurrencyById,
-  getCurrencyByUserId,
-} from './currencyService';
-export type {CurrencyData} from './currencyService';
+export {createCurrency, updateCurrencyById, getCurrencyByUserId} from './currencyService';
 
 // Debtor Service
 export {
@@ -51,29 +42,23 @@ export {
   createDebt,
   updateDebtById,
   deleteDebtById,
-  deleteAllDebtsByDebtorId,
   getAllDebtsByUserId,
   getAllDebtsByUserIdAndDebtorId,
+  getDebtById,
 } from './debtService';
 export type {DebtData} from './debtService';
 
 // Get Service
 export {getAllData} from './getService';
-export type {ExportData} from './getService';
+export type {ExportDraft} from './getService';
 
 // Delete Service
-export {
-  deleteAllData,
-} from './deleteService';
+export {deleteAllData, countAllRecords} from './deleteService';
+export type {RecordCounts} from './deleteService';
 
 // Budget Service
-export {
-  upsertBudget,
-  deleteBudget,
-  getBudgetsByMonth,
-} from './budgetService';
+export {upsertBudget, getBudgetsByMonth} from './budgetService';
 export type {BudgetData} from './budgetService';
 
 // Import Service (atomic backup restore)
 export {importAllData} from './importService';
-export type {ImportResult} from './importService';

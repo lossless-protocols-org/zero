@@ -1,8 +1,9 @@
 import {getLocales} from 'react-native-localize';
-import i18n from 'i18next';
-import StorageService from './asyncStorageService';
+import {createMmkvPreference, optionalString} from './mmkvPreference';
 
-const LOCALE_OVERRIDE_KEY = 'user_locale_override';
+// getFormatLocale runs on every formatAmount (twice per list row), so the
+// override is cached (S5, v2.7.1); setLocaleOverride is the only writer.
+const localeOverride = createMmkvPreference('user_locale_override', optionalString, null);
 
 interface DeviceLocaleInfo {
   languageTag: string;
@@ -21,13 +22,13 @@ export const getDeviceLocaleInfo = (): DeviceLocaleInfo => {
   if (cachedLocaleInfo) return cachedLocaleInfo;
 
   try {
-    const locales = getLocales();
-    if (locales.length > 0) {
+    const [primary] = getLocales();
+    if (primary) {
       cachedLocaleInfo = {
-        languageTag: locales[0].languageTag,
-        languageCode: locales[0].languageCode,
-        countryCode: locales[0].countryCode ?? '',
-        isRTL: locales[0].isRTL,
+        languageTag: primary.languageTag,
+        languageCode: primary.languageCode,
+        countryCode: primary.countryCode ?? '',
+        isRTL: primary.isRTL,
       };
       return cachedLocaleInfo;
     }
@@ -44,8 +45,10 @@ export const getDeviceLocaleInfo = (): DeviceLocaleInfo => {
   return cachedLocaleInfo;
 };
 
+/** Drops the cached device locale and the cached override; the next read goes to the OS and MMKV. @internal test */
 export const invalidateLocaleCache = (): void => {
   cachedLocaleInfo = null;
+  localeOverride.invalidate();
 };
 
 /**
@@ -55,30 +58,16 @@ export const invalidateLocaleCache = (): void => {
  * BCP-47 language tag (e.g., "en-US", "ru-RU", "hu-HU", "hi-IN")
  */
 export const getFormatLocale = (): string => {
-  const override = StorageService.getItemSync(LOCALE_OVERRIDE_KEY);
-  if (override) return override;
-  return getDeviceLocaleInfo().languageTag;
+  return localeOverride.get() ?? getDeviceLocaleInfo().languageTag;
 };
 
 /**
- * Sets a locale override persisted in MMKV. Syncs i18next language and dayjs locale.
- * Pass null to reset to device default.
+ * Persists a locale override (null = follow the device) and returns the
+ * language code to switch to. Applying it is src/i18n's job
+ * (`applyLocaleOverride`), so this file stays free of i18next and dateUtils.
  */
-export const setLocaleOverride = (locale: string | null): void => {
-  if (locale) {
-    StorageService.setItemSync(LOCALE_OVERRIDE_KEY, locale);
-  } else {
-    StorageService.removeItemSync(LOCALE_OVERRIDE_KEY);
-  }
+export const setLocaleOverride = (locale: string | null): string => {
+  localeOverride.set(locale);
   cachedLocaleInfo = null;
-
-  const langCode = locale ? locale.split('-')[0] : getDeviceLocaleInfo().languageCode;
-  if (i18n.isInitialized) {
-    void i18n.changeLanguage(langCode);
-  }
-  // Dates must follow the language too. Imported lazily: dateUtils imports
-  // this module, so a top-level import would be circular.
-  const {setDayjsLocale} = require('./dateUtils') as typeof import('./dateUtils');
-  setDayjsLocale(langCode);
+  return (locale && locale.split('-')[0]) || getDeviceLocaleInfo().languageCode;
 };
-

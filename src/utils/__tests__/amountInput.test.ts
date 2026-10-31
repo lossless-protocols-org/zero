@@ -42,3 +42,20 @@ describe('normalizeAmountInput', () => {
     }
   });
 });
+
+describe('normalizeAmountInput — currency decimals', () => {
+  it('drops the separator entirely for zero-decimal currencies', () => {
+    expect(normalizeAmountInput('12.5', 0)).toBe('125');
+    expect(normalizeAmountInput('12,', 0)).toBe('12');
+  });
+
+  it('truncates extra decimals to the currency precision', () => {
+    expect(normalizeAmountInput('12.345', 2)).toBe('12.34');
+    expect(normalizeAmountInput('12.3456', 3)).toBe('12.345');
+    expect(normalizeAmountInput('12.3', 2)).toBe('12.3');
+  });
+
+  it('leaves input alone when no precision is given', () => {
+    expect(normalizeAmountInput('12.3456')).toBe('12.3456');
+  });
+});

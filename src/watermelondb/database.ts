@@ -45,10 +45,11 @@ const getDatabase = (): Database => {
   return _database;
 };
 
+// The target is never read: every access goes through `get` to the lazily built database.
 export const database = new Proxy({} as Database, {
   get(_target, prop) {
     const db = getDatabase();
-    const value = db[prop as keyof Database];
+    const value = db[prop as keyof Database]; // any key the caller names on a Database; unknown ones read undefined, as on the real object
     if (typeof value === 'function') {
       return value.bind(db);
     }
@@ -56,5 +57,6 @@ export const database = new Proxy({} as Database, {
   },
 });
 
+/** @internal test */
 export {getDatabase};
 export default database;

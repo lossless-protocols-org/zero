@@ -6,7 +6,7 @@ import Animated, {FadeIn, FadeOut} from 'react-native-reanimated';
 import useThemeColors from '../../hooks/useThemeColors';
 import PrimaryText from './PrimaryText';
 import Icon from './Icons';
-import {gs} from '../../styles/globalStyles';
+import {gs, hitSlop} from '../../styles/globalStyles';
 
 interface SwipeTutorialTooltipProps {
   onDismiss: () => void;
@@ -30,6 +30,9 @@ const SwipeTutorialTooltip: React.FC<SwipeTutorialTooltipProps> = ({onDismiss}) 
       <TouchableOpacity
         onPress={onDismiss}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        // The pill is ~24 dp tall; the slop brings the target past 44 pt (M30).
+        hitSlop={hitSlop}
         style={[gs.px12, gs.py5, gs.rounded8, {backgroundColor: colors.buttonText}]}>
         <PrimaryText size={12} weight="semibold" color={colors.accentGreen}>
           {t('tutorial.gotIt')}

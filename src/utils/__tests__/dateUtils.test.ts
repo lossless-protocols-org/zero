@@ -8,54 +8,7 @@
  * silently rendered empty.
  */
 
-import {
-  getMonthIndex,
-  getMonthNumber,
-  getMonthNames,
-  setDayjsLocale,
-} from '../dateUtils';
-
-describe('getMonthIndex', () => {
-  it('resolves full English month names', () => {
-    expect(getMonthIndex('January')).toBe(0);
-    expect(getMonthIndex('December')).toBe(11);
-  });
-
-  it('is case-insensitive', () => {
-    expect(getMonthIndex('january')).toBe(0);
-    expect(getMonthIndex('JANUARY')).toBe(0);
-  });
-
-  it('resolves short month names', () => {
-    expect(getMonthIndex('Jan')).toBe(0);
-    expect(getMonthIndex('Dec')).toBe(11);
-  });
-
-  it('returns -1 for a name that is not a month', () => {
-    expect(getMonthIndex('Smarch')).toBe(-1);
-  });
-});
-
-describe('getMonthNumber', () => {
-  it('zero-pads to two digits', () => {
-    expect(getMonthNumber('January')).toBe('01');
-    expect(getMonthNumber('September')).toBe('09');
-    expect(getMonthNumber('October')).toBe('10');
-    expect(getMonthNumber('December')).toBe('12');
-  });
-
-  it('NEVER returns "00" for an unresolvable name', () => {
-    // "00" would build an impossible YYYY-MM key and silently show no data.
-    expect(getMonthNumber('Smarch')).not.toBe('00');
-    expect(getMonthNumber('')).not.toBe('00');
-  });
-
-  it('falls back to a real month (01-12) when the name cannot be resolved', () => {
-    const fallback = getMonthNumber('not-a-month');
-    expect(Number.parseInt(fallback, 10)).toBeGreaterThanOrEqual(1);
-    expect(Number.parseInt(fallback, 10)).toBeLessThanOrEqual(12);
-  });
-});
+import {getMonthNames, setDayjsLocale, daysInMonth, toYearMonth, firstWeekdayOfMonth} from '../dateUtils';
 
 describe('month names after a locale change', () => {
   afterEach(() => {
@@ -73,18 +26,23 @@ describe('month names after a locale change', () => {
     setDayjsLocale('en');
     expect(getMonthNames()[0]).toBe('January');
   });
+});
 
-  it('still resolves a month name persisted under the previous language', () => {
-    // The month picker stores names; switching language must not orphan them.
-    setDayjsLocale('fr');
-    expect(getMonthNumber('January')).toBe('01');
-    expect(getMonthNumber('December')).toBe('12');
+describe('month by index (M20): no localised name round trip', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('counts days without rolling over from today', () => {
+    // On the 31st, dayjs().month(1) rolls into March; the old name-based helper did exactly that.
+    jest.useFakeTimers({now: new Date(2026, 9, 31, 12)});
+    expect(daysInMonth(2026, 1)).toBe(28);
+    expect(daysInMonth(2028, 1)).toBe(29);
+    expect(daysInMonth(2026, 3)).toBe(30);
+    expect(daysInMonth(2026, 11)).toBe(31);
   });
 
-  it('resolves names in the newly active language too', () => {
-    setDayjsLocale('fr');
-    const frenchMonths = getMonthNames();
-    expect(getMonthNumber(frenchMonths[0])).toBe('01');
-    expect(getMonthNumber(frenchMonths[11])).toBe('12');
+  it('builds the YYYY-MM key and the first weekday from the index', () => {
+    expect(toYearMonth(2026, 0)).toBe('2026-01');
+    expect(toYearMonth(2026, 11)).toBe('2026-12');
+    expect(firstWeekdayOfMonth(2026, 9)).toBe(4); // 1 October 2026 is a Thursday
   });
 });

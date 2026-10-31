@@ -6,7 +6,10 @@
  * jest (`bun run test`) remains the canonical runner — it covers the full
  * suite including the App render smoke test, which bun cannot parse. The
  * pure suites (planner, upgrader, sanitize, numberUtils, expenseService)
- * run under both.
+ * run under both. `bun run test:unit` / `test:rn` split the two (M23).
+ *
+ * Lint-only on purpose: this file is outside tsconfig's `include`, because
+ * typechecking `bun:test` would need `@types/bun` as a new dev dependency.
  */
 import {mock} from 'bun:test';
 import * as localizeMock from './src/testing/localizeMock';

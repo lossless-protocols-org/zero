@@ -1,0 +1,254 @@
+diff --git a/native/android/build.gradle b/native/android/build.gradle
+index a45cfe0..c070ebf 100644
+--- a/native/android/build.gradle
++++ b/native/android/build.gradle
+@@ -26,6 +26,13 @@ android {
+ 
+     namespace "com.nozbe.watermelondb"
+ 
++    // zero patch (RN 0.88 / AGP 9): the React Native 0.88 gradle plugin only enables
++    // BuildConfig for libraries that apply the com.facebook.react plugin (0.86 swept every
++    // library). WMDatabaseBridge/WMDatabaseDriver read BuildConfig.DEBUG, so declare it here.
++    buildFeatures {
++        buildConfig true
++    }
++
+     defaultConfig {
+         minSdkVersion getExtOrIntegerDefault('minSdkVersion')
+         targetSdkVersion getExtOrIntegerDefault('targetSdkVersion')
+diff --git a/native/android/src/main/java/com/nozbe/watermelondb/WMDatabase.java b/native/android/src/main/java/com/nozbe/watermelondb/WMDatabase.java
+index 2f170e0..9723765 100644
+--- a/native/android/src/main/java/com/nozbe/watermelondb/WMDatabase.java
++++ b/native/android/src/main/java/com/nozbe/watermelondb/WMDatabase.java
+@@ -2,8 +2,10 @@ package com.nozbe.watermelondb;
+ 
+ import android.content.Context;
+ import android.database.Cursor;
++import android.database.DatabaseErrorHandler;
+ import android.database.sqlite.SQLiteCursor;
+ import android.database.sqlite.SQLiteDatabase;
++import android.util.Log;
+ 
+ import java.io.File;
+ import java.util.ArrayList;
+@@ -51,9 +53,14 @@ public class WMDatabase {
+             // On some systems there is some kind of lock on `/databases` folder ¯\_(ツ)_/¯
+             path = context.getDatabasePath("" + name + ".db").getPath().replace("/databases", "");
+         }
+-        return SQLiteDatabase.openDatabase(path, null, openFlags);
++        return SQLiteDatabase.openDatabase(path, null, openFlags, KEEP_CORRUPT_FILE);
+     }
+ 
++    // zero: the platform default handler deletes a corrupt file and reopens it empty, losing the
++    // user's data without a word. Keep the file; the corruption error reaches JS and the app shows it.
++    private static final DatabaseErrorHandler KEEP_CORRUPT_FILE = dbObj ->
++            Log.e("WMDatabase", "Database corruption detected; keeping the file for recovery");
++
+     public void setUserVersion(int version) {
+         db.setVersion(version);
+     }
+diff --git a/native/android/src/main/java/com/nozbe/watermelondb/WMDatabaseDriver.java b/native/android/src/main/java/com/nozbe/watermelondb/WMDatabaseDriver.java
+index 1534830..243ff88 100644
+--- a/native/android/src/main/java/com/nozbe/watermelondb/WMDatabaseDriver.java
++++ b/native/android/src/main/java/com/nozbe/watermelondb/WMDatabaseDriver.java
+@@ -251,13 +251,17 @@ public class WMDatabaseDriver {
+         if (databaseVersion == schemaVersion) {
+             return new SchemaCompatibility.Compatible();
+         } else if (databaseVersion == 0) {
++            // zero: setup drops every table. Version 0 must mean an empty file, not a damaged header.
++            if (database.count("select count(*) as count from sqlite_master where type = 'table' and name not like 'sqlite_%' and name != 'android_metadata'") > 0) {
++                throw new IllegalStateException("Database has tables but no version; refusing to reset it.");
++            }
+             return new SchemaCompatibility.NeedsSetup();
+         } else if (databaseVersion < schemaVersion) {
+             return new SchemaCompatibility.NeedsMigration(databaseVersion);
+         } else {
+-            log.info("com.nozbe.watermelondb.Database has newer version (" + databaseVersion + ") than what the " +
+-                    "app supports (" + schemaVersion + "). Will reset database.");
+-            return new SchemaCompatibility.NeedsSetup();
++            // zero: never reset a newer database (that wipes the user's data), and the release logger is null.
++            throw new IllegalStateException("Database version " + databaseVersion + " is newer than this app " +
++                    "supports (" + schemaVersion + "). Update the app to open it.");
+         }
+     }
+ }
+diff --git a/native/ios/WatermelonDB/JSIInstaller.h b/native/ios/WatermelonDB/JSIInstaller.h
+index c1b7efb..414da97 100644
+--- a/native/ios/WatermelonDB/JSIInstaller.h
++++ b/native/ios/WatermelonDB/JSIInstaller.h
+@@ -1,13 +1,17 @@
+ #pragma once
+ 
+-#import <React/RCTBridge+Private.h>
++#import <React/RCTBridge.h>
+ 
+ #ifdef __cplusplus
+ extern "C"
+ {
+ #endif
+ 
+-void installWatermelonJSI(RCTCxxBridge *bridge);
++// zero patch (RN 0.88): RCTCxxBridge no longer exists — the legacy bridge was removed
++// from React Native 0.88 and its private header no longer declares the class. The
++// module's `bridge` is an RCTBridgeProxy in bridgeless mode, so take an untyped
++// object and resolve `runtime` at run time (see JSIInstaller.mm).
++void installWatermelonJSI(id bridge);
+ void watermelondbProvideSyncJson(int id, NSData *json, NSError **errorPtr);
+ 
+ #ifdef __cplusplus
+diff --git a/native/ios/WatermelonDB/JSIInstaller.mm b/native/ios/WatermelonDB/JSIInstaller.mm
+index d508249..f39e9f9 100644
+--- a/native/ios/WatermelonDB/JSIInstaller.mm
++++ b/native/ios/WatermelonDB/JSIInstaller.mm
+@@ -1,12 +1,31 @@
+ #import "JSIInstaller.h"
+ #import "Database.h"
++#import <React/RCTLog.h>
+ 
+-extern "C" void installWatermelonJSI(RCTCxxBridge *bridge) {
+-    if (bridge.runtime == nullptr) {
++// zero patch (RN 0.88): upstream casts the bridge to RCTCxxBridge and reads its
++// `runtime` property. React Native 0.88 removed RCTCxxBridge together with the
++// legacy bridge. In bridgeless mode the object handed to legacy modules is an
++// RCTBridgeProxy, which still implements `- (void *)runtime` (RCTBridgeProxy.mm)
++// but does not declare it in any public header. Declare the selector locally and
++// check for it before calling, so this compiles against the prebuilt 0.88 headers
++// and keeps the exact runtime path that worked on 0.86 (proxy → runtime pointer).
++@protocol WMRuntimeProvider <NSObject>
++- (void *)runtime;
++@end
++
++extern "C" void installWatermelonJSI(id bridge) {
++    if (bridge == nil || ![bridge respondsToSelector:@selector(runtime)]) {
++        RCTLogWarn(@"[WatermelonDB] bridge does not expose a JSI runtime; JSI adapter not installed");
++        return;
++    }
++
++    void *rawRuntime = [(id<WMRuntimeProvider>)bridge runtime];
++    if (rawRuntime == nullptr) {
+         return;
+     }
+ 
+-    jsi::Runtime *runtime = (jsi::Runtime*) bridge.runtime;
+-    assert(runtime != nullptr);
++    jsi::Runtime *runtime = (jsi::Runtime *) rawRuntime;
+     watermelondb::Database::install(runtime);
++    // One line per launch so a device log proves which adapter path is live (no user data).
++    NSLog(@"[WatermelonDB] JSI adapter installed (runtime via %@)", NSStringFromClass([bridge class]));
+ }
+diff --git a/native/ios/WatermelonDB/objc/WMDatabaseBridge.m b/native/ios/WatermelonDB/objc/WMDatabaseBridge.m
+index 8a3ab35..b7bc48a 100644
+--- a/native/ios/WatermelonDB/objc/WMDatabaseBridge.m
++++ b/native/ios/WatermelonDB/objc/WMDatabaseBridge.m
+@@ -54,7 +54,12 @@ + (BOOL) requiresMainQueueSetup
+     }
+     
+     WMDatabaseDriver *driver = [WMDatabaseDriver driverWithName:name];
+-    WMDatabaseCompatibility compatibility = [driver isCompatibleWithSchemaVersion:[version integerValue]];
++    NSString *incompatibleReason = nil;
++    WMDatabaseCompatibility compatibility = [driver isCompatibleWithSchemaVersion:[version integerValue] reason:&incompatibleReason];
++
++    if (compatibility == WMDatabaseCompatibilityIncompatible) {
++        return reject(@"db.initialize.error", incompatibleReason, nil);
++    }
+     
+     if (compatibility == WMDatabaseCompatibilityCompatible) {
+         _connections[tag] = driver;
+@@ -196,7 +201,8 @@ + (BOOL) requiresMainQueueSetup
+ 
+ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(initializeJSI)
+ {
+-    __block RCTCxxBridge *bridge = (RCTCxxBridge *) _bridge;
++    // zero patch (RN 0.88): no RCTCxxBridge cast; JSIInstaller resolves the runtime itself.
++    __block id bridge = _bridge;
+     dispatch_sync([self methodQueue], ^{
+         installWatermelonJSI(bridge);
+     });
+diff --git a/native/ios/WatermelonDB/objc/WMDatabaseDriver.h b/native/ios/WatermelonDB/objc/WMDatabaseDriver.h
+index 0224cc3..454f181 100644
+--- a/native/ios/WatermelonDB/objc/WMDatabaseDriver.h
++++ b/native/ios/WatermelonDB/objc/WMDatabaseDriver.h
+@@ -6,6 +6,8 @@ typedef NS_ENUM(NSInteger, WMDatabaseCompatibility) {
+     WMDatabaseCompatibilityCompatible,
+     WMDatabaseCompatibilityNeedsSetup,
+     WMDatabaseCompatibilityNeedsMigration,
++    // zero: a newer or unversioned-but-populated database; never reset it.
++    WMDatabaseCompatibilityIncompatible,
+ };
+ 
+ @interface WMDatabaseDriver : NSObject
+@@ -20,7 +22,7 @@ typedef NS_ENUM(NSInteger, WMDatabaseCompatibility) {
+ #pragma mark - Setup
+ 
+ - (long) schemaVersion;
+-- (WMDatabaseCompatibility) isCompatibleWithSchemaVersion:(long)version;
++- (WMDatabaseCompatibility) isCompatibleWithSchemaVersion:(long)version reason:(NSString * _Nullable * _Nonnull)reason;
+ - (void) setUpWithSchema:(NSString *)sql schemaVersion:(long)version;
+ - (BOOL) setUpWithMigrations:(NSString *)sql fromVersion:(long)fromVersion toVersion:(long)toVersion error:(NSError **)errorPtr;
+ 
+diff --git a/native/ios/WatermelonDB/objc/WMDatabaseDriver.m b/native/ios/WatermelonDB/objc/WMDatabaseDriver.m
+index 020e083..533d7cb 100644
+--- a/native/ios/WatermelonDB/objc/WMDatabaseDriver.m
++++ b/native/ios/WatermelonDB/objc/WMDatabaseDriver.m
+@@ -42,20 +42,28 @@ - (long) schemaVersion
+     return _db.userVersion;
+ }
+ 
+-- (WMDatabaseCompatibility) isCompatibleWithSchemaVersion:(long)version
++- (WMDatabaseCompatibility) isCompatibleWithSchemaVersion:(long)version reason:(NSString * _Nullable * _Nonnull)reason
+ {
+     long dbVersion = _db.userVersion;
+ 
+     if (version == dbVersion) {
+         return WMDatabaseCompatibilityCompatible;
+     } else if (dbVersion == 0) {
++        // zero: setup drops every table. Version 0 must mean an empty file, not a damaged header.
++        NSError *error;
++        NSNumber *tables = [_db count:@"select count(*) as count from sqlite_master where type = 'table' and name not like 'sqlite_%'" args:@[] error:&error];
++        if (!tables || tables.longValue > 0) {
++            *reason = tables ? @"Database has tables but no version; refusing to reset it."
++                             : (error.localizedDescription ?: @"Could not inspect the database tables; refusing to reset it.");
++            return WMDatabaseCompatibilityIncompatible;
++        }
+         return WMDatabaseCompatibilityNeedsSetup;
+     } else if (dbVersion >= 1 && dbVersion < version) {
+         return WMDatabaseCompatibilityNeedsMigration;
+     } else {
+-        // TODO: Add logger customization
+-        NSLog(@"Database has newer version (%li) than what the app supports (%li). Will reset database.", dbVersion, version);
+-        return WMDatabaseCompatibilityNeedsSetup;
++        // zero: never reset a newer database; that wipes the user's data.
++        *reason = [NSString stringWithFormat:@"Database version %li is newer than this app supports (%li). Update the app to open it.", dbVersion, version];
++        return WMDatabaseCompatibilityIncompatible;
+     }
+ }
+ 
+diff --git a/native/shared/DatabaseBridge.cpp b/native/shared/DatabaseBridge.cpp
+index ef0f23b..74dcc80 100644
+--- a/native/shared/DatabaseBridge.cpp
++++ b/native/shared/DatabaseBridge.cpp
+@@ -88,14 +88,21 @@ void Database::install(jsi::Runtime *runtime) {
+                 database->initialized_ = true;
+                 response.setProperty(rt, "code", "ok");
+             } else if (databaseVersion == 0) {
++                // zero: setup drops every table. Version 0 must mean an empty file, not a damaged header.
++                jsi::String tablesQuery = jsi::String::createFromUtf8(rt, "select count(*) as count from sqlite_master where type = 'table' and name not like 'sqlite_%'");
++                jsi::Array noArgs(rt, 0);
++                if (database->count(tablesQuery, noArgs).getNumber() > 0) {
++                    throw jsi::JSError(rt, "Database has tables but no version; refusing to reset it.");
++                }
+                 response.setProperty(rt, "code", "schema_needed");
+             } else if (databaseVersion < expectedVersion) {
+                 response.setProperty(rt, "code", "migrations_needed");
+                 response.setProperty(rt, "databaseVersion", databaseVersion);
+             } else {
+-                consoleLog("Database has newer version (" + std::to_string(databaseVersion) +
+-                           ") than what the app supports (" + std::to_string(expectedVersion) + "). Will reset database.");
+-                response.setProperty(rt, "code", "schema_needed");
++                // zero: never reset a newer database; that wipes the user's data.
++                throw jsi::JSError(rt, "Database version " + std::to_string(databaseVersion) +
++                                   " is newer than this app supports (" + std::to_string(expectedVersion) +
++                                   "). Update the app to open it.");
+             }
+ 
+             return response;

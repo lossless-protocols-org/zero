@@ -1,7 +1,8 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
+import {EXPENSES_USER_DATE_INDEX_SQL} from './indexes';
 
 export const schema = appSchema({
-  version: 3,
+  version: 4,
   tables: [
     tableSchema({
       name: 'users',
@@ -30,6 +31,8 @@ export const schema = appSchema({
         {name: 'user_id', type: 'string', isIndexed: true},
         {name: 'date', type: 'string', isIndexed: true},
       ],
+      // v4: the composite index the month/day range queries need (see indexes.ts).
+      unsafeSql: sql => sql + EXPENSES_USER_DATE_INDEX_SQL,
     }),
     tableSchema({
       name: 'currencies',

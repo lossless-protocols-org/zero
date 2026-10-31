@@ -2,7 +2,7 @@ import {View, ViewStyle} from 'react-native';
 import React, {ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
 import PrimaryText from './PrimaryText';
-import {Colors} from '../../hooks/useThemeColors';
+import type {ThemeColors} from '../../hooks/useThemeColors';
 import Icon from './Icons';
 import {gs} from '../../styles/globalStyles';
 import {IconName} from './IconRegistry';
@@ -10,7 +10,7 @@ import {IconName} from './IconRegistry';
 type EmptyStateType = 'Transactions' | 'Insights' | 'Debts' | 'Categories';
 
 interface EmptyStateProps {
-  colors: Colors;
+  colors: ThemeColors;
   type: EmptyStateType;
   style?: ViewStyle;
   message?: string;
@@ -24,7 +24,10 @@ const iconMap: Record<EmptyStateType, IconName> = {
   Categories: 'shapes',
 };
 
-const messageKeyMap: Record<EmptyStateType, 'emptyState.transactions' | 'emptyState.insights' | 'emptyState.debts' | 'emptyState.categories'> = {
+const messageKeyMap: Record<
+  EmptyStateType,
+  'emptyState.transactions' | 'emptyState.insights' | 'emptyState.debts' | 'emptyState.categories'
+> = {
   Transactions: 'emptyState.transactions',
   Insights: 'emptyState.insights',
   Debts: 'emptyState.debts',

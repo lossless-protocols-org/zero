@@ -18,14 +18,17 @@ const useFormatAmount = () => {
   const currencyCode = useAppSelector(selectCurrencyCode);
   const currencySymbol = useAppSelector(selectCurrencySymbol);
 
-  const formatAmount = useCallback((amount: number): string => {
-    if (currencyCode) {
-      return formatAmountWithSymbol(amount, currencyCode);
-    }
-    // Legacy rows have a symbol but no code — placement is undecidable
-    // without a code, so keep the historical prefix.
-    return `${currencySymbol}${formatCurrency(amount)}`;
-  }, [currencyCode, currencySymbol]);
+  const formatAmount = useCallback(
+    (amount: number): string => {
+      if (currencyCode) {
+        return formatAmountWithSymbol(amount, currencyCode);
+      }
+      // Legacy rows have a symbol but no code — placement is undecidable
+      // without a code, so keep the historical prefix.
+      return `${currencySymbol}${formatCurrency(amount)}`;
+    },
+    [currencyCode, currencySymbol],
+  );
 
   return formatAmount;
 };

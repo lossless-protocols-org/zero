@@ -1,56 +1,39 @@
 import {createAsyncThunk, createEntityAdapter, createSelector, createSlice} from '@reduxjs/toolkit';
-import {RootState} from '../rootReducer';
+import type {RootState} from '../rootReducer';
 import {CategoryData as Category, getAllCategoriesByUserId} from '../../watermelondb/services';
 import {selectUserId} from './userIdSlice';
 
 const categoriesAdapter = createEntityAdapter<Category>();
 
-const initialState = categoriesAdapter.getInitialState({
-  isLoading: false,
-  error: null as string | null,
-});
+const initialState = categoriesAdapter.getInitialState();
 
-export const fetchCategories = createAsyncThunk<Category[], void, {state: RootState}>('category/fetchAll', async (_, {getState, rejectWithValue}) => {
-  try {
-    const userId = selectUserId(getState());
-    const categories = await getAllCategoriesByUserId(userId);
-    return categories;
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch categories');
-  }
-});
+export const fetchCategories = createAsyncThunk<Category[], void, {state: RootState; rejectValue: string}>(
+  'category/fetchAll',
+  async (_, {getState, rejectWithValue}) => {
+    try {
+      const userId = selectUserId(getState());
+      const categories = await getAllCategoriesByUserId(userId);
+      return categories;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch categories');
+    }
+  },
+);
 
 const categoryDataSlice = createSlice({
   name: 'category',
   initialState,
   reducers: {},
   extraReducers: builder => {
-    builder
-      .addCase(fetchCategories.pending, state => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(fetchCategories.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.error = null;
-        categoriesAdapter.setAll(state, action.payload);
-      })
-      .addCase(fetchCategories.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      });
+    builder.addCase(fetchCategories.fulfilled, (state, action) => {
+      categoriesAdapter.setAll(state, action.payload);
+    });
   },
 });
 
 const categorySelectors = categoriesAdapter.getSelectors<RootState>(state => state.category);
 
 export const selectCategoryData = categorySelectors.selectAll;
-export const selectCategoryDataById = categorySelectors.selectById;
-export const selectCategoryIds = categorySelectors.selectIds;
-export const selectCategoryEntities = categorySelectors.selectEntities;
-
-export const selectCategoryLoading = (state: RootState) => state.category.isLoading;
-export const selectCategoryError = (state: RootState) => state.category.error;
 
 export const selectActiveCategories = createSelector([selectCategoryData], categoryData =>
   categoryData.filter((category: Category) => category.categoryStatus === true),

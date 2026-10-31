@@ -4,12 +4,15 @@
  */
 
 export interface DonutSlice {
+  /** Identity: selection and hiding match on it. */
   key: string;
+  /** What is shown and read out; the key when absent. */
+  label?: string;
   value: number;
   color: string;
 }
 
-export interface DonutGeometry {
+interface DonutGeometry {
   /** Diameter of the ring itself (outer edge to outer edge). */
   diameter: number;
   strokeWidth: number;
@@ -26,8 +29,9 @@ export interface DonutGeometry {
   expand: number;
 }
 
-export interface DonutSegment {
+interface DonutSegment {
   key: string;
+  label?: string;
   color: string;
   value: number;
   fraction: number;
@@ -40,12 +44,12 @@ export interface DonutSegment {
 
 /** Width of the cut between adjacent segments. Constant across the band. */
 export const SEGMENT_GAP_WIDTH = 5;
-/** Arc a segment keeps beyond the two half-cuts, so no category disappears. */
+/** Arc a segment keeps beyond the two half-cuts, so no category disappears. @internal test */
 export const MIN_VISIBLE_ARC = 3;
 /** Ring thickness as a share of the diameter. */
-export const THICKNESS_RATIO = 0.19;
+const THICKNESS_RATIO = 0.19;
 /** How far the selected segment grows outward (the Recharts `+6` pattern). */
-export const SELECTION_EXPAND = 8;
+const SELECTION_EXPAND = 8;
 /** Extra touch slop around the ring band, in points. */
 const TOUCH_SLOP = 8;
 
@@ -67,10 +71,7 @@ export const buildGeometry = (diameter: number): DonutGeometry => {
   };
 };
 
-export const buildSegments = (
-  data: Array<DonutSlice>,
-  geometry: DonutGeometry,
-): Array<DonutSegment> => {
+export const buildSegments = (data: Array<DonutSlice>, geometry: DonutGeometry): Array<DonutSegment> => {
   const positive = data.filter(slice => slice.value > 0);
   const total = positive.reduce((sum, slice) => sum + slice.value, 0);
   if (total <= 0) {
@@ -89,6 +90,7 @@ export const buildSegments = (
     cumulative += fraction;
     return {
       key: slice.key,
+      label: slice.label,
       color: slice.color,
       value: slice.value,
       fraction,
@@ -146,5 +148,5 @@ export const segmentAtPoint = (
     }
   }
   // Floating-point drift at the seam: fall back to the last segment.
-  return segments[segments.length - 1];
+  return segments.at(-1) ?? null;
 };

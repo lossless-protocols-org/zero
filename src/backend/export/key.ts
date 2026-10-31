@@ -13,7 +13,9 @@ import {nanoid} from 'nanoid';
  * both test runners — the drift below went unnoticed precisely because
  * nothing could test it.
  */
+/** @internal test */
 export const EXPORT_KEY_PREFIX = 'zero';
+/** @internal test */
 export const EXPORT_KEY_LENGTH = 20;
 
 export const generateUniqueKey = (): string => {

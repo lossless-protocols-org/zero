@@ -2,7 +2,7 @@ import {TouchableOpacity, View, ActivityIndicator} from 'react-native';
 import React, {useMemo} from 'react';
 import PrimaryText from './PrimaryText';
 import Icon from './Icons';
-import {Colors} from '../../hooks/useThemeColors';
+import type {ThemeColors} from '../../hooks/useThemeColors';
 import {gs} from '../../styles/globalStyles';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
@@ -28,7 +28,7 @@ const ICON_SIZES: Record<ButtonSize, number> = {
 
 interface PrimaryButtonProps {
   onPress: () => void;
-  colors: Colors;
+  colors: ThemeColors;
   buttonTitle: string;
   disabled?: boolean;
   loading?: boolean;
@@ -80,7 +80,8 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = React.memo(
       }
 
       return {
-        height,
+        // A minimum, not a fixed height: large OS text must not clip the label (M30).
+        minHeight: height,
         backgroundColor,
         borderColor,
         borderWidth,

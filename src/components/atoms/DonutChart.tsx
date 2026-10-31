@@ -1,13 +1,8 @@
 import React, {useCallback, useMemo, useState} from 'react';
-import {
-  GestureResponderEvent,
-  Pressable,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import {GestureResponderEvent, Pressable, useWindowDimensions, View} from 'react-native';
 import Svg, {Circle, G, Line} from 'react-native-svg';
 import PrimaryText from './PrimaryText';
-import {Colors} from '../../hooks/useThemeColors';
+import type {ThemeColors} from '../../hooks/useThemeColors';
 import {
   buildGeometry,
   buildSegments,
@@ -16,12 +11,13 @@ import {
   type DonutSlice,
 } from '../../utils/donutGeometry';
 import {gs} from '../../styles/globalStyles';
+import {formatPercent} from '../../utils/numberUtils';
 
 export type {DonutSlice};
 
 interface DonutChartProps {
   data: Array<DonutSlice>;
-  colors: Colors;
+  colors: ThemeColors;
   /** Overrides the responsive diameter. Mostly for tests/snapshots. */
   size?: number;
   /** Formats the selected segment's value for the centre readout. */
@@ -150,9 +146,7 @@ const DonutChart: React.FC<DonutChartProps> = ({
             const grownCircumference = 2 * Math.PI * grownRadius;
             // Re-scale the dash to the larger circle so the segment still spans
             // the same angle after growing.
-            const arc = isSelected
-              ? (segment.arc / circumference) * grownCircumference
-              : segment.arc;
+            const arc = isSelected ? (segment.arc / circumference) * grownCircumference : segment.arc;
             return (
               <Circle
                 key={segment.key}
@@ -187,15 +181,9 @@ const DonutChart: React.FC<DonutChartProps> = ({
       </Svg>
 
       {selected ? (
-        <View
-          style={[gs.center, gs.absolute, {width: canvas, height: canvas}]}
-          pointerEvents="none">
-          <PrimaryText
-            size={12}
-            color={colors.secondaryText}
-            numberOfLines={1}
-            style={{maxWidth: centreWidth}}>
-            {selected.key}
+        <View style={[gs.center, gs.absolute, {width: canvas, height: canvas}]} pointerEvents="none">
+          <PrimaryText size={12} color={colors.secondaryText} numberOfLines={1} style={{maxWidth: centreWidth}}>
+            {selected.label ?? selected.key}
           </PrimaryText>
           <PrimaryText
             size={18}
@@ -207,7 +195,7 @@ const DonutChart: React.FC<DonutChartProps> = ({
             {formatValue ? formatValue(selected.value) : String(selected.value)}
           </PrimaryText>
           <PrimaryText size={11} weight="semibold" variant="number" color={selected.color}>
-            {`${percent}%`}
+            {formatPercent(percent)}
           </PrimaryText>
         </View>
       ) : null}

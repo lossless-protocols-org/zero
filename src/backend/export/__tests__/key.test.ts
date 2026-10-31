@@ -1,9 +1,4 @@
-import {
-  EXPORT_KEY_LENGTH,
-  EXPORT_KEY_PREFIX,
-  generateUniqueKey,
-  isValidExportKey,
-} from '../key';
+import {EXPORT_KEY_LENGTH, EXPORT_KEY_PREFIX, generateUniqueKey, isValidExportKey} from '../key';
 
 /**
  * These tests exist because `isValidExportKey` once required

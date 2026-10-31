@@ -11,9 +11,10 @@ export default class Budget extends Model {
 
   @text('user_id') userId!: string;
   /**
-   * Reserved for per-category budgets, which are not implemented yet: the
-   * column is optional in the schema and every writer stores ''. Typed as
-   * string (not string | null) to match what is actually written.
+   * The category of a per-category budget (`budgetType` 'category'); '' on the
+   * overall monthly budget. Typed as string to match what is written; the
+   * service maps rows to `BudgetData`, where the id exists only on category
+   * budgets. `month` is a stored key: read it through `parseBudgetMonth`.
    */
   @text('category_id') categoryId!: string;
   @field('amount') amount!: number;

@@ -1,72 +1,74 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import useThemeColors from '../../hooks/useThemeColors';
+import useMonthNavigation from '../../hooks/useMonthNavigation';
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
-import {
-  fetchExpensesByMonth,
-  invalidateExpenseCache,
-  selectExpenseData,
-} from '../../redux/slice/expenseDataSlice';
-import {selectMonthIndex, selectYear, setMonthSelection} from '../../redux/slice/monthSelectionSlice';
-import {selectUserName} from '../../redux/slice/userNameSlice';
+import {fetchExpensesByMonth, selectExpenseData, selectMonthTotals} from '../../redux/slice/expenseDataSlice';
+import {useUserName} from '../../hooks/useUserName';
 import {fetchUserData, selectUserId} from '../../redux/slice/userIdSlice';
 import {fetchCurrency} from '../../redux/slice/currencyDataSlice';
 import {fetchCategories} from '../../redux/slice/categoryDataSlice';
 import {fetchBudgetsByMonth, selectCurrentBudget} from '../../redux/slice/budgetDataSlice';
-import {getCurrentYear, getMonthNumber, getMonthNames, getDaysInMonth, sortByDateDesc, formatDate} from '../../utils/dateUtils';
-import {ExpenseData as Expense} from '../../watermelondb/services';
-import {loadAvailableYears} from '../../utils/availableYearsCache';
+import {daysInMonth as countDaysInMonth, sortByDateDesc, formatDate} from '../../utils/dateUtils';
+import {loadAvailableYears} from '../../watermelondb/services/availableYearsCache';
 import {useFocusEffect} from '@react-navigation/native';
-
-const MONTHS = getMonthNames();
-const CURRENT_YEAR = getCurrentYear();
-const CURRENT_MONTH_INDEX = new Date().getMonth();
+import {logRejection} from '../../utils/errorLog';
 
 const useHome = () => {
   const colors = useThemeColors();
   const [refreshing, setRefreshing] = useState(false);
-  const [availableYears, setAvailableYears] = useState<number[]>([CURRENT_YEAR]);
+  const {
+    selectedMonthIndex,
+    selectedYear,
+    selectedMonthName,
+    yearMonth,
+    isCurrentMonth,
+    currentYear,
+    canGoForward,
+    handleMonthYearSelect,
+    shiftMonth,
+  } = useMonthNavigation();
+  const [availableYears, setAvailableYears] = useState<number[]>(() => [currentYear]);
 
   const dispatch = useAppDispatch();
 
-  const selectedMonthIndex = useAppSelector(selectMonthIndex);
-  const selectedYear = useAppSelector(selectYear);
-
   const allTransactions = useAppSelector(selectExpenseData);
-  const sortedTransactions = useMemo(() => sortByDateDesc(allTransactions as Expense[]), [allTransactions]);
+  const sortedTransactions = useMemo(() => sortByDateDesc(allTransactions), [allTransactions]);
 
-  const userName = useAppSelector(selectUserName);
+  const {userName} = useUserName();
   const userId = useAppSelector(selectUserId);
 
-  const selectedMonthName = MONTHS[selectedMonthIndex];
-  const yearMonth = `${selectedYear}-${getMonthNumber(selectedMonthName)}`;
-
   useEffect(() => {
-    dispatch(fetchUserData());
+    void dispatch(fetchUserData());
   }, [dispatch]);
 
   useEffect(() => {
     if (userId) {
-      dispatch(fetchCurrency());
-      dispatch(fetchCategories());
-      loadAvailableYears(userId).then(years => {
-        if (years.length > 0) {
-          setAvailableYears(years);
-        }
-      });
+      void dispatch(fetchCurrency());
+      void dispatch(fetchCategories());
+      logRejection(
+        loadAvailableYears(userId).then(years => {
+          if (years.length > 0) {
+            setAvailableYears(years);
+          }
+        }),
+      );
     }
   }, [dispatch, userId]);
 
+  // The month is refetched on EVERY focus deliberately: rows carry joined
+  // category name/icon/colour and the currency, which other screens edit
+  // (Categories tab, Settings) with no hook into this slice. One indexed month
+  // query per focus is cheaper than a stale label.
   useFocusEffect(
     useCallback(() => {
       if (userId) {
-        dispatch(invalidateExpenseCache());
-        dispatch(fetchExpensesByMonth(yearMonth));
-        dispatch(fetchBudgetsByMonth(yearMonth));
+        void dispatch(fetchExpensesByMonth(yearMonth));
+        void dispatch(fetchBudgetsByMonth(yearMonth));
       }
     }, [dispatch, userId, yearMonth]),
   );
 
-  const currentBudget = useAppSelector(selectCurrentBudget);
+  const currentBudget = useAppSelector(state => selectCurrentBudget(state, yearMonth));
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -75,34 +77,17 @@ const useHome = () => {
   useEffect(() => {
     if (!refreshing) return;
 
-    dispatch(invalidateExpenseCache());
-    dispatch(fetchExpensesByMonth(yearMonth)).finally(() => {
+    void dispatch(fetchExpensesByMonth(yearMonth)).finally(() => {
       setRefreshing(false);
     });
   }, [dispatch, refreshing, yearMonth]);
 
-  const isCurrentMonth = selectedYear === CURRENT_YEAR && selectedMonthIndex === CURRENT_MONTH_INDEX;
+  const monthTotals = useAppSelector(state => selectMonthTotals(state, formatDate(new Date(), 'YYYY-MM-DD')));
+  const totalSpent = monthTotals.total;
+  const transactionCount = monthTotals.count;
+  const todayTotal = isCurrentMonth ? monthTotals.today : 0;
 
-  const {totalSpent, transactionCount, todayTotal} = useMemo(() => {
-    const total = (allTransactions ?? []).reduce((sum: number, t: Expense) => sum + t.amount, 0);
-    const count = (allTransactions ?? []).length;
-
-    const todayStr = formatDate(new Date(), 'YYYY-MM-DD');
-    const today = isCurrentMonth
-      ? (allTransactions ?? []).reduce((sum: number, t: Expense) => (t.date.startsWith(todayStr) ? sum + t.amount : sum), 0)
-      : 0;
-
-    return {totalSpent: total, transactionCount: count, todayTotal: today};
-  }, [allTransactions, isCurrentMonth]);
-
-  const daysInMonth = useMemo(() => getDaysInMonth(selectedYear, selectedMonthName), [selectedYear, selectedMonthName]);
-
-  const handleMonthYearSelect = useCallback(
-    (monthIndex: number, year: number) => {
-      dispatch(setMonthSelection({monthIndex, year}));
-    },
-    [dispatch],
-  );
+  const daysInMonth = countDaysInMonth(selectedYear, selectedMonthIndex);
 
   return {
     colors,
@@ -121,9 +106,11 @@ const useHome = () => {
     transactionCount,
     todayTotal,
     isCurrentMonth,
+    canGoForward,
     daysInMonth,
     currentBudget,
     handleMonthYearSelect,
+    shiftMonth,
   };
 };
 

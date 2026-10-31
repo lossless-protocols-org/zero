@@ -1,4 +1,5 @@
 import type {NavigatorScreenParams} from '@react-navigation/native';
+import type {IsoDay} from '../domain/types';
 
 export type TabParamList = {
   HomeScreen: undefined;
@@ -7,62 +8,26 @@ export type TabParamList = {
   DebtsScreen: undefined;
 };
 
+/**
+ * Routes carry ids, never display copies (M19, v2.7.1): a name, amount or
+ * colour passed along goes stale the moment it is edited elsewhere. Screens
+ * read the current row.
+ */
 export type HomeStackParamList = {
   TabStack: NavigatorScreenParams<TabParamList>;
   SettingsScreen: undefined;
   DiagnosticsScreen: undefined;
   AddTransactionsScreen: undefined;
-  UpdateTransactionScreen: {
-    expenseId: string;
-    expenseTitle: string;
-    expenseDescription: string;
-    category: {name?: string; icon?: string; color?: string};
-    expenseDate: string;
-    expenseAmount: number;
-  };
+  UpdateTransactionScreen: {expenseId: string};
   AddCategoryScreen: undefined;
-  UpdateCategoryScreen: {
-    categoryId: string;
-    categoryName: string;
-    categoryIcon: string;
-    categoryColor: string;
-  };
-  EverydayTransactionScreen: {
-    dayTransactions?: Array<any>;
-    isDate: string;
-  };
-  CategoryTransactionScreen: {
-    categoryId: string;
-    categoryName: string;
-    categoryColor: string;
-    categoryIcon?: string;
-    yearMonth: string;
-    monthLabel: string;
-  };
+  UpdateCategoryScreen: {categoryId: string};
+  EverydayTransactionScreen: {isDate: IsoDay};
+  CategoryTransactionScreen: {categoryId: string; yearMonth: string};
   AddDebtorScreen: undefined;
-  IndividualDebtsScreen: {
-    debtorName: string;
-    debtorId: string;
-    debtorType: string;
-  };
-  AddDebtsScreen: {
-    debtorId: string;
-    debtorName: string;
-  };
-  UpdateDebtScreen: {
-    debtId: string;
-    debtDescription: string;
-    amount: number;
-    debtorName: string;
-    debtDate: string;
-    debtorId: string;
-    debtType: string;
-  };
-  UpdateDebtorScreen: {
-    debtorId: string;
-    debtorName: string;
-    debtorType: string;
-  };
+  IndividualDebtsScreen: {debtorId: string};
+  AddDebtsScreen: {debtorId: string};
+  UpdateDebtScreen: {debtId: string};
+  UpdateDebtorScreen: {debtorId: string};
 };
 
 export type OnboardingStackParamList = {
@@ -70,6 +35,6 @@ export type OnboardingStackParamList = {
   WelcomeScreen: undefined;
   ExistingUserScreen: undefined;
   PersonalizeScreen: undefined;
-  OnboardingScreen: undefined;
+  PickCategoriesScreen: undefined;
   ChooseCurrencyScreen: undefined;
 };

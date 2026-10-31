@@ -10,6 +10,39 @@ pathIgnorePatterns = [
   "__tests__/**",
   # imports @react-navigation/native → react-native Flow sources bun cannot parse; jest-only
   "src/utils/__tests__/navigationUtils.test.ts",
+  # imports lucide → react-native-svg → react-native Flow sources bun cannot parse; jest-only
+  "src/components/atoms/__tests__/IconRegistry.test.ts",
+  # imports the store → WatermelonDB's node adapter, which needs better-sqlite3; jest-only
+  "src/redux/__tests__/store.test.ts",
+  # imports react-native (Platform, Share) → Flow sources bun cannot parse; jest-only
+  "src/screens/SettingsScreen/__tests__/exportFiles.test.ts",
+  # uses jest.mock on the services barrel, which bun does not hoist; jest-only
+  "src/watermelondb/services/__tests__/availableYearsCache.test.ts",
+  # imports react-native (Platform, PermissionsAndroid) → Flow sources bun cannot parse; jest-only
+  "src/utils/__tests__/unhandledChains.test.ts",
+  # renders DialogProvider (react-native Modal) → Flow sources bun cannot parse; jest-only
+  "src/context/__tests__/DialogContext.test.tsx",
+  # uses jest.mock on DialogContext / react-i18next, which bun does not hoist; jest-only
+  "src/hooks/__tests__/useReportFailure.test.tsx",
+  "src/hooks/__tests__/useBudgetActions.test.tsx",
+  "src/hooks/__tests__/useUndoableDelete.test.tsx",
+  "src/hooks/__tests__/useRecord.test.tsx",
+  "src/hooks/__tests__/useUserName.test.tsx",
+  "src/hooks/__tests__/useCategoryForm.test.tsx",
+  "src/components/molecules/__tests__/settingsAndHeatmap.test.tsx",
+  "src/components/molecules/__tests__/dialogAccessibility.test.tsx",
+  "src/components/molecules/__tests__/categoryDonutKeys.test.tsx",
+  "src/components/atoms/__tests__/swipeableRowAccessibility.test.tsx",
+  # imports Icons → lucide → react-native-svg Flow sources bun cannot parse; jest-only
+  "src/components/atoms/__tests__/iconMirroring.test.tsx",
+  # renders gesture-handler / reanimated touchables → Flow sources bun cannot parse; jest-only
+  "src/components/atoms/__tests__/swipeTutorialTooltip.test.tsx",
+  "src/components/atoms/__tests__/dailyBudgetRow.test.tsx",
+  "src/components/atoms/__tests__/undoStrip.test.tsx",
+  # renders react-native touchables → Flow sources bun cannot parse; jest-only
+  "src/components/atoms/__tests__/MonthNavigator.test.tsx",
+  # jest.isolateModules (fresh install of the handler per test); bun has no equivalent; jest-only
+  "src/utils/__tests__/globalErrorHandler.test.ts",
   # vendored third-party docs, not our tests
   "references/**",
 ]

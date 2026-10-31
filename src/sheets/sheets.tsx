@@ -1,3 +1,4 @@
+import type {ThemeMode} from '../context/ThemeContext';
 import {registerSheet, SheetDefinition} from 'react-native-actions-sheet';
 import IconPickerSheet from './IconPickerSheet';
 import ColorPickerSheet from './ColorPickerSheet';
@@ -9,6 +10,8 @@ import ThemePickerSheet from './ThemePickerSheet';
 import WeekStartPickerSheet from './WeekStartPickerSheet';
 import LanguagePickerSheet from './LanguagePickerSheet';
 import BudgetSheet from './BudgetSheet';
+import type {BudgetScopeList} from '../utils/budgetScopes';
+import RowActionsSheet from './RowActionsSheet';
 
 registerSheet('icon-picker-sheet', IconPickerSheet);
 registerSheet('color-picker-sheet', ColorPickerSheet);
@@ -20,6 +23,7 @@ registerSheet('theme-picker-sheet', ThemePickerSheet);
 registerSheet('week-start-picker-sheet', WeekStartPickerSheet);
 registerSheet('language-picker-sheet', LanguagePickerSheet);
 registerSheet('budget-sheet', BudgetSheet);
+registerSheet('row-actions-sheet', RowActionsSheet);
 
 declare module 'react-native-actions-sheet' {
   interface Sheets {
@@ -65,8 +69,8 @@ declare module 'react-native-actions-sheet' {
     }>;
     'theme-picker-sheet': SheetDefinition<{
       payload: {
-        currentTheme?: string;
-        onSelect?: (theme: string) => void;
+        currentTheme?: ThemeMode;
+        onSelect?: (theme: ThemeMode) => void;
       };
     }>;
     'week-start-picker-sheet': SheetDefinition<{
@@ -83,13 +87,23 @@ declare module 'react-native-actions-sheet' {
     }>;
     'budget-sheet': SheetDefinition<{
       payload: {
-        currentAmount?: number;
         currencySymbol?: string;
         currencyCode?: string;
-        isRecurring?: boolean;
         monthLabel?: string;
-        onSave?: (amount: number, everyMonth: boolean) => void;
-        onRemove?: () => void;
+        /** Overall first (categoryId ''), then one entry per active category. */
+        scopes?: BudgetScopeList;
+        initialCategoryId?: string;
+        onSave?: (amount: number, everyMonth: boolean, categoryId?: string) => void;
+        onRemove?: (isRecurring: boolean, categoryId?: string) => void;
+      };
+    }>;
+    'row-actions-sheet': SheetDefinition<{
+      payload: {
+        title?: string;
+        editLabel?: string;
+        deleteLabel?: string;
+        onEdit?: () => void;
+        onDelete?: () => void;
       };
     }>;
   }

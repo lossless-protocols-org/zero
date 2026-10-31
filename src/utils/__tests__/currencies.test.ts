@@ -8,11 +8,7 @@
  */
 
 import currencies from '../../../assets/jsons/currencies.json';
-import {
-  formatAmountWithSymbol,
-  getCurrencyDecimals,
-  isCurrencySymbolSuffix,
-} from '../numberUtils';
+import {formatAmountWithSymbol, getCurrencyDecimals, isCurrencySymbolSuffix} from '../numberUtils';
 
 /** Codes ISO 4217 retired; existing users' stored rows are unaffected, but
  * the picker must not offer them for new selections. */

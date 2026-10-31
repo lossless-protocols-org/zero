@@ -1,15 +1,18 @@
 import {useEffect, useRef} from 'react';
-import {InteractionManager, Platform, Share} from 'react-native';
+import {Share} from 'react-native';
+import {afterInteractions} from '../../utils/afterInteractions';
 import {useTranslation} from 'react-i18next';
 import {useDialog} from '../../context/DialogContext';
 import {
   formatErrorReport,
   getErrorLog,
   getLastCrashPromptedAt,
+  getLastPromptedMessage,
   getUnreportedFatal,
   setLastCrashPromptedAt,
+  setLastPromptedMessage,
 } from '../../utils/errorLog';
-import {getAppVersion} from '../../utils/getVersion';
+import {getReportMeta} from '../../utils/reportMeta';
 
 /**
  * Asks, once per crash, whether the user wants to share the previous launch's
@@ -39,33 +42,36 @@ const CrashReportPrompt = () => {
     askedRef.current = true;
 
     const entries = getErrorLog();
-    const fatal = getUnreportedFatal(entries, getLastCrashPromptedAt());
+    const lastPromptedAt = getLastCrashPromptedAt();
+    const fatal = getUnreportedFatal(entries, lastPromptedAt);
     if (!fatal) {
       return;
     }
-    // Whatever the user chooses, this crash is never asked about again.
+    // Whatever the user chooses, this entry is never asked about again.
     setLastCrashPromptedAt(fatal.timestamp);
+    // A crash since the last prompt decides the wording, even if a background
+    // error happened after it.
+    const crashed = entries.some(e => e.fatal && (!lastPromptedAt || e.timestamp > lastPromptedAt));
+    // A non-fatal error that repeats every session is asked about once, not every launch.
+    if (!crashed && getLastPromptedMessage() === fatal.message) {
+      return;
+    }
+    setLastPromptedMessage(fatal.message);
 
     // Let the first screen settle so the dialog doesn't fight the splash.
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = afterInteractions(() => {
       void (async () => {
         const wantsToShare = await showDialog({
           type: 'warning',
-          message: t('crashReport.message'),
+          // An unhandled rejection did not close the app; say what actually happened.
+          message: t(crashed ? 'crashReport.message' : 'crashReport.unhandledMessage'),
           okLabel: t('crashReport.share'),
           cancelLabel: t('crashReport.notNow'),
         });
         if (!wantsToShare) {
           return;
         }
-        const constants = Platform.constants as {Brand?: string; Model?: string; Release?: string};
-        const report = formatErrorReport(entries, {
-          appVersion: getAppVersion(),
-          os: Platform.OS,
-          osVersion: constants.Release ?? String(Platform.Version),
-          brand: constants.Brand,
-          model: constants.Model,
-        });
+        const report = formatErrorReport(entries, getReportMeta());
         try {
           await Share.share({message: report, title: t('crashReport.shareTitle')});
         } catch {

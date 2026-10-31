@@ -1,18 +1,14 @@
 import {Q} from '@nozbe/watermelondb';
+import type {Clause} from '@nozbe/watermelondb/QueryDescription';
+import {DEFAULTS} from '../../utils/sanitize';
 import {database} from '../database';
 import Expense from '../models/Expense';
 import Category from '../models/Category';
-
-// Type for expense data
-export interface ExpenseData {
-  id: string;
-  title: string;
-  amount: number;
-  description?: string;
-  categoryId: string;
-  userId: string;
-  date: string;
-}
+import {EXPENSE_YEARS_SQL, parseExpenseYears, type ExpenseYearRow} from './expenseYearsQuery';
+import {assertUserId} from './assertUserId';
+import {dayDateClauses, monthDateClauses} from './expenseDateRange';
+import type {ExpenseData} from '../../domain/types';
+export type {ExpenseData};
 
 // Extended expense type with populated category
 export interface ExpenseWithCategory extends ExpenseData {
@@ -35,22 +31,16 @@ const buildCategoryMap = async (userId: string): Promise<Map<string, CategoryInf
   // Intentionally queries ALL categories (no category_status filter) so that
   // expenses under soft-deleted categories still resolve their name/icon/color.
   // Do NOT add a status filter here — it would break historical categorization.
-  const categories = await database
-    .get<Category>('categories')
-    .query(Q.where('user_id', userId))
-    .fetch();
+  const categories = await database.get<Category>('categories').query(Q.where('user_id', userId)).fetch();
   return new Map(
     categories.map(cat => [
       cat.id,
-      {id: cat.id, name: cat.name, icon: cat.icon ?? '', color: cat.color ?? '#808080'},
+      {id: cat.id, name: cat.name, icon: cat.icon ?? '', color: cat.color ?? DEFAULTS.color},
     ]),
   );
 };
 
-const mapExpenseWithCategory = (
-  e: Expense,
-  categoryMap: Map<string, CategoryInfo>,
-): ExpenseWithCategory => ({
+const mapExpenseWithCategory = (e: Expense, categoryMap: Map<string, CategoryInfo>): ExpenseWithCategory => ({
   id: e.id,
   title: e.title,
   amount: e.amount,
@@ -61,15 +51,49 @@ const mapExpenseWithCategory = (
   category: categoryMap.get(e.categoryId),
 });
 
-const mapExpenseToData = (e: Expense): ExpenseData => ({
-  id: e.id,
-  title: e.title,
-  amount: e.amount,
-  description: e.description ?? '',
-  categoryId: e.categoryId,
-  userId: e.userId,
-  date: e.date,
+/**
+ * An expense row as SQLite holds it (column names; keep in step with schema.ts
+ * and models/Expense.ts). The list reads below skip Model hydration: Redux only
+ * ever gets plain objects, and hydrating ~170 models was most of a month read
+ * on the Moto once the index fixed the SQL (2.7.1 gate).
+ */
+interface RawExpenseRow {
+  id: string;
+  title: string;
+  amount: number;
+  description: string | null;
+  category_id: string;
+  user_id: string;
+  date: string;
+}
+
+// unsafeFetchRaw is typed any[]; the rows are schema.ts's expenses table, and
+// WatermelonDB's query still leaves out soft-deleted rows.
+const fetchExpenseRows = (...clauses: Clause[]): Promise<RawExpenseRow[]> =>
+  database
+    .get<Expense>('expenses')
+    .query(...clauses)
+    .unsafeFetchRaw();
+
+const mapRawExpense = (row: RawExpenseRow, categoryMap: Map<string, CategoryInfo>): ExpenseWithCategory => ({
+  id: row.id,
+  title: row.title,
+  amount: row.amount,
+  description: row.description ?? '',
+  categoryId: row.category_id,
+  userId: row.user_id,
+  date: row.date,
+  category: categoryMap.get(row.category_id),
 });
+
+/** One expense with its category, or null when the id no longer exists (M19). */
+export const getExpenseById = async (expenseId: string): Promise<ExpenseWithCategory | null> => {
+  const [expense] = await database.get<Expense>('expenses').query(Q.where('id', expenseId)).fetch();
+  if (!expense) {
+    return null;
+  }
+  return mapExpenseWithCategory(expense, await buildCategoryMap(expense.userId));
+};
 
 /**
  * Creates a new expense
@@ -82,6 +106,7 @@ export const createExpense = async (
   categoryId: string,
   date: string,
 ): Promise<string> => {
+  assertUserId(userId, 'expense');
   let expenseId = '';
   await database.write(async () => {
     // Uses WatermelonDB auto-generated ID (library default). This is intentional;
@@ -143,69 +168,26 @@ export const deleteExpenseById = async (expenseId: string): Promise<void> => {
 };
 
 /**
- * Gets all expenses by user ID
- */
-export const getAllExpensesByUserId = async (
-  userId: string,
-): Promise<ExpenseData[]> => {
-  const expenses = await database
-    .get<Expense>('expenses')
-    .query(Q.where('user_id', userId))
-    .fetch();
-  return expenses.map(mapExpenseToData);
-};
-
-/**
- * Gets all expenses by user ID with category data populated
- */
-export const getAllExpensesByUserIdWithCategory = async (
-  userId: string,
-): Promise<ExpenseWithCategory[]> => {
-  const expenses = await database
-    .get<Expense>('expenses')
-    .query(Q.where('user_id', userId))
-    .fetch();
-
-  const categoryMap = await buildCategoryMap(userId);
-  return expenses.map(e => mapExpenseWithCategory(e, categoryMap));
-};
-
-/**
  * Gets all expenses by user ID and date with category data
  */
-export const getAllExpensesByDate = async (
-  userId: string,
-  targetDate: string,
-): Promise<ExpenseWithCategory[]> => {
-  const expenses = await database
-    .get<Expense>('expenses')
-    .query(
-      Q.where('user_id', userId),
-      Q.where('date', Q.like(`${Q.sanitizeLikeString(targetDate)}%`)),
-    )
-    .fetch();
-
-  const categoryMap = await buildCategoryMap(userId);
-  return expenses.map(e => mapExpenseWithCategory(e, categoryMap));
+export const getAllExpensesByDate = async (userId: string, targetDate: string): Promise<ExpenseWithCategory[]> => {
+  const [rows, categoryMap] = await Promise.all([
+    fetchExpenseRows(Q.where('user_id', userId), ...dayDateClauses(targetDate)),
+    buildCategoryMap(userId),
+  ]);
+  return rows.map(row => mapRawExpense(row, categoryMap));
 };
 
 /**
- * Gets all expenses for a user in a specific month (YYYY-MM prefix match)
+ * Gets all expenses for a user in a specific month: an index range on
+ * (user_id, date) since schema v4 (see expenseDateRange.ts).
  */
-export const getAllExpensesByMonth = async (
-  userId: string,
-  yearMonth: string,
-): Promise<ExpenseWithCategory[]> => {
-  const expenses = await database
-    .get<Expense>('expenses')
-    .query(
-      Q.where('user_id', userId),
-      Q.where('date', Q.like(`${Q.sanitizeLikeString(yearMonth)}%`)),
-    )
-    .fetch();
-
-  const categoryMap = await buildCategoryMap(userId);
-  return expenses.map(e => mapExpenseWithCategory(e, categoryMap));
+export const getAllExpensesByMonth = async (userId: string, yearMonth: string): Promise<ExpenseWithCategory[]> => {
+  const [rows, categoryMap] = await Promise.all([
+    fetchExpenseRows(Q.where('user_id', userId), ...monthDateClauses(yearMonth)),
+    buildCategoryMap(userId),
+  ]);
+  return rows.map(row => mapRawExpense(row, categoryMap));
 };
 
 /**
@@ -216,56 +198,22 @@ export const getAllExpensesByCategoryAndMonth = async (
   categoryId: string,
   yearMonth: string,
 ): Promise<ExpenseWithCategory[]> => {
-  const expenses = await database
-    .get<Expense>('expenses')
-    .query(
-      Q.where('user_id', userId),
-      Q.where('category_id', categoryId),
-      Q.where('date', Q.like(`${Q.sanitizeLikeString(yearMonth)}%`)),
-    )
-    .fetch();
-
-  const categoryMap = await buildCategoryMap(userId);
-  return expenses.map(e => mapExpenseWithCategory(e, categoryMap));
+  const [rows, categoryMap] = await Promise.all([
+    fetchExpenseRows(Q.where('user_id', userId), Q.where('category_id', categoryId), ...monthDateClauses(yearMonth)),
+    buildCategoryMap(userId),
+  ]);
+  return rows.map(row => mapRawExpense(row, categoryMap));
 };
 
 /**
- * Gets distinct years that have expense data for a user.
- * Uses unsafeFetchRaw to avoid hydrating full model objects.
+ * Distinct years that have expenses, straight from SQLite (L5, v2.7.1): one
+ * `select distinct substr(date,1,4)` instead of fetching every row. Cached per
+ * user in `services/availableYearsCache`.
  */
-/**
- * Distinct years that have expenses.
- *
- * This scans the user's expense rows, but via `unsafeFetchRaw` — no models are
- * hydrated, so it reads plain objects straight from SQLite. On a personal
- * expense database (hundreds to a few thousand rows) that is cheap, and the
- * result is cached per user in `utils/availableYearsCache`, so it runs once
- * per session rather than per render.
- *
- * A `SELECT DISTINCT substr(date,1,4)` via `Q.unsafeSqlQuery` would read fewer
- * rows, but it is SQLite-adapter-specific and only pays off at a dataset size
- * this app does not reach. Revisit only if profiling on a real database shows
- * this in a hot path.
- */
-export const getAvailableExpenseYears = async (
-  userId: string,
-): Promise<number[]> => {
-  const raws = await database
+export const getAvailableExpenseYears = async (userId: string): Promise<number[]> => {
+  const rows: ExpenseYearRow[] = await database
     .get<Expense>('expenses')
-    .query(Q.where('user_id', userId))
+    .query(Q.unsafeSqlQuery(EXPENSE_YEARS_SQL, [userId]))
     .unsafeFetchRaw();
-
-  const years = new Set<number>();
-  for (const r of raws) {
-    const dateStr = (r as {date?: string}).date;
-    if (dateStr) {
-      const year = Number.parseInt(dateStr.substring(0, 4), 10);
-      if (!Number.isNaN(year)) {
-        years.add(year);
-      }
-    }
-  }
-
-  return Array.from(years).sort((a, b) => a - b);
+  return parseExpenseYears(rows);
 };
-

@@ -2,6 +2,7 @@ import React, {useCallback, useMemo} from 'react';
 import {TouchableOpacity, View} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import Icon from '../../components/atoms/Icons';
+import {MonthNavigator} from '../../components/atoms/MonthNavigator';
 import {navigate} from '../../utils/navigationUtils';
 import TransactionList from '../../components/molecules/TransactionList';
 import HeaderContainer from '../../components/molecules/HeaderContainer';
@@ -14,8 +15,15 @@ import EmptyState from '../../components/atoms/EmptyState';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {SheetManager} from 'react-native-actions-sheet';
 import DailyBudgetRow from '../../components/atoms/DailyBudgetRow';
+import {DataErrorBanner} from '../../components/atoms/DataErrorBanner';
+import {useDataError} from '../../hooks/useDataError';
 import {gs, hitSlop} from '../../styles/globalStyles';
 import {computeDailyAllowance} from '../../utils/budgetMath';
+import {formatPercent} from '../../utils/numberUtils';
+import {markTimeToInteractive} from '../../utils/startupMarker';
+
+/** Thunk domains Home loads from; a failure in any of them shows the banner. */
+const HOME_DOMAINS = ['expense', 'budget', 'user', 'currency', 'category'];
 
 const HomeScreen = () => {
   const {
@@ -33,13 +41,18 @@ const HomeScreen = () => {
     transactionCount,
     todayTotal,
     isCurrentMonth,
+    canGoForward,
     daysInMonth,
     currentBudget,
     handleMonthYearSelect,
+    shiftMonth,
   } = useHome();
   const {t} = useTranslation();
   const formatAmount = useFormatAmount();
-  const {shouldShowTutorial, tutorialRef, dismissTutorial} = useSwipeTutorial({screen: 'home', itemCount: sortedTransactions.length});
+  const {shouldShowTutorial, tutorialRef, dismissTutorial} = useSwipeTutorial({
+    screen: 'home',
+    itemCount: sortedTransactions.length,
+  });
 
   const openMonthPicker = useCallback(() => {
     void SheetManager.show('month-year-picker-sheet', {
@@ -68,29 +81,35 @@ const HomeScreen = () => {
   const listHeader = useMemo(
     () => (
       <View style={gs.mx16}>
+        <DataErrorBanner domains={HOME_DOMAINS} />
         <TouchableOpacity
           onPress={openMonthPicker}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`${selectedMonthName} ${selectedYear}`}
+          accessibilityHint={t('sheets.selectMonthYear')}
           style={[gs.px14, gs.py12, gs.rounded12, {backgroundColor: colors.accentGreen}]}>
           <View style={gs.rowBetweenCenter}>
-            <View style={[gs.rowCenter, gs.gap6]}>
-              <PrimaryText size={14} weight="semibold" color={colors.buttonText}>
-                {selectedMonthName} {selectedYear}
-              </PrimaryText>
-              <Icon name="chevron-down" size={14} color={colors.buttonText} />
-            </View>
+            {/* The whole card opens the picker; the chevrons step one month. */}
+            <MonthNavigator
+              label={`${selectedMonthName} ${selectedYear}`}
+              canGoForward={canGoForward}
+              onShift={shiftMonth}
+            />
             <PrimaryText size={20} weight="bold" variant="number" color={colors.buttonText}>
               {formatAmount(totalSpent)}
             </PrimaryText>
           </View>
           <View style={[gs.rowCenter, gs.gap8, gs.mt4]}>
-            <PrimaryText size={11} color={colors.buttonText} variant="number" style={{opacity: 0.7}}>
+            <PrimaryText size={11} color={colors.buttonText} variant="number" style={gs.opacity70}>
               {t('home.transactionCount', {count: transactionCount})}
             </PrimaryText>
             {todayTotal > 0 ? (
               <>
-                <PrimaryText size={11} color={colors.buttonText} style={{opacity: 0.7}}>·</PrimaryText>
-                <PrimaryText size={11} color={colors.buttonText} variant="number" style={{opacity: 0.7}}>
+                <PrimaryText size={11} color={colors.buttonText} style={gs.opacity70}>
+                  ·
+                </PrimaryText>
+                <PrimaryText size={11} color={colors.buttonText} variant="number" style={gs.opacity70}>
                   {t('home.today')}: {formatAmount(todayTotal)}
                 </PrimaryText>
               </>
@@ -101,11 +120,15 @@ const HomeScreen = () => {
         {currentBudget ? (
           <View style={[gs.px14, gs.py10, gs.rounded12, gs.mt6, {backgroundColor: colors.secondaryAccent}]}>
             <View style={gs.rowBetweenCenter}>
-              <PrimaryText size={12} weight="semibold" variant="number" color={budgetExceeded ? colors.accentOrange : colors.primaryText}>
+              <PrimaryText
+                size={12}
+                weight="semibold"
+                variant="number"
+                color={budgetExceeded ? colors.accentOrange : colors.primaryText}>
                 {formatAmount(Math.max(currentBudget.amount - totalSpent, 0))} {t('home.remaining')}
               </PrimaryText>
               <PrimaryText size={11} variant="number" color={colors.secondaryText}>
-                {budgetPct}%
+                {formatPercent(budgetPct)}
               </PrimaryText>
             </View>
             <View style={[gs.rounded4, gs.h4, gs.mt8, {backgroundColor: colors.secondaryContainerColor}]}>
@@ -121,22 +144,50 @@ const HomeScreen = () => {
               />
             </View>
             <View style={gs.mt6}>
-              <DailyBudgetRow dailyBudget={dailyBudget} dailyLeft={dailyLeft} isCurrentMonth={isCurrentMonth} colors={colors} formatAmount={formatAmount} t={t} />
+              <DailyBudgetRow
+                dailyBudget={dailyBudget}
+                dailyLeft={dailyLeft}
+                isCurrentMonth={isCurrentMonth}
+                colors={colors}
+                formatAmount={formatAmount}
+                t={t}
+              />
             </View>
           </View>
         ) : null}
       </View>
     ),
-    [selectedMonthName, selectedYear, totalSpent, transactionCount, todayTotal, isCurrentMonth, currentBudget, budgetPct, budgetExceeded, dailyBudget, dailyLeft, colors, openMonthPicker, formatAmount, t],
+    [
+      selectedMonthName,
+      selectedYear,
+      totalSpent,
+      transactionCount,
+      todayTotal,
+      isCurrentMonth,
+      canGoForward,
+      currentBudget,
+      budgetPct,
+      budgetExceeded,
+      dailyBudget,
+      dailyLeft,
+      colors,
+      openMonthPicker,
+      shiftMonth,
+      formatAmount,
+      t,
+    ],
   );
 
+  // A failed load is not "no transactions yet": the banner above says so.
+  const dataError = useDataError(HOME_DOMAINS);
   const listEmpty = useMemo(
-    () => (
-      <View style={gs.px16}>
-        <EmptyState colors={colors} type={'Transactions'} />
-      </View>
-    ),
-    [colors],
+    () =>
+      dataError ? undefined : (
+        <View style={gs.px16}>
+          <EmptyState colors={colors} type={'Transactions'} />
+        </View>
+      ),
+    [colors, dataError],
   );
 
   return (
@@ -156,9 +207,10 @@ const HomeScreen = () => {
           onRefresh={onRefresh}
           contentContainerStyle={gs.pb100}
           tutorialSwipeRef={tutorialRef}
+          onRowsCommitted={markTimeToInteractive}
         />
       </PrimaryView>
-      <View style={[gs.absolute, gs.bottom15, gs.right15, gs.zIndex1]}>
+      <View style={[gs.absolute, gs.bottom15, gs.end15, gs.zIndex1]}>
         <TouchableOpacity
           style={[gs.size50, gs.rounded8, gs.center, {backgroundColor: colors.secondaryBackground}]}
           onPress={() => navigate('AddTransactionsScreen')}

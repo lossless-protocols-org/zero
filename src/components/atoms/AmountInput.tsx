@@ -1,10 +1,9 @@
-import React, {useCallback} from 'react';
-import {StyleProp, TextInput, View, ViewStyle} from 'react-native';
+import React, {forwardRef, useCallback} from 'react';
+import {StyleProp, TextInput, View, ViewStyle, type ReturnKeyTypeOptions} from 'react-native';
 import PrimaryText from './PrimaryText';
 import useThemeColors from '../../hooks/useThemeColors';
-import {useAppSelector} from '../../redux/hooks';
-import {selectCurrencyCode, selectCurrencySymbol} from '../../redux/slice/currencyDataSlice';
-import {isCurrencySymbolSuffix} from '../../utils/numberUtils';
+import {useCurrency} from '../../hooks/useCurrency';
+import {getCurrencyDecimals, isCurrencySymbolSuffix} from '../../utils/numberUtils';
 import {normalizeAmountInput} from '../../utils/amountInput';
 import {gs} from '../../styles/globalStyles';
 
@@ -14,6 +13,9 @@ interface AmountInputProps {
   onBlur?: () => void;
   /** Outer container additions (e.g. the error-dependent bottom margin). */
   style?: StyleProp<ViewStyle>;
+  returnKeyType?: ReturnKeyTypeOptions;
+  onSubmitEditing?: () => void;
+  accessibilityLabel?: string;
 }
 
 /**
@@ -22,49 +24,63 @@ interface AmountInputProps {
  * hardcoded the symbol as a prefix, disagreeing with the (already
  * locale-correct) formatted display strings for suffix currencies.
  */
-const AmountInput: React.FC<AmountInputProps> = ({value, onChangeText, onBlur, style}) => {
-  const colors = useThemeColors();
-  // Numeric keyboards emit a comma as the decimal key in most of Europe and
-  // Latin America; every consumer parses with Number(), which needs a dot.
-  // Normalising here means the user sees the dot appear as they type.
-  const handleChangeText = useCallback(
-    (text: string) => onChangeText(normalizeAmountInput(text)),
-    [onChangeText],
-  );
-  const currencySymbol = useAppSelector(selectCurrencySymbol);
-  const currencyCode = useAppSelector(selectCurrencyCode);
-  const suffix = isCurrencySymbolSuffix(currencyCode);
+type TextInputHandle = React.ElementRef<typeof TextInput>;
 
-  const symbol = (
-    <PrimaryText size={15} variant="number" color={colors.secondaryText}>
-      {currencySymbol}
-    </PrimaryText>
-  );
+const AmountInput = forwardRef<TextInputHandle, AmountInputProps>(
+  ({value, onChangeText, onBlur, style, returnKeyType, onSubmitEditing, accessibilityLabel}, ref) => {
+    const colors = useThemeColors();
+    const {symbol: currencySymbol, code: currencyCode} = useCurrency();
+    const suffix = isCurrencySymbolSuffix(currencyCode);
+    // The currency's own precision: a yen has no decimals, a dinar has three.
+    // Extra digits are dropped as they are typed so what is shown is storable.
+    const decimals = getCurrencyDecimals(currencyCode);
 
-  return (
-    <View
-      style={[
-        gs.h48,
-        gs.itemsCenter,
-        gs.rounded12,
-        gs.row,
-        suffix ? gs.pr10 : gs.pl10,
-        {backgroundColor: colors.secondaryAccent},
-        style,
-      ]}>
-      {!suffix && symbol}
-      <TextInput
-        style={[gs.px15, gs.h48, gs.flex1, gs.numMedium, gs.noFontPadding, {color: colors.primaryText}]}
-        value={value}
-        onChangeText={handleChangeText}
-        placeholder={'0'}
-        onBlur={onBlur}
-        placeholderTextColor={colors.secondaryText}
-        keyboardType="decimal-pad"
-      />
-      {suffix && symbol}
-    </View>
-  );
-};
+    // Numeric keyboards emit a comma as the decimal key in most of Europe and
+    // Latin America; every consumer parses with Number(), which needs a dot.
+    // Normalising here means the user sees the dot appear as they type.
+    const handleChangeText = useCallback(
+      (text: string) => onChangeText(normalizeAmountInput(text, decimals)),
+      [onChangeText, decimals],
+    );
+
+    const symbol = (
+      <PrimaryText size={15} variant="number" color={colors.secondaryText}>
+        {currencySymbol}
+      </PrimaryText>
+    );
+
+    return (
+      <View
+        style={[
+          gs.minH48,
+          gs.itemsCenter,
+          gs.rounded12,
+          gs.row,
+          suffix ? gs.pr10 : gs.pl10,
+          gs.border1,
+          {backgroundColor: colors.secondaryAccent, borderColor: colors.inputBorder},
+          style,
+        ]}>
+        {!suffix && symbol}
+        <TextInput
+          ref={ref}
+          style={[gs.px15, gs.minH48, gs.flex1, gs.numMedium, gs.noFontPadding, {color: colors.primaryText}]}
+          value={value}
+          onChangeText={handleChangeText}
+          placeholder={'0'}
+          onBlur={onBlur}
+          placeholderTextColor={colors.secondaryText}
+          keyboardType={decimals === 0 ? 'number-pad' : 'decimal-pad'}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          accessibilityLabel={accessibilityLabel}
+        />
+        {suffix && symbol}
+      </View>
+    );
+  },
+);
+
+AmountInput.displayName = 'AmountInput';
 
 export default React.memo(AmountInput);

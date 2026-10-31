@@ -1,14 +1,14 @@
-import {TextInput, TouchableOpacity, View, useWindowDimensions} from 'react-native';
+import {Keyboard, TextInput, View, useWindowDimensions} from 'react-native';
 import React, {useCallback, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {SheetManager, SheetProps, ScrollView as SheetScrollView} from 'react-native-actions-sheet';
-import {FlashList} from '@shopify/flash-list';
 import useThemeColors from '../hooks/useThemeColors';
 import {CustomBottomSheet} from '../components/atoms/CustomBottomSheet';
 import PrimaryButton from '../components/atoms/PrimaryButton';
-import PrimaryText from '../components/atoms/PrimaryText';
+import CurrencySymbolPicker from '../components/molecules/CurrencySymbolPicker';
 import Icon from '../components/atoms/Icons';
 import currencies from '../../assets/jsons/currencies.json';
+import {filterCurrencies} from '../utils/currencySearch';
 import {gs} from '../styles/globalStyles';
 
 interface Currency {
@@ -25,21 +25,12 @@ const CurrencyPickerSheet: React.FC<SheetProps<'currency-picker-sheet'>> = React
   const [searchText, setSearchText] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(initialCurrency || null);
 
-  const filteredCurrencies = useMemo(() => {
-    if (!searchText) return currencies;
-    const searchItem = searchText.toLowerCase();
-    return currencies.filter(currency => {
-      const {code, name, symbol} = currency;
-      return (
-        code.toLowerCase().includes(searchItem) ||
-        name.toLowerCase().includes(searchItem) ||
-        symbol.toLowerCase().includes(searchItem)
-      );
-    });
-  }, [searchText]);
+  const filteredCurrencies = useMemo(() => filterCurrencies(currencies, searchText), [searchText]);
 
   const handleCurrencySelect = useCallback((currency: Currency) => {
     setSelectedCurrency(currency);
+    // Same as onboarding (S6, v2.7.1): picking ends the search and reveals Update.
+    Keyboard.dismiss();
   }, []);
 
   const handleConfirm = useCallback(() => {
@@ -53,50 +44,22 @@ const CurrencyPickerSheet: React.FC<SheetProps<'currency-picker-sheet'>> = React
     setSearchText('');
   }, []);
 
-  const renderCurrencyItem = useCallback(
-    ({item: currency}: {item: Currency}) => (
-      <TouchableOpacity
-        style={[
-          gs.flex1,
-          gs.h70,
-          gs.mx3,
-          gs.mb8,
-          gs.rounded8,
-          gs.border15,
-          gs.p8,
-          gs.justifyBetween,
-          {
-            backgroundColor:
-              selectedCurrency?.code === currency.code ? `${colors.accentGreen}40` : colors.secondaryAccent,
-            borderColor:
-              selectedCurrency?.code === currency.code ? colors.accentGreen : colors.secondaryContainerColor,
-          },
-        ]}
-        onPress={() => handleCurrencySelect(currency)}>
-        <View style={gs.rowBetweenCenter}>
-          <PrimaryText size={18} weight="semibold">{currency.symbol}</PrimaryText>
-          <PrimaryText size={11}>{currency.code}</PrimaryText>
-        </View>
-        <PrimaryText size={9}>{currency.name}</PrimaryText>
-      </TouchableOpacity>
-    ),
-    [selectedCurrency, colors, handleCurrencySelect],
-  );
-
   return (
     <CustomBottomSheet
       sheetId={props.sheetId}
       header={{
         title: t('sheets.selectCurrency'),
         showCloseButton: true,
-        onClosePress: () => void SheetManager.hide(props.sheetId),
+        onClosePress: () => {
+          void SheetManager.hide(props.sheetId);
+        },
       }}
       onClose={handleClose}
       gestureEnabled>
       <View style={[gs.px15, gs.pb10]}>
         <View
           style={[
-            gs.h48,
+            gs.minH48,
             gs.itemsCenter,
             gs.border2,
             gs.mt5,
@@ -109,7 +72,7 @@ const CurrencyPickerSheet: React.FC<SheetProps<'currency-picker-sheet'>> = React
           ]}>
           <Icon name="search" size={20} color={colors.primaryText} />
           <TextInput
-            style={[gs.px15, gs.h48, gs.wFull, gs.fontMedium, gs.noFontPadding, {color: colors.primaryText}]}
+            style={[gs.px15, gs.minH48, gs.wFull, gs.fontMedium, gs.noFontPadding, {color: colors.primaryText}]}
             value={searchText}
             onChangeText={setSearchText}
             placeholder={t('sheets.searchCurrency')}
@@ -117,17 +80,23 @@ const CurrencyPickerSheet: React.FC<SheetProps<'currency-picker-sheet'>> = React
           />
         </View>
 
-        <View style={[gs.my10, {height: screenHeight * 0.42}]}>
-          <FlashList
-            renderScrollComponent={SheetScrollView}
-            data={filteredCurrencies}
-            renderItem={renderCurrencyItem}
-            numColumns={3}
-            keyExtractor={(currency: Currency) => currency.code}
-          />
-        </View>
+        <CurrencySymbolPicker
+          filteredCurrencies={filteredCurrencies}
+          selectedCurrency={selectedCurrency}
+          handleCurrencySelect={handleCurrencySelect}
+          scrollEnabled
+          renderScrollComponent={SheetScrollView}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          style={[gs.my10, {height: screenHeight * 0.42}]}
+        />
 
-        <PrimaryButton onPress={handleConfirm} colors={colors} buttonTitle={t('common.update')} disabled={!selectedCurrency} />
+        <PrimaryButton
+          onPress={handleConfirm}
+          colors={colors}
+          buttonTitle={t('common.update')}
+          disabled={!selectedCurrency}
+        />
       </View>
     </CustomBottomSheet>
   );

@@ -7,9 +7,10 @@ import PrimaryButton from '../../components/atoms/PrimaryButton';
 import Carousel from '../../components/atoms/Carousel';
 import useWelcome from './useWelcome';
 import {gs} from '../../styles/globalStyles';
+import {logRejection} from '../../utils/errorLog';
 
 const WelcomeScreen = () => {
-  const {colors, handleAlreadyUser, handleNewUser} = useWelcome();
+  const {colors, isBusy, handleAlreadyUser, handleNewUser} = useWelcome();
   const {t} = useTranslation();
 
   return (
@@ -29,8 +30,18 @@ const WelcomeScreen = () => {
       <Carousel />
 
       <View style={gs.gap12}>
-        <PrimaryButton onPress={handleNewUser} colors={colors} buttonTitle={t('common.getStarted')} />
-        <PrimaryButton onPress={handleAlreadyUser} colors={colors} buttonTitle={t('backup.iHaveBackup')} variant="outline" />
+        <PrimaryButton
+          onPress={() => logRejection(handleNewUser())}
+          colors={colors}
+          buttonTitle={t('common.getStarted')}
+          loading={isBusy}
+        />
+        <PrimaryButton
+          onPress={handleAlreadyUser}
+          colors={colors}
+          buttonTitle={t('backup.iHaveBackup')}
+          variant="outline"
+        />
       </View>
     </PrimaryView>
   );

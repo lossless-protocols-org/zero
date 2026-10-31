@@ -1,10 +1,3 @@
-export {
-  ThemeProvider,
-  useTheme,
-  useThemeColors,
-  type ThemeColors,
-  type ThemeMode,
-  type ResolvedTheme,
-} from './ThemeContext';
+export {ThemeProvider, useTheme, useThemeColors, type ThemeColors, type ThemeMode} from './ThemeContext';
 
 export {DialogProvider, useDialog} from './DialogContext';

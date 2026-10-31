@@ -12,19 +12,12 @@ import Icon from '../../components/atoms/Icons';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {gs} from '../../styles/globalStyles';
 import {hexToRgba} from '../../utils/colorUtils';
+import {DataErrorBanner} from '../../components/atoms/DataErrorBanner';
 
 const CategoryTransactionScreen = () => {
   const route = useRoute<CategoryTransactionRouteProp>();
-  const {
-    colors,
-    transactions,
-    totalAmount,
-    categoryName,
-    categoryColor,
-    categoryIcon,
-    monthLabel,
-    yearMonth,
-  } = useCategoryTransaction(route);
+  const {colors, transactions, totalAmount, categoryName, categoryColor, categoryIcon, monthLabel, yearMonth} =
+    useCategoryTransaction(route);
   const {t} = useTranslation();
   const formatAmount = useFormatAmount();
 
@@ -36,7 +29,9 @@ const CategoryTransactionScreen = () => {
             <Icon name={categoryIcon || 'shapes'} size={18} color={categoryColor} />
           </View>
           <View style={gs.flex1}>
-            <PrimaryText size={11} color={colors.secondaryText}>{monthLabel}</PrimaryText>
+            <PrimaryText size={11} color={colors.secondaryText}>
+              {monthLabel}
+            </PrimaryText>
             <PrimaryText size={15} weight="semibold" variant="number">
               {formatAmount(totalAmount)}
             </PrimaryText>
@@ -71,6 +66,7 @@ const CategoryTransactionScreen = () => {
       <View style={[gs.mb20, gs.mt20]}>
         <AppHeader onPress={goBack} colors={colors} text={categoryName} />
       </View>
+      <DataErrorBanner domains={['expense']} />
       <TransactionList
         allExpenses={transactions}
         targetMonth={yearMonth}

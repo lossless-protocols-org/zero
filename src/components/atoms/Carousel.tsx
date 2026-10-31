@@ -1,5 +1,5 @@
 import React, {memo, useCallback, useRef, useState} from 'react';
-import {FlatList, useWindowDimensions, View, ViewToken} from 'react-native';
+import {FlatList, StyleSheet, useWindowDimensions, View, type ListViewToken} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import PrimaryText from './PrimaryText';
 import useThemeColors from '../../hooks/useThemeColors';
@@ -16,7 +16,7 @@ const SLIDES = [
 
 type Slide = (typeof SLIDES)[number];
 
-const SLIDE_IMAGES: Record<string, React.FC<{width: string; height: string}>> = {
+const SLIDE_IMAGES: Record<Slide['id'], React.FC<{width: string; height: string}>> = {
   '1': SvgImage,
   '2': SvgImage1,
   '3': SvgImage2,
@@ -38,7 +38,8 @@ const Carousel = () => {
 
   // Kept in a ref: FlatList treats a changed onViewableItemsChanged identity
   // as a fatal error, so this callback must be stable for the list's lifetime.
-  const onViewableItemsChanged = useRef(({viewableItems}: {viewableItems: Array<ViewToken>}) => {
+  // RN 0.88 renamed the exported type ViewToken → ListViewToken (same shape).
+  const onViewableItemsChanged = useRef(({viewableItems}: {viewableItems: Array<ListViewToken>}) => {
     const first = viewableItems[0];
     if (first?.index != null) {
       setActiveIndex(first.index);
@@ -87,11 +88,8 @@ const Carousel = () => {
               style={[
                 gs.m3,
                 gs.roundedFull,
-                {
-                  backgroundColor: isActive ? colors.primaryText : colors.secondaryAccent,
-                  width: isActive ? 8 : 6,
-                  height: isActive ? 8 : 6,
-                },
+                isActive ? styles.activeDot : styles.dot,
+                {backgroundColor: isActive ? colors.primaryText : colors.secondaryAccent},
               ]}
             />
           );
@@ -102,3 +100,8 @@ const Carousel = () => {
 };
 
 export default memo(Carousel);
+
+const styles = StyleSheet.create({
+  dot: {width: 6, height: 6},
+  activeDot: {width: 8, height: 8},
+});

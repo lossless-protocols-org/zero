@@ -1,7 +1,8 @@
 import {StyleSheet} from 'react-native';
 
-// Standard hitSlop for touch targets (Apple HIG: 44pt, Android: 48dp)
-export const hitSlop = {top: 10, bottom: 10, left: 10, right: 10};
+// Standard hitSlop for touch targets (Apple HIG: 44pt, Android: 48dp): an
+// 18 pt icon plus 14 on each side is 46 (M30; it was 10, i.e. 38).
+export const hitSlop = {top: 14, bottom: 14, left: 14, right: 14};
 
 export const gs = StyleSheet.create({
   // LAYOUT - Flex
@@ -66,6 +67,7 @@ export const gs = StyleSheet.create({
   mb6: {marginBottom: 6},
   mb8: {marginBottom: 8},
   mb10: {marginBottom: 10},
+  mb12: {marginBottom: 12},
   mb15: {marginBottom: 15},
   mb20: {marginBottom: 20},
   mb30: {marginBottom: 30},
@@ -259,6 +261,9 @@ export const gs = StyleSheet.create({
   opacity0: {opacity: 0},
   opacity50: {opacity: 0.5},
   opacity60: {opacity: 0.6},
+  opacity70: {opacity: 0.7},
+  /** A control that is shown but unavailable (a greyed chevron or month). */
+  dimmed: {opacity: 0.35},
   opacity100: {opacity: 1},
 
   // OVERFLOW
@@ -279,6 +284,7 @@ export const gs = StyleSheet.create({
   minW70: {minWidth: 70},
   minH60: {minHeight: 60},
   minH200: {minHeight: 200},
+  size6: {width: 6, height: 6},
   size10: {width: 10, height: 10},
   size16: {width: 16, height: 16},
   size20: {width: 20, height: 20},
@@ -315,17 +321,19 @@ export const gs = StyleSheet.create({
   // BORDER
 
   borderBottom1: {borderBottomWidth: 1},
+  borderBottom05: {borderBottomWidth: 0.5},
   borderBottom08: {borderBottomWidth: 0.8},
+  /** Hairline rule; colour it at the call site. */
+  hairline: {height: 0.5},
   borderTop08: {borderTopWidth: 0.8},
   border15: {borderWidth: 1.5},
 
   // POSITION OFFSETS
 
   bottom15: {bottom: 15},
-  right15: {right: 15},
+  // Logical: the trailing edge, which is the left in a right-to-left layout (M32).
+  end15: {end: 15},
   bottom15p: {bottom: '15%'},
-  left0: {left: 0},
-  right0: {right: 0},
 
   // TEXT SPECIFIC
 
@@ -335,6 +343,21 @@ export const gs = StyleSheet.create({
 
   selfEnd: {alignSelf: 'flex-end'},
   selfStart: {alignSelf: 'flex-start'},
+
+  // WIDTH CAPS
+
+  /** Chip and label text that must truncate rather than push neighbours. */
+  maxW160: {maxWidth: 160},
+  maxW220: {maxWidth: 220},
+  /** Takes no space (a hidden sheet indicator). */
+  size0: {width: 0, height: 0},
+
+  // MINIMUM HEIGHTS (M30): grow with the OS font size instead of clipping it.
+
+  /** The smallest comfortable touch target. */
+  minTouch: {minHeight: 44, justifyContent: 'center'},
+  minH48: {minHeight: 48},
+  minH80: {minHeight: 80},
 });
 
 export default gs;

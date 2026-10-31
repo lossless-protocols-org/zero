@@ -1,12 +1,15 @@
 import {
   appendErrorLog,
+  buildErrorMailto,
   clearErrorLog,
   formatErrorReport,
   getErrorLog,
   getUnreportedFatal,
+  MAILTO_BODY_MAX_CHARS,
   MAX_STACK_CHARS,
   type ErrorLogEntry,
 } from '../errorLog';
+import {SUPPORT_EMAIL} from '../../constants/links';
 
 const entry = (overrides: Partial<ErrorLogEntry>): ErrorLogEntry => ({
   timestamp: '2026-10-18T10:00:00.000Z',
@@ -81,6 +84,46 @@ describe('formatErrorReport', () => {
   });
 });
 
+describe('buildErrorMailto', () => {
+  const meta = {appVersion: '2.6.8', os: 'android', osVersion: '15', brand: 'motorola', model: 'moto g84 5G'};
+
+  const decode = (url: string) => {
+    const [, query] = url.split('?');
+    const params = new URLSearchParams(query);
+    return {subject: params.get('subject') ?? '', body: params.get('body') ?? ''};
+  };
+
+  it('addresses the support inbox and names version, OS and device in the subject', () => {
+    const url = buildErrorMailto([entry({})], meta);
+    expect(url.startsWith(`mailto:${SUPPORT_EMAIL}?`)).toBe(true);
+    expect(decode(url).subject).toBe('zero 2.6.8 · android 15 · motorola moto g84 5G · error report');
+  });
+
+  it('carries the same report text the share sheet gets, newline-safe', () => {
+    const url = buildErrorMailto([entry({})], meta);
+    const {body} = decode(url);
+    expect(body).toBe(formatErrorReport([entry({})], meta));
+    expect(body).toContain('goBack@1:1924824');
+    expect(url).not.toContain('\n');
+  });
+
+  it('bounds the body so a long log cannot exceed what mail clients accept', () => {
+    const big = Array.from({length: 20}, (_, i) =>
+      entry({timestamp: `2026-10-18T10:${String(i).padStart(2, '0')}:00.000Z`, stack: 'x'.repeat(MAX_STACK_CHARS)}),
+    );
+    const {body} = decode(buildErrorMailto(big, meta));
+    expect(body.length).toBeLessThanOrEqual(MAILTO_BODY_MAX_CHARS + 120);
+    expect(body).toContain('[truncated');
+    // newest entry survives the cut — it is the one the user is writing about
+    expect(body).toContain('2026-10-18T10:19:00.000Z');
+  });
+
+  it('can address a different recipient without changing the report', () => {
+    const url = buildErrorMailto([], meta, 'someone@example.com');
+    expect(url.startsWith('mailto:someone@example.com?')).toBe(true);
+  });
+});
+
 describe('appendErrorLog → formatErrorReport', () => {
   beforeEach(() => clearErrorLog());
 
@@ -92,8 +135,8 @@ describe('appendErrorLog → formatErrorReport', () => {
     appendErrorLog(error, true);
 
     const [stored] = getErrorLog();
-    expect(stored.stack).toContain('frame99@1:');
-    expect(stored.stack.length).toBeLessThanOrEqual(MAX_STACK_CHARS);
+    expect(stored?.stack).toContain('frame99@1:');
+    expect(stored?.stack.length).toBeLessThanOrEqual(MAX_STACK_CHARS);
 
     const report = formatErrorReport(getErrorLog(), {appVersion: '2.6.7', os: 'android', osVersion: '15'});
     expect(report).toContain('frame99@1:');
@@ -104,6 +147,6 @@ describe('appendErrorLog → formatErrorReport', () => {
     const error = new Error('boom');
     error.stack = 'x'.repeat(MAX_STACK_CHARS * 3);
     appendErrorLog(error, false);
-    expect(getErrorLog()[0].stack).toHaveLength(MAX_STACK_CHARS);
+    expect(getErrorLog()[0]?.stack).toHaveLength(MAX_STACK_CHARS);
   });
 });

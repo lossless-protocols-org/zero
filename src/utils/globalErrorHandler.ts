@@ -1,32 +1,47 @@
-import {appendErrorLog} from './errorLog';
+import {appendErrorLog, markRejectionHandled, recordUnhandledRejection} from './errorLog';
 
-const g = globalThis as any;
+// Read through `typeof`: React Native declares the global, but a test or
+// headless runtime may not install it, and a bare read would throw.
+const errorUtils = typeof ErrorUtils === 'undefined' ? undefined : ErrorUtils;
 
-const defaultHandler = g.ErrorUtils?.getGlobalHandler?.();
+/** Hermes' rejection tracker. React Native types `HermesInternal` only as `null | {}`. */
+interface RejectionTracker {
+  enablePromiseRejectionTracker: (options: {
+    allRejections: boolean;
+    onUnhandled: (id: number, rejection: unknown) => void;
+    onHandled: (id: number) => void;
+  }) => void;
+}
 
-g.ErrorUtils?.setGlobalHandler?.(
-  (error: Error, isFatal?: boolean) => {
-    appendErrorLog(error, !!isFatal);
+const hasRejectionTracker = (hermes: unknown): hermes is RejectionTracker =>
+  typeof hermes === 'object' &&
+  hermes !== null &&
+  'enablePromiseRejectionTracker' in hermes &&
+  typeof hermes.enablePromiseRejectionTracker === 'function';
 
-    if (__DEV__) {
-      console.error('[GlobalErrorHandler]', isFatal ? 'FATAL' : 'NON-FATAL', error);
-      defaultHandler?.(error, isFatal);
-      return;
-    }
+const defaultHandler = errorUtils?.getGlobalHandler();
 
-    // Non-fatal errors are recorded and swallowed on purpose: they are already
-    // captured above, and letting RN surface them in production would show a
-    // red box over a finance app for a recoverable problem.
-    if (!isFatal) {
-      return;
-    }
+errorUtils?.setGlobalHandler((error: Error, isFatal?: boolean) => {
+  appendErrorLog(error, !!isFatal);
 
-    // Fatals ALWAYS go to the default handler. Swallowing them (as this used
-    // to do on Android) left the app running in an undefined state with no
-    // crash and no restart — strictly worse than crashing.
+  if (__DEV__) {
+    console.error('[GlobalErrorHandler]', isFatal ? 'FATAL' : 'NON-FATAL', error);
     defaultHandler?.(error, isFatal);
-  },
-);
+    return;
+  }
+
+  // Non-fatal errors are recorded and swallowed on purpose: they are already
+  // captured above, and letting RN surface them in production would show a
+  // red box over a finance app for a recoverable problem.
+  if (!isFatal) {
+    return;
+  }
+
+  // Fatals ALWAYS go to the default handler. Swallowing them (as this used
+  // to do on Android) left the app running in an undefined state with no
+  // crash and no restart — strictly worse than crashing.
+  defaultHandler?.(error, isFatal);
+});
 
 /**
  * Unhandled promise rejections.
@@ -37,19 +52,32 @@ g.ErrorUtils?.setGlobalHandler?.(
  * silently lost. Install our own tracker for release builds only, which
  * therefore cannot clash with RN's dev one.
  */
-if (!__DEV__) {
-  g.HermesInternal?.enablePromiseRejectionTracker?.({
+const MAX_TRACKED_REJECTIONS = 100;
+
+const hermes = typeof HermesInternal === 'undefined' ? undefined : HermesInternal;
+if (!__DEV__ && hasRejectionTracker(hermes)) {
+  const loggedAt = new Map<number, string>();
+  hermes.enablePromiseRejectionTracker({
     allRejections: true,
-    onUnhandled: (_id: number, rejection: unknown) => {
-      const error =
-        rejection instanceof Error
-          ? rejection
-          : new Error(`Unhandled promise rejection: ${String(rejection)}`);
-      appendErrorLog(error, false);
+    onUnhandled: (id: number, rejection: unknown) => {
+      loggedAt.set(id, recordUnhandledRejection(rejection));
+      // Rejections never handled stay here; keep the map bounded (the log itself holds 20).
+      const oldest = loggedAt.size > MAX_TRACKED_REJECTIONS ? loggedAt.keys().next().value : undefined;
+      if (oldest !== undefined) {
+        loggedAt.delete(oldest);
+      }
     },
-    onHandled: () => {
-      // A rejection handled after the fact needs no action; the log entry
-      // stays as a record that it happened.
+    onHandled: (id: number) => {
+      // Handled after all: keep the entry as a record, but do not ask about it.
+      const timestamp = loggedAt.get(id);
+      loggedAt.delete(id);
+      if (timestamp) {
+        markRejectionHandled(timestamp);
+      }
     },
   });
+} else if (!__DEV__) {
+  // Without the tracker, release builds would lose every unhandled rejection
+  // silently; leave one line in Diagnostics saying so.
+  appendErrorLog(new Error('Promise rejection tracker unavailable: unhandled rejections are not recorded'), false);
 }

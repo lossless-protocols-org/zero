@@ -27,8 +27,11 @@ const ColorPickerSheet: React.FC<SheetProps<'color-picker-sheet'>> = React.memo(
   );
 
   const renderColorItem = useCallback(
-    ({item: color}: {item: string}) => (
+    ({item: color, index}: {item: string; index: number}) => (
       <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={t('sheets.colourOption', {index: index + 1, count: colorsList.length})}
+        accessibilityState={{selected: selectedColor === color}}
         style={[
           gs.m8,
           gs.center,
@@ -43,7 +46,7 @@ const ColorPickerSheet: React.FC<SheetProps<'color-picker-sheet'>> = React.memo(
         <View style={[gs.size36, gs.rounded18, {backgroundColor: color}]} />
       </TouchableOpacity>
     ),
-    [colorSize, selectedColor, colors.primaryText, handleSelectColor],
+    [colorSize, selectedColor, colors.primaryText, handleSelectColor, t, colorsList.length],
   );
 
   return (
@@ -53,7 +56,7 @@ const ColorPickerSheet: React.FC<SheetProps<'color-picker-sheet'>> = React.memo(
         title: t('sheets.selectColor'),
         showCloseButton: true,
         onClosePress: () => {
-          SheetManager.hide(props.sheetId);
+          void SheetManager.hide(props.sheetId);
         },
       }}
       gestureEnabled>

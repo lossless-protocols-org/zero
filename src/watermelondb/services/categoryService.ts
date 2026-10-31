@@ -2,17 +2,19 @@ import {Q} from '@nozbe/watermelondb';
 import {nanoid} from 'nanoid';
 import {database} from '../database';
 import Category from '../models/Category';
-import {sanitizeString, DEFAULTS} from '../../backend/sanitize';
+import {sanitizeString, DEFAULTS} from '../../utils/sanitize';
+import {assertUserId} from './assertUserId';
+import type {CategoryData} from '../../domain/types';
+export type {CategoryData};
 
-// Type for category data - all properties initialized for Hidden Class optimization
-export interface CategoryData {
-  id: string;
-  name: string;
-  categoryStatus: boolean;
-  userId: string;
-  icon: string;
-  color: string;
-}
+const toCategoryData = (c: Category): CategoryData => ({
+  id: c.id,
+  name: c.name,
+  categoryStatus: c.categoryStatus,
+  userId: c.userId,
+  icon: sanitizeString(c.icon, DEFAULTS.icon),
+  color: sanitizeString(c.color, DEFAULTS.color),
+});
 
 /**
  * Creates a new category
@@ -23,6 +25,7 @@ export const createCategory = async (
   icon: string | null,
   color: string | null,
 ): Promise<string> => {
+  assertUserId(userId, 'category');
   const id = nanoid(24);
   await database.write(async () => {
     await database.get<Category>('categories').create(cat => {
@@ -41,9 +44,7 @@ export const createCategory = async (
 /**
  * Soft deletes a category by ID (sets categoryStatus to false)
  */
-export const softDeleteCategoryById = async (
-  categoryId: string,
-): Promise<void> => {
+export const softDeleteCategoryById = async (categoryId: string): Promise<void> => {
   await database.write(async () => {
     const category = await database.get<Category>('categories').find(categoryId);
     await category.update(cat => {
@@ -80,20 +81,13 @@ export const updateCategoryById = async (
 /**
  * Gets all categories by user ID
  */
-export const getAllCategoriesByUserId = async (
-  userId: string,
-): Promise<CategoryData[]> => {
-  const categories = await database
-    .get<Category>('categories')
-    .query(Q.where('user_id', userId))
-    .fetch();
-  return categories.map(c => ({
-    id: c.id,
-    name: c.name,
-    categoryStatus: c.categoryStatus,
-    userId: c.userId,
-    icon: sanitizeString(c.icon, DEFAULTS.icon),
-    color: sanitizeString(c.color, DEFAULTS.color),
-  }));
+export const getAllCategoriesByUserId = async (userId: string): Promise<CategoryData[]> => {
+  const categories = await database.get<Category>('categories').query(Q.where('user_id', userId)).fetch();
+  return categories.map(toCategoryData);
 };
 
+/** One category (active or not), or null when the id no longer exists (M19). */
+export const getCategoryById = async (categoryId: string): Promise<CategoryData | null> => {
+  const [category] = await database.get<Category>('categories').query(Q.where('id', categoryId)).fetch();
+  return category ? toCategoryData(category) : null;
+};

@@ -21,10 +21,16 @@
  * digit; treating a comma as "thousands" here is what would make `12,50`
  * ambiguous, and guessing wrong means storing the wrong amount.
  */
-export const normalizeAmountInput = (text: string): string => {
+export const normalizeAmountInput = (text: string, maxDecimals?: number): string => {
   // Any comma the keyboard produced is a decimal separator in this context.
   const withDot = text.replace(/,/g, '.');
   const digitsAndDots = withDot.replace(/[^0-9.]/g, '');
+
+  // Zero-decimal currencies (JPY, KRW, VND, COP, …) have no fraction to type:
+  // a separator is dropped as it is typed, so the user sees that it did nothing.
+  if (maxDecimals === 0) {
+    return digitsAndDots.replace(/\./g, '');
+  }
 
   const firstDot = digitsAndDots.indexOf('.');
   if (firstDot === -1) {
@@ -34,6 +40,9 @@ export const normalizeAmountInput = (text: string): string => {
   // Keep the first separator, drop any extras rather than rejecting the whole
   // edit — rejecting made the field appear frozen when a key was double-tapped.
   const head = digitsAndDots.slice(0, firstDot + 1);
-  const tail = digitsAndDots.slice(firstDot + 1).replace(/\./g, '');
+  let tail = digitsAndDots.slice(firstDot + 1).replace(/\./g, '');
+  if (maxDecimals !== undefined && tail.length > maxDecimals) {
+    tail = tail.slice(0, maxDecimals);
+  }
   return head + tail;
 };

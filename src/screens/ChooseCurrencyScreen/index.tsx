@@ -1,4 +1,4 @@
-import {ScrollView, TextInput, View} from 'react-native';
+import {TextInput, View} from 'react-native';
 import React from 'react';
 import {useTranslation} from 'react-i18next';
 import Icon from '../../components/atoms/Icons';
@@ -8,17 +8,30 @@ import PrimaryView from '../../components/atoms/PrimaryView';
 import PrimaryText from '../../components/atoms/PrimaryText';
 import CurrencySymbolPicker from '../../components/molecules/CurrencySymbolPicker';
 import {gs} from '../../styles/globalStyles';
+import {logRejection} from '../../utils/errorLog';
 
 const ChooseCurrencyScreen = () => {
-  const {colors, search, filteredCurrencies, selectedCurrency, isSubmitting, handleCurrencySubmit, handleSearch, handleCurrencySelect} =
-    useChooseCurrency();
+  const {
+    colors,
+    search,
+    filteredCurrencies,
+    selectedCurrency,
+    isSubmitting,
+    handleCurrencySubmit,
+    handleSearch,
+    handleCurrencySelect,
+  } = useChooseCurrency();
   const {t} = useTranslation();
 
   return (
     <PrimaryView colors={colors}>
       <View style={gs.pt15p}>
-        <PrimaryText size={28} weight="bold">{t('chooseCurrency.title')}</PrimaryText>
-        <PrimaryText size={28} weight="bold">{t('chooseCurrency.titleSuffix')}</PrimaryText>
+        <PrimaryText size={28} weight="bold">
+          {t('chooseCurrency.title')}
+        </PrimaryText>
+        <PrimaryText size={28} weight="bold">
+          {t('chooseCurrency.titleSuffix')}
+        </PrimaryText>
       </View>
 
       <PrimaryText size={14} color={colors.secondaryText} style={gs.mt6}>
@@ -27,7 +40,7 @@ const ChooseCurrencyScreen = () => {
 
       <View
         style={[
-          gs.h48,
+          gs.minH48,
           gs.itemsCenter,
           gs.mt20,
           gs.mb15,
@@ -39,7 +52,7 @@ const ChooseCurrencyScreen = () => {
         ]}>
         <Icon name="search" size={18} color={colors.secondaryText} />
         <TextInput
-          style={[gs.px15, gs.h48, gs.wFull, gs.fontMedium, gs.noFontPadding, {color: colors.primaryText}]}
+          style={[gs.px15, gs.minH48, gs.wFull, gs.fontMedium, gs.noFontPadding, {color: colors.primaryText}]}
           value={search}
           onChangeText={handleSearch}
           placeholder={t('chooseCurrency.searchPlaceholder')}
@@ -47,22 +60,23 @@ const ChooseCurrencyScreen = () => {
         />
       </View>
 
-      {/* keyboardShouldPersistTaps + keyboardDismissMode replace the
-          screen-wide TouchableWithoutFeedback: they dismiss the keyboard
-          without taking the touch responder away from this ScrollView. */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
+      {/* The grid scrolls itself so FlashList virtualises it (S6, v2.7.1); a
+          wrapping ScrollView made it lay out all 153 cells. keyboardShouldPersistTaps
+          + keyboardDismissMode replace the screen-wide TouchableWithoutFeedback
+          (2.6.6): they dismiss the keyboard without taking the touch responder
+          away from the list, and a tap on a cell selects it on the first try. */}
+      <CurrencySymbolPicker
+        filteredCurrencies={filteredCurrencies}
+        selectedCurrency={selectedCurrency}
+        handleCurrencySelect={handleCurrencySelect}
+        scrollEnabled
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag">
-        <CurrencySymbolPicker
-          filteredCurrencies={filteredCurrencies}
-          selectedCurrency={selectedCurrency}
-          handleCurrencySelect={handleCurrencySelect}
-        />
-      </ScrollView>
+        keyboardDismissMode="on-drag"
+        style={gs.flex1}
+      />
 
       <PrimaryButton
-        onPress={handleCurrencySubmit}
+        onPress={() => logRejection(handleCurrencySubmit())}
         colors={colors}
         buttonTitle={t('common.continue')}
         disabled={!selectedCurrency || isSubmitting}

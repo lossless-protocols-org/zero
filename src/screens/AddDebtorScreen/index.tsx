@@ -2,7 +2,7 @@ import React from 'react';
 import DebtorEntry from '../../components/molecules/DebtorEntry';
 
 const AddDebtorScreen = () => {
-  return <DebtorEntry type={'Add'} />;
+  return <DebtorEntry />;
 };
 
 export default AddDebtorScreen;

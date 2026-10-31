@@ -81,3 +81,5 @@ yarn-error.log
 !.yarn/sdks
 !.yarn/versions
 /references
+# graphify knowledge graph (regenerated locally with `graphify update .`)
+graphify-out/

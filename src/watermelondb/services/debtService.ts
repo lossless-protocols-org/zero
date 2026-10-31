@@ -1,17 +1,26 @@
 import {Q} from '@nozbe/watermelondb';
 import {database} from '../database';
 import Debt from '../models/Debt';
+import {assertUserId} from './assertUserId';
+import {normalizeDebtType} from '../../utils/debtType';
+import type {DebtData, DebtType} from '../../domain/types';
+export type {DebtData};
 
-// Type for debt data
-export interface DebtData {
-  id: string;
-  description: string;
-  amount: number;
-  debtorId: string;
-  userId: string;
-  date: string;
-  type: string;
-}
+const toDebtData = (d: Debt): DebtData => ({
+  id: d.id,
+  description: d.description,
+  amount: d.amount,
+  debtorId: d.debtorId,
+  userId: d.userId,
+  date: d.date,
+  type: normalizeDebtType(d.type),
+});
+
+/** One debt, or null when the id no longer exists (M19). */
+export const getDebtById = async (debtId: string): Promise<DebtData | null> => {
+  const [debt] = await database.get<Debt>('debts').query(Q.where('id', debtId)).fetch();
+  return debt ? toDebtData(debt) : null;
+};
 
 /**
  * Creates a new debt
@@ -22,8 +31,9 @@ export const createDebt = async (
   description: string,
   debtorId: string,
   date: string,
-  type: string,
+  type: DebtType,
 ): Promise<string> => {
+  assertUserId(userId, 'debt');
   let debtId = '';
   await database.write(async () => {
     // Uses WatermelonDB auto-generated ID (library default). This is intentional;
@@ -49,7 +59,7 @@ export const updateDebtById = async (
   newAmount?: number,
   newDescription?: string,
   newDate?: string,
-  newType?: string,
+  newType?: DebtType,
 ): Promise<void> => {
   await database.write(async () => {
     const debt = await database.get<Debt>('debts').find(debtId);
@@ -81,62 +91,20 @@ export const deleteDebtById = async (debtId: string): Promise<void> => {
 };
 
 /**
- * Deletes all debts by debtor ID
- */
-export const deleteAllDebtsByDebtorId = async (
-  debtorId: string,
-): Promise<void> => {
-  await database.write(async () => {
-    const debts = await database
-      .get<Debt>('debts')
-      .query(Q.where('debtor_id', debtorId))
-      .fetch();
-
-    // Use batch operation for better performance
-    await database.batch(...debts.map(debt => debt.prepareDestroyPermanently()));
-  });
-};
-
-/**
  * Gets all debts by user ID
  */
-export const getAllDebtsByUserId = async (
-  userId: string,
-): Promise<DebtData[]> => {
-  const debts = await database
-    .get<Debt>('debts')
-    .query(Q.where('user_id', userId))
-    .fetch();
-  return debts.map(d => ({
-    id: d.id,
-    description: d.description,
-    amount: d.amount,
-    debtorId: d.debtorId,
-    userId: d.userId,
-    date: d.date,
-    type: d.type,
-  }));
+export const getAllDebtsByUserId = async (userId: string): Promise<DebtData[]> => {
+  const debts = await database.get<Debt>('debts').query(Q.where('user_id', userId)).fetch();
+  return debts.map(toDebtData);
 };
 
 /**
  * Gets all debts by user ID and debtor ID
  */
-export const getAllDebtsByUserIdAndDebtorId = async (
-  userId: string,
-  debtorId: string,
-): Promise<DebtData[]> => {
+export const getAllDebtsByUserIdAndDebtorId = async (userId: string, debtorId: string): Promise<DebtData[]> => {
   const debts = await database
     .get<Debt>('debts')
     .query(Q.where('user_id', userId), Q.where('debtor_id', debtorId))
     .fetch();
-  return debts.map(d => ({
-    id: d.id,
-    description: d.description,
-    amount: d.amount,
-    debtorId: d.debtorId,
-    userId: d.userId,
-    date: d.date,
-    type: d.type,
-  }));
+  return debts.map(toDebtData);
 };
-

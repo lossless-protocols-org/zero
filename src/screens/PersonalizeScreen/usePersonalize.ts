@@ -2,34 +2,43 @@ import {useState, useCallback} from 'react';
 import useThemeColors from '../../hooks/useThemeColors';
 import {createUser} from '../../watermelondb/services';
 import {navigate} from '../../utils/navigationUtils';
-import {nameSchema} from '../../utils/validationSchema';
+import {nameSchema} from '../../i18n/validationSchema';
+import {DEFAULT_USER_NAME} from '../../i18n/displayNames';
+import {useReportFailure} from '../../hooks/useReportFailure';
 
 const usePersonalize = () => {
   const colors = useThemeColors();
   const [name, setName] = useState('');
 
+  // Onboarding writes used to fail silently (a __DEV__ console only): the
+  // Continue tap did nothing and the user was stuck with no explanation (B5).
+  const reportSaveFailure = useReportFailure('onboarding.saveFailed');
+
   const handleSubmit = useCallback(async () => {
     try {
       await nameSchema.parseAsync(name);
-      await createUser(name, '');
-      navigate('OnboardingScreen');
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error saving user data:', error);
-      }
+    } catch {
+      // The input already shows the validation message; nothing to report.
+      return;
     }
-  }, [name]);
+    try {
+      await createUser(name, '');
+    } catch (error) {
+      await reportSaveFailure(error);
+      return;
+    }
+    navigate('PickCategoriesScreen');
+  }, [name, reportSaveFailure]);
 
   const handleSkip = useCallback(async () => {
     try {
-      await createUser('User', '');
-      navigate('OnboardingScreen');
+      await createUser(DEFAULT_USER_NAME, '');
     } catch (error) {
-      if (__DEV__) {
-        console.error('Error saving demo user data:', error);
-      }
+      await reportSaveFailure(error);
+      return;
     }
-  }, []);
+    navigate('PickCategoriesScreen');
+  }, [reportSaveFailure]);
 
   return {
     colors,

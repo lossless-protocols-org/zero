@@ -1,4 +1,4 @@
-import {IconName} from '../components/atoms/IconRegistry';
+import type {IconName} from '../components/atoms/IconRegistry';
 
 export const CATEGORY_ICONS: IconName[] = [
   // Food & Dining

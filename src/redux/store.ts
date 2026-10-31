@@ -1,40 +1,23 @@
 import {configureStore} from '@reduxjs/toolkit';
-import {persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER} from 'redux-persist';
 import rootReducer from './rootReducer';
-import mmkvStorage from './mmkvStorage';
+import {thunkRejectionMiddleware} from './thunkRejectionMiddleware';
 
-// Hybrid persistence strategy:
-// - redux-persist (MMKV-backed): nothing today. monthSelection USED to be
-//   whitelisted, but rehydrating it meant the app opened on whatever month
-//   the user last viewed — weeks-old sometimes. The slice's initial state is
-//   the device's current month, so an empty whitelist gives every cold start
-//   today's month while in-session navigation still works normally.
-// - Sync MMKV via StorageService: isOnboarded, weekStartDay — read at init
-// - ThemeContext + MMKV: theme preference — managed outside Redux entirely
+// Persistence lives outside Redux (S4, v2.7.1 removed redux-persist, which
+// ran with an empty whitelist and only delayed the first render):
+// - Sync MMKV via StorageService: isOnboarded, weekStartDay, locale and swipe
+//   preferences — read synchronously when needed
+// - ThemeContext + MMKV: theme preference
 // - WatermelonDB: all domain data (expenses, categories, etc.) — source of truth
-const persistConfig = {
-  key: 'root',
-  storage: mmkvStorage,
-  whitelist: [] as string[],
-};
-
-const persistedReducer = persistReducer(persistConfig, rootReducer);
-
+// monthSelection is deliberately NOT persisted: its initial state is the
+// device's current month, so every cold start opens on today's month.
 const store = configureStore({
-  reducer: persistedReducer,
-  middleware: getDefaultMiddleware =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-      },
-    }),
+  reducer: rootReducer,
+  middleware: getDefaultMiddleware => getDefaultMiddleware().concat(thunkRejectionMiddleware),
   enhancers: getDefaultEnhancers =>
     getDefaultEnhancers({
       autoBatch: {type: 'tick'},
     }),
 });
-
-export const persistor = persistStore(store);
 
 export type AppDispatch = typeof store.dispatch;
 

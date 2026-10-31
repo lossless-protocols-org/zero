@@ -6,7 +6,7 @@ import useThemeColors from '../hooks/useThemeColors';
 import {CustomBottomSheet} from '../components/atoms/CustomBottomSheet';
 import PrimaryButton from '../components/atoms/PrimaryButton';
 import CustomInput from '../components/atoms/CustomInput';
-import {nameSchema} from '../utils/validationSchema';
+import {nameSchema} from '../i18n/validationSchema';
 import {gs} from '../styles/globalStyles';
 
 const ChangeNameSheet: React.FC<SheetProps<'change-name-sheet'>> = React.memo(props => {
@@ -27,7 +27,9 @@ const ChangeNameSheet: React.FC<SheetProps<'change-name-sheet'>> = React.memo(pr
       header={{
         title: t('sheets.changeName'),
         showCloseButton: true,
-        onClosePress: () => void SheetManager.hide(props.sheetId),
+        onClosePress: () => {
+          void SheetManager.hide(props.sheetId);
+        },
       }}
       gestureEnabled>
       <View style={[gs.px20, gs.pb10, gs.pt5]}>

@@ -33,7 +33,10 @@ const HEADER = ['Date', 'Title', 'Description', 'Category', 'Amount'];
  * to TEXT columns only — amounts must stay machine-parseable, and a negative
  * amount legitimately starts with `-`.
  */
-const NEUTRALISE_LEADING = /^[=+\-@\t\r]/;
+// Leading spaces (and a zero-width space) too: Sheets and Numbers trim them,
+// then evaluate what follows (M33). Full-width ＝＋－＠ are formulas in
+// East Asian Excel.
+const NEUTRALISE_LEADING = /^[\s\u200B]*[=+\-@\t\r\uFF1D\uFF0B\uFF0D\uFF20]/;
 
 const escapeField = (value: string): string => {
   const guarded = NEUTRALISE_LEADING.test(value) ? `'${value}` : value;

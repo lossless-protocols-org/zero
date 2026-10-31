@@ -1,17 +1,27 @@
 import {getFormatLocale, getDeviceLocaleInfo} from './locale';
+import {appendErrorLog} from './errorLog';
 
-const LAKH_CURRENCIES = new Set([
-  'INR', 'BDT', 'NPR', 'PKR', 'LKR',
-]);
+const LAKH_CURRENCIES = new Set(['INR', 'BDT', 'NPR', 'PKR', 'LKR']);
 
-const LAKH_COUNTRY_CODES = new Set([
-  'IN', 'BD', 'NP', 'PK', 'LK',
-]);
+const LAKH_COUNTRY_CODES = new Set(['IN', 'BD', 'NP', 'PK', 'LK']);
 
 // The lakh/crore grouping lives in the numbering system of South Asian
 // LANGUAGES, not only their countries — "hi-US" still groups as 1,24,000.
 const LAKH_LANGUAGE_CODES = new Set([
-  'hi', 'bn', 'ta', 'te', 'mr', 'pa', 'gu', 'kn', 'ml', 'or', 'as', 'ne', 'si', 'ur',
+  'hi',
+  'bn',
+  'ta',
+  'te',
+  'mr',
+  'pa',
+  'gu',
+  'kn',
+  'ml',
+  'or',
+  'as',
+  'ne',
+  'si',
+  'ur',
 ]);
 
 /**
@@ -32,8 +42,7 @@ const getEffectiveLocaleForCurrency = (currencyCode?: string): string => {
   const region = regionSubtag || getDeviceLocaleInfo().countryCode;
 
   const isLakhLocale =
-    LAKH_COUNTRY_CODES.has(region?.toUpperCase() ?? '') ||
-    LAKH_LANGUAGE_CODES.has(languageSubtag?.toLowerCase() ?? '');
+    LAKH_COUNTRY_CODES.has(region?.toUpperCase() ?? '') || LAKH_LANGUAGE_CODES.has(languageSubtag?.toLowerCase() ?? '');
   const isLakhCurrency = LAKH_CURRENCIES.has(currencyCode.toUpperCase());
 
   if (isLakhLocale && !isLakhCurrency) {
@@ -89,17 +98,73 @@ const CURRENCY_DECIMALS: Record<string, number> = {
 
 const numberFormatCache = new Map<string, Intl.NumberFormat>();
 
-const getNumberFormatter = (
-  locale: string,
-  options: Intl.NumberFormatOptions,
-): Intl.NumberFormat => {
-  const cacheKey = `${locale}|${JSON.stringify(options)}`;
+/** The options this app formats with; `useGrouping` is narrowed to boolean so `true` and `'true'` cannot share a key. @internal test */
+export type FormatterOptions = Pick<
+  Intl.NumberFormatOptions,
+  | 'style'
+  | 'currency'
+  | 'currencyDisplay'
+  | 'notation'
+  | 'compactDisplay'
+  | 'minimumFractionDigits'
+  | 'maximumFractionDigits'
+> & {useGrouping?: boolean};
+
+/**
+ * Cached Intl.NumberFormat per locale + options. The key is concatenated
+ * rather than JSON.stringify'd: this runs twice per list row (S5, v2.7.1).
+ * The formatter is built from exactly the fields in the key, so an argument
+ * carrying an extra option (possible through a wider typed variable) can never
+ * get a formatter that disagrees with its key.
+ * @internal test
+ */
+export const getNumberFormatter = (locale: string, options: FormatterOptions): Intl.NumberFormat => {
+  const {
+    style,
+    currency,
+    currencyDisplay,
+    notation,
+    compactDisplay,
+    minimumFractionDigits,
+    maximumFractionDigits,
+    useGrouping,
+  } = options;
+  const cacheKey = `${locale}|${style}|${currency}|${currencyDisplay}|${notation}|${compactDisplay}|${minimumFractionDigits}|${maximumFractionDigits}|${useGrouping}`;
   let formatter = numberFormatCache.get(cacheKey);
   if (!formatter) {
-    formatter = new Intl.NumberFormat(locale, options);
+    formatter = new Intl.NumberFormat(locale, {
+      style,
+      currency,
+      currencyDisplay,
+      notation,
+      compactDisplay,
+      minimumFractionDigits,
+      maximumFractionDigits,
+      useGrouping,
+    });
     numberFormatCache.set(cacheKey, formatter);
   }
   return formatter;
+};
+
+/**
+ * A whole percent (42 → "42%", "%42" in Turkish, "٤٢٪" in Arabic) in the
+ * user's locale; `${pct}%` put the sign on the English side everywhere (M32).
+ */
+const rejectedPercentLocales = new Set<string>();
+
+export const formatPercent = (percent: number, locale: string = getFormatLocale()): string => {
+  const options: FormatterOptions = {style: 'percent', maximumFractionDigits: 0};
+  try {
+    return getNumberFormatter(locale, options).format(percent / 100);
+  } catch (error) {
+    // Same fallback as formatNumber; logged once per rejected locale, not per row.
+    if (!rejectedPercentLocales.has(locale)) {
+      rejectedPercentLocales.add(locale);
+      appendErrorLog(error, false);
+    }
+    return getNumberFormatter('en-US', options).format(percent / 100);
+  }
 };
 
 export const getCurrencyDecimals = (currencyCode?: string): number => {
@@ -150,9 +215,7 @@ export const formatCurrency = (amount: number, currencyCode?: string, locale?: s
   if (!Number.isFinite(amount)) return '0';
 
   const isWholeNumber = Number.isInteger(amount);
-  const minDecimals = maxDecimals === 3
-    ? 3
-    : isWholeNumber ? 0 : Math.min(2, maxDecimals);
+  const minDecimals = maxDecimals === 3 ? 3 : isWholeNumber ? 0 : Math.min(2, maxDecimals);
 
   try {
     const formatter = getNumberFormatter(effectiveLocale, {
@@ -180,10 +243,7 @@ const symbolPlacementCache = new Map<string, boolean>();
  * display strings put it. Every probe is wrapped: any Intl gap falls back to
  * prefix — exactly today's behaviour, so this can never regress a device.
  */
-export const isCurrencySymbolSuffix = (
-  currencyCode?: string,
-  locale?: string,
-): boolean => {
+export const isCurrencySymbolSuffix = (currencyCode?: string, locale?: string): boolean => {
   if (!currencyCode) {
     return false;
   }
@@ -235,20 +295,14 @@ export const isCurrencySymbolSuffix = (
  *   en-IN + INR → "₹1,24,000"
  *   de-DE + EUR → "124.000 €"
  */
-export const formatAmountWithSymbol = (
-  amount: number,
-  currencyCode: string,
-  locale?: string,
-): string => {
+export const formatAmountWithSymbol = (amount: number, currencyCode: string, locale?: string): string => {
   const effectiveLocale = locale ?? getEffectiveLocaleForCurrency(currencyCode);
 
   if (!Number.isFinite(amount)) return '0';
 
   const maxDecimals = getCurrencyDecimals(currencyCode);
   const isWholeNumber = Number.isInteger(amount);
-  const minDecimals = maxDecimals === 3
-    ? 3
-    : isWholeNumber ? 0 : Math.min(2, maxDecimals);
+  const minDecimals = maxDecimals === 3 ? 3 : isWholeNumber ? 0 : Math.min(2, maxDecimals);
 
   try {
     const formatter = getNumberFormatter(effectiveLocale, {
@@ -276,40 +330,6 @@ export const formatAmountWithSymbol = (
   }
 };
 
-export const formatCompact = (amount: number, locale?: string): string => {
-  const effectiveLocale = locale ?? getFormatLocale();
-  if (!Number.isFinite(amount)) return '0';
-
-  try {
-    const formatter = getNumberFormatter(effectiveLocale, {
-      notation: 'compact',
-      compactDisplay: 'short',
-      maximumFractionDigits: 1,
-    });
-    return formatter.format(amount);
-  } catch {
-    if (Math.abs(amount) >= 1e9) return `${(amount / 1e9).toFixed(1)}B`;
-    if (Math.abs(amount) >= 1e6) return `${(amount / 1e6).toFixed(1)}M`;
-    if (Math.abs(amount) >= 1e3) return `${(amount / 1e3).toFixed(1)}K`;
-    return amount.toString();
-  }
-};
-
-export const roundCurrency = (amount: number, currencyCode?: string): number => {
-  const decimals = getCurrencyDecimals(currencyCode);
-  const factor = Math.pow(10, decimals);
-  return Math.round(amount * factor) / factor;
-};
-
-export const isValidAmount = (amount: unknown): amount is number => {
-  return typeof amount === 'number' && Number.isFinite(amount) && !Number.isNaN(amount);
-};
-
-export const safeAdd = (...amounts: number[]): number => {
-  const sum = amounts.reduce((acc, val) => acc + (val || 0), 0);
-  return roundCurrency(sum);
-};
-
-export const safeSubtract = (a: number, b: number): number => {
-  return roundCurrency((a || 0) - (b || 0));
-};
+/** Sum of the `amount` field of every row. */
+export const sumAmounts = (rows: ReadonlyArray<{amount: number}>): number =>
+  rows.reduce((sum, row) => sum + row.amount, 0);

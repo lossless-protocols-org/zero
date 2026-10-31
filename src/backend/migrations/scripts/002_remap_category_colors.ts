@@ -19,10 +19,7 @@ const up = async (): Promise<void> => {
   }
 
   await database.write(async () => {
-    const categories = await database
-      .get<Category>('categories')
-      .query()
-      .fetch();
+    const categories = await database.get<Category>('categories').query().fetch();
     for (const cat of categories) {
       const mapped = caseInsensitiveMap.get(cat.color.toUpperCase());
       if (mapped) {

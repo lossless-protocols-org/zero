@@ -14,11 +14,9 @@ export const navigate = <T extends keyof AllScreens>(
   ...args: AllScreens[T] extends undefined ? [] : [AllScreens[T]]
 ) => {
   if (navigationRef) {
-    navigationRef.dispatch(CommonActions.navigate({name: name as string, params: args[0]}));
+    navigationRef.dispatch(CommonActions.navigate({name, params: args[0]}));
   } else if (__DEV__) {
-    console.error(
-      'Navigation reference is not set. Make sure to call setNavigationRef.',
-    );
+    console.error('Navigation reference is not set. Make sure to call setNavigationRef.');
   }
 };
 
@@ -39,9 +37,7 @@ export const navigate = <T extends keyof AllScreens>(
 export const goBack = (): boolean => {
   if (!navigationRef) {
     if (__DEV__) {
-      console.error(
-        'Navigation reference is not set. Make sure to call setNavigationRef.',
-      );
+      console.error('Navigation reference is not set. Make sure to call setNavigationRef.');
     }
     return false;
   }

@@ -2,25 +2,14 @@ import {Q} from '@nozbe/watermelondb';
 import {nanoid} from 'nanoid';
 import {database} from '../database';
 import Currency from '../models/Currency';
-
-// Type for currency data
-export interface CurrencyData {
-  id: string;
-  code: string;
-  symbol: string;
-  name: string;
-  userId: string;
-}
+import {assertUserId} from './assertUserId';
+import type {CurrencyData} from '../../domain/types';
 
 /**
  * Creates a new currency
  */
-export const createCurrency = async (
-  code: string,
-  symbol: string,
-  name: string,
-  userId: string,
-): Promise<string> => {
+export const createCurrency = async (code: string, symbol: string, name: string, userId: string): Promise<string> => {
+  assertUserId(userId, 'currency');
   const id = nanoid(24);
   await database.write(async () => {
     await database.get<Currency>('currencies').create(curr => {
@@ -60,19 +49,14 @@ export const updateCurrencyById = async (
 /**
  * Gets currency by user ID
  */
-export const getCurrencyByUserId = async (
-  userId: string,
-): Promise<CurrencyData | null> => {
-  const currencies = await database
-    .get<Currency>('currencies')
-    .query(Q.where('user_id', userId))
-    .fetch();
+export const getCurrencyByUserId = async (userId: string): Promise<CurrencyData | null> => {
+  const currencies = await database.get<Currency>('currencies').query(Q.where('user_id', userId)).fetch();
 
-  if (currencies.length === 0) {
+  const [currency] = currencies;
+  if (!currency) {
     return null;
   }
 
-  const currency = currencies[0];
   return {
     id: currency.id,
     code: currency.code,
@@ -81,4 +65,3 @@ export const getCurrencyByUserId = async (
     userId: currency.userId,
   };
 };
-

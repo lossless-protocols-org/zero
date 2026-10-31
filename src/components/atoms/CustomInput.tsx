@@ -1,15 +1,15 @@
-import {TextInput, View, KeyboardTypeOptions, TouchableOpacity} from 'react-native';
-import React, {useState, useCallback, useMemo, memo} from 'react';
+import {TextInput, View, KeyboardTypeOptions, TouchableOpacity, type ReturnKeyTypeOptions} from 'react-native';
+import React, {useState, useCallback, useMemo, memo, forwardRef} from 'react';
 import PrimaryText from './PrimaryText';
 import Icon from './Icons';
-import {Colors} from '../../hooks/useThemeColors';
+import type {ThemeColors} from '../../hooks/useThemeColors';
 import {gs} from '../../styles/globalStyles';
 import {ZodType} from 'zod';
 
 interface CustomInputProps {
   input: string;
   setInput: (value: string) => void;
-  colors: Colors;
+  colors: ThemeColors;
   placeholder: string;
   label?: string;
   schema?: ZodType<string>;
@@ -25,138 +25,172 @@ interface CustomInputProps {
   rightIcon?: string;
   onRightIconPress?: () => void;
   disabled?: boolean;
+  /**
+   * Keyboard flow between fields: 'next' keeps the keyboard up and
+   * `onSubmitEditing` moves focus on; 'done' (default) closes it.
+   */
+  returnKeyType?: ReturnKeyTypeOptions;
+  onSubmitEditing?: () => void;
+  /** Extra error lines from the caller (e.g. "already exists"). */
+  externalError?: string;
 }
 
-const CustomInput: React.FC<CustomInputProps> = ({
-  colors,
-  input,
-  setInput,
-  placeholder,
-  label,
-  schema,
-  keyboardType,
-  autoCapitalize,
-  autoFocus = false,
-  secureTextEntry = false,
-  multiline = false,
-  maxLength,
-  onBlur,
-  onFocus,
-  leftIcon,
-  rightIcon,
-  onRightIconPress,
-  disabled = false,
-}) => {
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
+type TextInputHandle = React.ElementRef<typeof TextInput>;
 
-  const errors = hasInteracted ? schema?.safeParse(input).error?.issues || [] : [];
-
-  const hasLeftIcon = !!leftIcon;
-  const hasRightIcon = !!rightIcon;
-  const hasIcons = hasLeftIcon || hasRightIcon;
-
-  const inputBorderColor = useMemo(() => {
-    return isFocused ? colors.primaryText : 'transparent';
-  }, [isFocused, colors.primaryText]);
-
-  const inputBackgroundColor = useMemo(() => {
-    return disabled ? colors.secondaryContainerColor : colors.secondaryAccent;
-  }, [disabled, colors.secondaryContainerColor, colors.secondaryAccent]);
-
-  const handleFocus = useCallback(() => {
-    setIsFocused(true);
-    onFocus?.();
-  }, [onFocus]);
-
-  const handleBlur = useCallback(() => {
-    setIsFocused(false);
-    setHasInteracted(true);
-    onBlur?.();
-  }, [onBlur]);
-
-  const handleChangeText = useCallback(
-    (text: string) => {
-      setInput(text);
-      if (!hasInteracted) {
-        setHasInteracted(true);
-      }
+const CustomInput = forwardRef<TextInputHandle, CustomInputProps>(
+  (
+    {
+      colors,
+      input,
+      setInput,
+      placeholder,
+      label,
+      schema,
+      keyboardType,
+      autoCapitalize,
+      autoFocus = false,
+      secureTextEntry = false,
+      multiline = false,
+      maxLength,
+      onBlur,
+      onFocus,
+      leftIcon,
+      rightIcon,
+      onRightIconPress,
+      disabled = false,
+      returnKeyType,
+      onSubmitEditing,
+      externalError,
     },
-    [setInput, hasInteracted],
-  );
+    ref,
+  ) => {
+    const [hasInteracted, setHasInteracted] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
 
-  return (
-    <View style={disabled ? gs.opacity60 : undefined}>
-      {label ? (
-        <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>
-          {label}
-        </PrimaryText>
-      ) : null}
-      <View
-        style={
-          hasIcons
-            ? [
-                gs.h48,
-                gs.itemsCenter,
-                gs.rounded12,
-                gs.pl10,
-                gs.justifyStart,
-                gs.row,
-                {borderWidth: 1.5, borderColor: inputBorderColor, backgroundColor: inputBackgroundColor},
-              ]
-            : undefined
-        }>
-        {hasLeftIcon && (
-          <View style={gs.mr8}>
-            <Icon name={leftIcon} size={20} color={colors.secondaryText} />
-          </View>
-        )}
-        <TextInput
+    const schemaErrors = hasInteracted ? schema?.safeParse(input).error?.issues || [] : [];
+    const errors: Array<{message: string}> = externalError ? [...schemaErrors, {message: externalError}] : schemaErrors;
+
+    const hasLeftIcon = !!leftIcon;
+    const hasRightIcon = !!rightIcon;
+    const hasIcons = hasLeftIcon || hasRightIcon;
+
+    // A visible resting edge (M31): the field was 1.11:1 against the page with none.
+    const inputBorderColor = useMemo(() => {
+      return isFocused ? colors.primaryText : colors.inputBorder;
+    }, [isFocused, colors.primaryText, colors.inputBorder]);
+
+    const inputBackgroundColor = useMemo(() => {
+      return disabled ? colors.secondaryContainerColor : colors.secondaryAccent;
+    }, [disabled, colors.secondaryContainerColor, colors.secondaryAccent]);
+
+    const handleFocus = useCallback(() => {
+      setIsFocused(true);
+      onFocus?.();
+    }, [onFocus]);
+
+    const handleBlur = useCallback(() => {
+      setIsFocused(false);
+      setHasInteracted(true);
+      onBlur?.();
+    }, [onBlur]);
+
+    const handleChangeText = useCallback(
+      (text: string) => {
+        setInput(text);
+        if (!hasInteracted) {
+          setHasInteracted(true);
+        }
+      },
+      [setInput, hasInteracted],
+    );
+
+    return (
+      <View style={disabled ? gs.opacity60 : undefined}>
+        {label ? (
+          <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>
+            {label}
+          </PrimaryText>
+        ) : null}
+        <View
           style={
             hasIcons
-              ? [gs.px15, gs.h48, gs.wFull, gs.fontMedium, gs.noFontPadding, {color: colors.primaryText}]
-              : [
-                  gs.h48,
+              ? [
+                  gs.minH48,
+                  gs.itemsCenter,
                   gs.rounded12,
-                  gs.px15,
-                  gs.fontMedium,
-                  gs.noFontPadding,
-                  {borderWidth: 1.5, borderColor: inputBorderColor, color: colors.primaryText, backgroundColor: inputBackgroundColor, marginBottom: 5},
+                  gs.pl10,
+                  gs.justifyStart,
+                  gs.row,
+                  {borderWidth: 1.5, borderColor: inputBorderColor, backgroundColor: inputBackgroundColor},
                 ]
-          }
-          value={input}
-          onChangeText={handleChangeText}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          placeholder={placeholder}
-          placeholderTextColor={colors.secondaryText}
-          keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
-          autoFocus={autoFocus}
-          secureTextEntry={secureTextEntry}
-          multiline={multiline}
-          maxLength={maxLength}
-          editable={!disabled}
-        />
-        {hasRightIcon && (
-          <TouchableOpacity onPress={onRightIconPress} disabled={!onRightIconPress} style={gs.ml8}>
-            <Icon name={rightIcon} size={20} color={colors.secondaryText} />
-          </TouchableOpacity>
+              : undefined
+          }>
+          {hasLeftIcon && (
+            <View style={gs.mr8}>
+              <Icon name={leftIcon} size={20} color={colors.secondaryText} />
+            </View>
+          )}
+          <TextInput
+            ref={ref}
+            style={
+              hasIcons
+                ? [gs.px15, gs.minH48, gs.wFull, gs.fontMedium, gs.noFontPadding, {color: colors.primaryText}]
+                : [
+                    gs.minH48,
+                    gs.rounded12,
+                    gs.px15,
+                    gs.fontMedium,
+                    gs.noFontPadding,
+                    {
+                      borderWidth: 1.5,
+                      borderColor: inputBorderColor,
+                      color: colors.primaryText,
+                      backgroundColor: inputBackgroundColor,
+                      marginBottom: 5,
+                    },
+                  ]
+            }
+            value={input}
+            onChangeText={handleChangeText}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            placeholderTextColor={colors.secondaryText}
+            keyboardType={keyboardType}
+            autoCapitalize={autoCapitalize}
+            autoFocus={autoFocus}
+            secureTextEntry={secureTextEntry}
+            multiline={multiline}
+            maxLength={maxLength}
+            editable={!disabled}
+            returnKeyType={returnKeyType}
+            onSubmitEditing={onSubmitEditing}
+            // Keep the keyboard up while focus hops to the next field.
+            blurOnSubmit={returnKeyType === 'next' ? false : undefined}
+            accessibilityLabel={label ?? placeholder}
+          />
+          {hasRightIcon && (
+            <TouchableOpacity onPress={onRightIconPress} disabled={!onRightIconPress} style={gs.ml8}>
+              <Icon name={rightIcon} size={20} color={colors.secondaryText} />
+            </TouchableOpacity>
+          )}
+        </View>
+        {errors.length > 0 && (
+          <View style={gs.mb10}>
+            {errors.map((error: {message: string}) => (
+              <View key={error.message}>
+                <PrimaryText size={12} color={colors.accentRed}>
+                  {error.message}
+                </PrimaryText>
+              </View>
+            ))}
+          </View>
         )}
       </View>
-      {errors.length > 0 && (
-        <View style={gs.mb10}>
-          {errors.map((error: {message: string}) => (
-            <View key={error.message}>
-              <PrimaryText size={12} color={colors.accentRed}>
-                {error.message}
-              </PrimaryText>
-            </View>
-          ))}
-        </View>
-      )}
-    </View>
-  );
-};
+    );
+  },
+);
+
+CustomInput.displayName = 'CustomInput';
 
 export default memo(CustomInput);

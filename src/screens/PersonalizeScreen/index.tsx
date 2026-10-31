@@ -7,6 +7,7 @@ import PrimaryView from '../../components/atoms/PrimaryView';
 import PrimaryText from '../../components/atoms/PrimaryText';
 import CustomInput from '../../components/atoms/CustomInput';
 import {gs} from '../../styles/globalStyles';
+import {logRejection} from '../../utils/errorLog';
 
 const PersonalizeScreen = () => {
   const {colors, setName, name, handleSubmit, handleSkip, nameSchema} = usePersonalize();
@@ -16,13 +17,22 @@ const PersonalizeScreen = () => {
   return (
     <PrimaryView colors={colors} style={gs.justifyBetween} dismissKeyboardOnTouch>
       <View>
-        <TouchableOpacity style={[gs.selfEnd, gs.pt5p]} onPress={handleSkip}>
-          <PrimaryText size={13} weight="medium" color={colors.secondaryText}>{t('common.skip')}</PrimaryText>
+        <TouchableOpacity
+          style={[gs.selfEnd, gs.mt5p, gs.minTouch, gs.px10]}
+          onPress={handleSkip}
+          accessibilityRole="button">
+          <PrimaryText size={13} weight="medium" color={colors.secondaryText}>
+            {t('common.skip')}
+          </PrimaryText>
         </TouchableOpacity>
 
         <View style={gs.pt15p}>
-          <PrimaryText size={28} weight="bold">{t('personalize.title')}</PrimaryText>
-          <PrimaryText size={28} weight="bold">{t('personalize.titleSuffix')}</PrimaryText>
+          <PrimaryText size={28} weight="bold">
+            {t('personalize.title')}
+          </PrimaryText>
+          <PrimaryText size={28} weight="bold">
+            {t('personalize.titleSuffix')}
+          </PrimaryText>
         </View>
 
         <PrimaryText size={14} color={colors.secondaryText} style={gs.mt6}>
@@ -40,7 +50,12 @@ const PersonalizeScreen = () => {
           />
         </View>
       </View>
-      <PrimaryButton onPress={handleSubmit} colors={colors} buttonTitle={t('common.continue')} disabled={!isValid} />
+      <PrimaryButton
+        onPress={() => logRejection(handleSubmit())}
+        colors={colors}
+        buttonTitle={t('common.continue')}
+        disabled={!isValid}
+      />
     </PrimaryView>
   );
 };

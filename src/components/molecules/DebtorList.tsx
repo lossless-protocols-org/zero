@@ -3,31 +3,32 @@ import React, {useCallback, useMemo, memo} from 'react';
 import {useTranslation} from 'react-i18next';
 import Icon from '../atoms/Icons';
 import {navigate} from '../../utils/navigationUtils';
-import {DebtorData as Debtor, DebtData as DebtDocType} from '../../watermelondb/services';
+import type {DebtorData as Debtor, DebtData as DebtDocType} from '../../watermelondb/services';
 import PrimaryText from '../atoms/PrimaryText';
-import {Colors} from '../../hooks/useThemeColors';
+import type {ThemeColors} from '../../hooks/useThemeColors';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {FlashList} from '@shopify/flash-list';
 import {gs} from '../../styles/globalStyles';
 import {hexToRgba} from '../../utils/colorUtils';
 import EmptyState from '../atoms/EmptyState';
+import {isBorrowType} from '../../utils/debtType';
 
 interface Debt extends DebtDocType {
   debtor?: {type?: string};
 }
 
 interface DebtorListProps {
-  colors: Colors;
+  colors: ThemeColors;
   debtors: Array<Debtor>;
   allDebts: Array<Debt>;
-  ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
+  ListHeaderComponent?: React.ComponentType | React.ReactElement | null;
 }
 
 const DebtorList: React.FC<DebtorListProps> = ({colors, debtors, allDebts, ListHeaderComponent}) => {
   const {t} = useTranslation();
   const formatAmount = useFormatAmount();
-  const handleDebtor = useCallback((debtorId: string, debtorName: string, debtorType: string) => {
-    navigate('IndividualDebtsScreen', {debtorId, debtorName, debtorType});
+  const handleDebtor = useCallback((debtorId: string) => {
+    navigate('IndividualDebtsScreen', {debtorId});
   }, []);
 
   const debtTotalsByDebtor = useMemo(() => {
@@ -38,7 +39,7 @@ const DebtorList: React.FC<DebtorListProps> = ({colors, debtors, allDebts, ListH
       if (!debtorId) return;
 
       const current = totalsMap.get(debtorId) ?? 0;
-      const delta = debt.type === 'Borrow' ? debt.amount : -debt.amount;
+      const delta = isBorrowType(debt.type) ? debt.amount : -debt.amount;
       totalsMap.set(debtorId, current + delta);
     });
 
@@ -76,9 +77,9 @@ const DebtorList: React.FC<DebtorListProps> = ({colors, debtors, allDebts, ListH
 
       return (
         <TouchableOpacity
-          onPress={() => handleDebtor(debtorId, debtor.title, debtor.type)}
+          onPress={() => handleDebtor(debtorId)}
           activeOpacity={0.7}
-          style={[gs.mx16, gs.py12, gs.rowCenter, {borderBottomWidth: 0.5, borderBottomColor: colors.secondaryAccent}]}>
+          style={[gs.mx16, gs.py12, gs.rowCenter, gs.borderBottom05, {borderBottomColor: colors.secondaryAccent}]}>
           <View
             style={[
               gs.size36,

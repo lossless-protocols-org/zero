@@ -2,14 +2,14 @@ import {TouchableOpacity, View} from 'react-native';
 import React, {ReactNode} from 'react';
 import Icon from './Icons';
 import PrimaryText from './PrimaryText';
-import {Colors} from '../../hooks/useThemeColors';
+import type {ThemeColors} from '../../hooks/useThemeColors';
 import {gs, hitSlop} from '../../styles/globalStyles';
 import {useTranslation} from 'react-i18next';
 
 interface AppHeaderProps {
   onPress: () => void;
   text: string;
-  colors: Colors;
+  colors: ThemeColors;
   subtitle?: string;
   iconSize?: number;
   rightAction?: ReactNode;
@@ -30,7 +30,7 @@ const AppHeader: React.FC<AppHeaderProps> = React.memo(
             <Icon name="arrow-left" size={iconSize} color={colors.primaryText} />
           </TouchableOpacity>
           <View style={gs.flex1}>
-            <PrimaryText numberOfLines={1} ellipsizeMode="tail">
+            <PrimaryText numberOfLines={1} ellipsizeMode="tail" accessibilityRole="header">
               {text}
             </PrimaryText>
             {subtitle && (

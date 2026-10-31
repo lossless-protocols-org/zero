@@ -1,3 +1,4 @@
+import {appendErrorLog} from './errorLog';
 import {PermissionsAndroid, Platform} from 'react-native';
 
 export const requestStoragePermission = async () => {
@@ -20,15 +21,13 @@ export const requestStoragePermission = async () => {
       const granted = await PermissionsAndroid.requestMultiple(permissions);
 
       return (
-        granted['android.permission.READ_EXTERNAL_STORAGE'] ===
-          PermissionsAndroid.RESULTS.GRANTED &&
-        granted['android.permission.WRITE_EXTERNAL_STORAGE'] ===
-          PermissionsAndroid.RESULTS.GRANTED
+        granted['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
+        granted['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED
       );
     } catch (err) {
-      if (__DEV__) {
-        console.warn(err);
-      }
+      // A thrown request (no activity, OEM restriction) is not a denial; the
+      // caller still shows its "open settings" path, but the cause is kept.
+      appendErrorLog(err, false);
       return false;
     }
   } else {

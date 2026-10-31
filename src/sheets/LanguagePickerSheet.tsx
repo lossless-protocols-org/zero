@@ -5,11 +5,10 @@ import {useTranslation} from 'react-i18next';
 import useThemeColors from '../hooks/useThemeColors';
 import {CustomBottomSheet} from '../components/atoms/CustomBottomSheet';
 import PrimaryText from '../components/atoms/PrimaryText';
+import PrimaryButton from '../components/atoms/PrimaryButton';
 import {gs} from '../styles/globalStyles';
 
-const LANGUAGES = [
-  {code: 'en', label: 'English'},
-] as const;
+const LANGUAGES = [{code: 'en', label: 'English'}] as const;
 
 const LanguagePickerSheet: React.FC<SheetProps<'language-picker-sheet'>> = React.memo(props => {
   const colors = useThemeColors();
@@ -27,12 +26,19 @@ const LanguagePickerSheet: React.FC<SheetProps<'language-picker-sheet'>> = React
       header={{
         title: t('settings.language'),
         showCloseButton: true,
-        onClosePress: () => void SheetManager.hide(props.sheetId),
+        onClosePress: () => {
+          void SheetManager.hide(props.sheetId);
+        },
       }}
       gestureEnabled>
       <View style={[gs.px20, gs.pb10, gs.pt5]}>
         {LANGUAGES.map(lang => (
-          <TouchableOpacity key={lang.code} onPress={() => setSelected(lang.code)} activeOpacity={0.6}>
+          <TouchableOpacity
+            key={lang.code}
+            onPress={() => setSelected(lang.code)}
+            activeOpacity={0.6}
+            accessibilityRole="radio"
+            accessibilityState={{checked: selected === lang.code}}>
             <View style={[gs.rowBetweenCenter, gs.py12]}>
               <PrimaryText size={15} weight={selected === lang.code ? 'semibold' : 'medium'}>
                 {lang.label}
@@ -55,14 +61,9 @@ const LanguagePickerSheet: React.FC<SheetProps<'language-picker-sheet'>> = React
         <PrimaryText size={12} color={colors.secondaryText} style={[gs.mt10, gs.textCenter]}>
           {t('sheets.moreLanguages')}
         </PrimaryText>
-        <TouchableOpacity
-          onPress={handleConfirm}
-          activeOpacity={0.7}
-          style={[gs.mt10, gs.py12, gs.rounded10, gs.center, {backgroundColor: colors.accentGreen}]}>
-          <PrimaryText size={14} weight="semibold" color={colors.buttonText}>
-            {t('common.apply')}
-          </PrimaryText>
-        </TouchableOpacity>
+        <View style={gs.mt10}>
+          <PrimaryButton onPress={handleConfirm} colors={colors} buttonTitle={t('common.apply')} />
+        </View>
       </View>
     </CustomBottomSheet>
   );

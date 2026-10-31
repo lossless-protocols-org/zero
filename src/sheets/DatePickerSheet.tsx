@@ -1,4 +1,4 @@
-import {Platform, TouchableOpacity, View} from 'react-native';
+import {Platform, TouchableOpacity, View, StyleSheet} from 'react-native';
 import React, {useState, useCallback, memo} from 'react';
 import {useTranslation} from 'react-i18next';
 import {SheetManager, SheetProps} from 'react-native-actions-sheet';
@@ -25,21 +25,25 @@ const DatePickerSheet: React.FC<SheetProps<'date-picker-sheet'>> = props => {
 
   const handleConfirm = useCallback(() => {
     props.payload?.onSelect?.(tempDate);
-    SheetManager.hide(props.sheetId);
+    void SheetManager.hide(props.sheetId);
   }, [props.payload, props.sheetId, tempDate]);
 
   const handleCancel = useCallback(() => {
-    SheetManager.hide(props.sheetId);
+    void SheetManager.hide(props.sheetId);
   }, [props.sheetId]);
 
   return (
     <CustomBottomSheet sheetId={props.sheetId} header={null} showIndicator={true} gestureEnabled>
       <View style={gs.pb20}>
-        <View style={[gs.rowBetween, gs.px20, gs.py10]}>
-          <TouchableOpacity onPress={handleCancel} style={gs.p5}>
+        <View style={[gs.rowBetween, gs.itemsCenter, gs.px20, gs.py10]}>
+          {/* 44 pt targets (M30); the title gives the sheet a heading (M29). */}
+          <TouchableOpacity onPress={handleCancel} style={styles.action} accessibilityRole="button">
             <PrimaryText color={colors.accentRed}>{t('common.cancel')}</PrimaryText>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleConfirm} style={gs.p5}>
+          <PrimaryText weight="semibold" accessibilityRole="header">
+            {t('sheets.selectDate')}
+          </PrimaryText>
+          <TouchableOpacity onPress={handleConfirm} style={styles.action} accessibilityRole="button">
             <PrimaryText color={colors.accentGreen}>{t('common.done')}</PrimaryText>
           </TouchableOpacity>
         </View>
@@ -61,3 +65,7 @@ const DatePickerSheet: React.FC<SheetProps<'date-picker-sheet'>> = props => {
 };
 
 export default memo(DatePickerSheet);
+
+const styles = StyleSheet.create({
+  action: {minHeight: 44, minWidth: 44, justifyContent: 'center', paddingHorizontal: 5},
+});

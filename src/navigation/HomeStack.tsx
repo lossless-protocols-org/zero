@@ -25,12 +25,17 @@ import EverydayTransactionScreen from '../screens/EverydayTransactionScreen';
 import CategoryTransactionScreen from '../screens/CategoryTransactionScreen';
 import UpdateDebtorScreen from '../screens/UpdateDebtorScreen';
 import {gs} from '../styles/globalStyles';
+import {tabBarLayout} from './tabBarLayout';
 
 const screenOptions = {
   headerShown: false,
 };
 
 const ICON_SIZE = 24;
+
+// Tab labels sit in a fixed-height bar: at the largest system font "Reports"
+// broke mid-word. One line, grown at most 1.5×, shrunk to fit if needed (M30).
+const TAB_LABEL_TEXT = {numberOfLines: 1, maxFontSizeMultiplier: 1.5, adjustsFontSizeToFit: true} as const;
 
 const HomeIcon = ({color}: {color: string}) => {
   const {t} = useTranslation();
@@ -39,7 +44,9 @@ const HomeIcon = ({color}: {color: string}) => {
       <View style={[gs.h26, gs.center]}>
         <Icon name="home" size={ICON_SIZE} color={color} />
       </View>
-      <Text style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>{t('tabs.home')}</Text>
+      <Text {...TAB_LABEL_TEXT} style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>
+        {t('tabs.home')}
+      </Text>
     </View>
   );
 };
@@ -51,7 +58,9 @@ const ReportsIcon = ({color}: {color: string}) => {
       <View style={[gs.h26, gs.center]}>
         <Icon name="bar-chart-3" size={ICON_SIZE} color={color} />
       </View>
-      <Text style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>{t('tabs.reports')}</Text>
+      <Text {...TAB_LABEL_TEXT} style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>
+        {t('tabs.reports')}
+      </Text>
     </View>
   );
 };
@@ -63,7 +72,9 @@ const DebtIcon = ({color}: {color: string}) => {
       <View style={[gs.h26, gs.center]}>
         <Icon name="credit-card" size={ICON_SIZE} color={color} />
       </View>
-      <Text style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>{t('tabs.debts')}</Text>
+      <Text {...TAB_LABEL_TEXT} style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>
+        {t('tabs.debts')}
+      </Text>
     </View>
   );
 };
@@ -75,7 +86,9 @@ const CategoriesIcon = ({color}: {color: string}) => {
       <View style={[gs.h26, gs.center]}>
         <Icon name="shapes" size={ICON_SIZE} color={color} />
       </View>
-      <Text style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>{t('tabs.categories')}</Text>
+      <Text {...TAB_LABEL_TEXT} style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>
+        {t('tabs.categories')}
+      </Text>
     </View>
   );
 };
@@ -90,16 +103,13 @@ const TabBarButton = ({ref: _ref, ...props}: BottomTabBarButtonProps) => (
 );
 
 const TabStack = () => {
+  const {t} = useTranslation();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
-  const bottomPadding = Math.max(insets.bottom, 8);
-
   const tabBarStyle = {
     backgroundColor: colors.containerColor,
-    height: 65 + bottomPadding - (Platform.OS === 'ios' ? 20 : 0),
-    paddingTop: 8,
-    paddingBottom: bottomPadding,
+    ...tabBarLayout(insets.bottom, Platform.OS === 'ios' ? 'ios' : 'android'),
     borderTopWidth: 0,
   };
 
@@ -113,18 +123,28 @@ const TabStack = () => {
         tabBarStyle: tabBarStyle,
         tabBarButton: TabBarButton,
       }}>
-      <Tab.Screen name="HomeScreen" component={HomeScreen} options={{headerShown: false, tabBarIcon: HomeIcon}} />
+      <Tab.Screen
+        name="HomeScreen"
+        component={HomeScreen}
+        options={{headerShown: false, tabBarIcon: HomeIcon, tabBarAccessibilityLabel: t('tabs.home')}}
+      />
       <Tab.Screen
         name="ReportsScreen"
         component={ReportsScreen}
-        options={{headerShown: false, tabBarIcon: ReportsIcon}}
+        // The label is drawn inside the icon, so VoiceOver needs it named here
+        // (it read the route name: "ReportsScreen, tab, 2 of 4").
+        options={{headerShown: false, tabBarIcon: ReportsIcon, tabBarAccessibilityLabel: t('tabs.reports')}}
       />
       <Tab.Screen
         name="CategoryScreen"
         component={CategoryScreen}
-        options={{headerShown: false, tabBarIcon: CategoriesIcon}}
+        options={{headerShown: false, tabBarIcon: CategoriesIcon, tabBarAccessibilityLabel: t('tabs.categories')}}
       />
-      <Tab.Screen name="DebtsScreen" component={DebtsScreen} options={{headerShown: false, tabBarIcon: DebtIcon}} />
+      <Tab.Screen
+        name="DebtsScreen"
+        component={DebtsScreen}
+        options={{headerShown: false, tabBarIcon: DebtIcon, tabBarAccessibilityLabel: t('tabs.debts')}}
+      />
     </Tab.Navigator>
   );
 };

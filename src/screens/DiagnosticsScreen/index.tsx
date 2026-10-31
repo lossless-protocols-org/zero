@@ -1,5 +1,5 @@
-import {Platform, ScrollView, Share, TouchableOpacity, View} from 'react-native';
-import React, {useCallback, useState} from 'react';
+import {Linking, ScrollView, Share, TouchableOpacity, View} from 'react-native';
+import React, {useCallback, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import PrimaryView from '../../components/atoms/PrimaryView';
 import PrimaryText from '../../components/atoms/PrimaryText';
@@ -8,11 +8,19 @@ import Icon from '../../components/atoms/Icons';
 import EmptyState from '../../components/atoms/EmptyState';
 import useThemeColors from '../../hooks/useThemeColors';
 import {useDialog} from '../../context/DialogContext';
-import {clearErrorLog, formatErrorReport, getErrorLog} from '../../utils/errorLog';
-import {getAppVersion} from '../../utils/getVersion';
+import {
+  buildErrorMailto,
+  clearErrorLog,
+  formatErrorReport,
+  getErrorLog,
+  type ErrorLogEntry,
+  type ReportMeta,
+  appendErrorLog,
+} from '../../utils/errorLog';
 import {goBack} from '../../utils/navigationUtils';
-import {formatDate} from '../../utils/dateUtils';
-import {gs} from '../../styles/globalStyles';
+import {formatDisplayDate} from '../../utils/dateUtils';
+import {gs, hitSlop} from '../../styles/globalStyles';
+import {getReportMeta} from '../../utils/reportMeta';
 
 /**
  * Reads the on-device error log. Nothing here is transmitted anywhere — the
@@ -22,29 +30,37 @@ import {gs} from '../../styles/globalStyles';
 const DiagnosticsScreen = () => {
   const colors = useThemeColors();
   const {t} = useTranslation();
-  const {showDialog} = useDialog();
+  const {showDialog, showAlert} = useDialog();
   const [entries, setEntries] = useState(() => getErrorLog());
+
+  // Same facts the post-crash prompt attaches, so reports look alike whoever sends them.
+  const meta = useMemo<ReportMeta>(getReportMeta, []);
 
   // Nothing is sent automatically: this hands the text to the OS share sheet
   // only when the user taps, and only they choose where it goes.
   const handleShare = useCallback(async () => {
-    // Same text the post-crash prompt shares, so reports look alike whoever sends them.
-    const constants = Platform.constants as {Brand?: string; Model?: string; Release?: string};
-    const payload = formatErrorReport(entries, {
-      appVersion: getAppVersion(),
-      os: Platform.OS,
-      osVersion: constants.Release ?? String(Platform.Version),
-      brand: constants.Brand,
-      model: constants.Model,
-    });
+    const payload = formatErrorReport(entries, meta);
     try {
       await Share.share({message: payload, title: t('diagnostics.title')});
     } catch (error) {
-      if (__DEV__) {
-        console.error('Error sharing diagnostics:', error);
-      }
+      appendErrorLog(error, false);
     }
-  }, [entries, t]);
+  }, [entries, meta, t]);
+
+  // A mailto: hand-off to whatever mail app the user has. If there is none,
+  // say so instead of failing silently — the user came here to get a report out.
+  const openMail = useCallback(
+    async (forEntries: ErrorLogEntry[]) => {
+      try {
+        await Linking.openURL(buildErrorMailto(forEntries, meta));
+      } catch {
+        await showAlert({type: 'error', message: t('diagnostics.noMailApp')});
+      }
+    },
+    [meta, showAlert, t],
+  );
+
+  const handleEmailAll = useCallback(() => openMail(entries), [entries, openMail]);
 
   const handleClear = useCallback(async () => {
     const confirmed = await showDialog({
@@ -54,9 +70,12 @@ const DiagnosticsScreen = () => {
     if (!confirmed) {
       return;
     }
-    clearErrorLog();
+    if (!clearErrorLog()) {
+      await showAlert({type: 'error', message: t('diagnostics.clearFailed')});
+      return;
+    }
     setEntries([]);
-  }, [showDialog, t]);
+  }, [showDialog, showAlert, t]);
 
   return (
     <PrimaryView colors={colors}>
@@ -72,14 +91,26 @@ const DiagnosticsScreen = () => {
         <EmptyState type="Insights" colors={colors} message={t('diagnostics.empty')} />
       ) : (
         <>
-          <View style={[gs.rowCenter, gs.gap10, gs.mb10]}>
+          <View style={[gs.rowCenter, gs.gap10, gs.mb10, gs.wrap]}>
             <TouchableOpacity
               onPress={handleShare}
               accessibilityRole="button"
               accessibilityLabel={t('diagnostics.share')}
               style={[gs.rowCenter, gs.gap6, gs.px14, gs.py10, gs.rounded8, {backgroundColor: colors.containerColor}]}>
               <Icon name="share-2" size={14} color={colors.primaryText} />
-              <PrimaryText size={12} weight="medium">{t('diagnostics.share')}</PrimaryText>
+              <PrimaryText size={12} weight="medium">
+                {t('diagnostics.share')}
+              </PrimaryText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleEmailAll}
+              accessibilityRole="button"
+              accessibilityLabel={t('diagnostics.email')}
+              style={[gs.rowCenter, gs.gap6, gs.px14, gs.py10, gs.rounded8, {backgroundColor: colors.containerColor}]}>
+              <Icon name="at-sign" size={14} color={colors.primaryText} />
+              <PrimaryText size={12} weight="medium">
+                {t('diagnostics.email')}
+              </PrimaryText>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleClear}
@@ -97,9 +128,11 @@ const DiagnosticsScreen = () => {
             {entries
               .slice()
               .reverse()
-              .map(entry => (
+              .map((entry, index) => (
                 <View
-                  key={`${entry.timestamp}-${entry.message}`}
+                  // Timestamp alone can repeat (two fatals in one second); the
+                  // position in the reversed list is what makes the key unique.
+                  key={`${index}-${entry.timestamp}`}
                   style={[gs.rounded12, gs.px14, gs.py12, gs.mb8, {backgroundColor: colors.containerColor}]}>
                   <View style={[gs.rowBetweenCenter, gs.mb5]}>
                     <PrimaryText
@@ -108,11 +141,22 @@ const DiagnosticsScreen = () => {
                       color={entry.fatal ? colors.accentOrange : colors.secondaryText}>
                       {entry.fatal ? t('diagnostics.fatal') : t('diagnostics.error')}
                     </PrimaryText>
-                    <PrimaryText size={11} color={colors.secondaryText} variant="number">
-                      {formatDate(entry.timestamp, 'Do MMM YYYY, HH:mm')}
-                    </PrimaryText>
+                    <View style={[gs.rowCenter, gs.gap10]}>
+                      <PrimaryText size={11} color={colors.secondaryText} variant="number">
+                        {formatDisplayDate(entry.timestamp, 'dateTime')}
+                      </PrimaryText>
+                      <TouchableOpacity
+                        onPress={() => openMail([entry])}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('diagnostics.emailEntry')}
+                        hitSlop={hitSlop}>
+                        <Icon name="at-sign" size={14} color={colors.secondaryText} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <PrimaryText size={12} selectable>{entry.message}</PrimaryText>
+                  <PrimaryText size={12} selectable>
+                    {entry.message}
+                  </PrimaryText>
                 </View>
               ))}
           </ScrollView>

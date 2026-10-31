@@ -1,3 +1,4 @@
+import type {ExportData} from './validate';
 /**
  * Export format versioning.
  *
@@ -24,4 +25,19 @@
  */
 export const CURRENT_EXPORT_VERSION = 4;
 
+/**
+ * A file written by a NEWER app may carry fields this version does not know
+ * how to restore. Importing it "successfully" would silently drop them — so it
+ * is refused with a message telling the user to update (B8).
+ */
+export const isEnvelopeTooNew = (version: number | undefined): boolean =>
+  typeof version === 'number' && version > CURRENT_EXPORT_VERSION;
+
 export type {ExportData, ExportEnvelope} from './validate';
+
+/**
+ * What the export builds from the database, before validation: identical to
+ * ExportData except that the users list may be empty (a device with no user
+ * row). The export refuses that case with its own message before validating.
+ */
+export type ExportDraft = Omit<ExportData, 'users'> & {users: Array<ExportData['users'][number]>};

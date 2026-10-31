@@ -14,9 +14,7 @@ import {formatCurrency, formatAmountWithSymbol, getCurrencyDecimals} from '../nu
 // These tests exercise the lakh/crore guard, which only activates on a South
 // Asian device locale — switch the mocked device to en-IN for this file.
 beforeAll(() => {
-  setMockLocales([
-    {languageTag: 'en-IN', languageCode: 'en', countryCode: 'IN', isRTL: false},
-  ]);
+  setMockLocales([{languageTag: 'en-IN', languageCode: 'en', countryCode: 'IN', isRTL: false}]);
   invalidateLocaleCache();
 });
 
@@ -242,8 +240,16 @@ describe('getCurrencyDecimals', () => {
 describe('Non-English Indian locales also get fixed (hi, bn, ta, mr, pa)', () => {
   it('hi-IN device: TRY should NOT use lakh (proves en-US fallback needed)', () => {
     // hi-US still gives lakh — so our fix must use en-US, not hi-US
-    const hiUS = new Intl.NumberFormat('hi-US', {style: 'currency', currency: 'TRY', currencyDisplay: 'narrowSymbol'}).format(124000);
-    const enUS = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'TRY', currencyDisplay: 'narrowSymbol'}).format(124000);
+    const hiUS = new Intl.NumberFormat('hi-US', {
+      style: 'currency',
+      currency: 'TRY',
+      currencyDisplay: 'narrowSymbol',
+    }).format(124000);
+    const enUS = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'TRY',
+      currencyDisplay: 'narrowSymbol',
+    }).format(124000);
 
     // hi-US still has lakh grouping (bug in langCode-US approach)
     expect(hiUS).toContain('1,24,000');
@@ -252,8 +258,16 @@ describe('Non-English Indian locales also get fixed (hi, bn, ta, mr, pa)', () =>
   });
 
   it('bn-BD device: AED should NOT use lakh (proves en-US fallback needed)', () => {
-    const bnUS = new Intl.NumberFormat('bn-US', {style: 'currency', currency: 'AED', currencyDisplay: 'narrowSymbol'}).format(1500000);
-    const enUS = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'AED', currencyDisplay: 'narrowSymbol'}).format(1500000);
+    const bnUS = new Intl.NumberFormat('bn-US', {
+      style: 'currency',
+      currency: 'AED',
+      currencyDisplay: 'narrowSymbol',
+    }).format(1500000);
+    const enUS = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'AED',
+      currencyDisplay: 'narrowSymbol',
+    }).format(1500000);
 
     // Some ICU builds render bn-US with Bengali numerals; normalize so the
     // assertion checks the lakh GROUPING, not the digit script.
@@ -301,7 +315,11 @@ describe('isCurrencySymbolSuffix', () => {
 
   it('matches formatAmountWithSymbol placement for the same inputs', () => {
     // The input and the display must always agree — that is the whole point.
-    for (const [code, locale] of [['USD', 'en-US'], ['EUR', 'de-DE'], ['SEK', 'sv-SE']] as const) {
+    for (const [code, locale] of [
+      ['USD', 'en-US'],
+      ['EUR', 'de-DE'],
+      ['SEK', 'sv-SE'],
+    ] as const) {
       const formatted = formatAmountWithSymbol(1234, code, locale);
       const startsWithDigit = /^\d/.test(formatted);
       expect(isCurrencySymbolSuffix(code, locale)).toBe(startsWithDigit);

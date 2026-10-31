@@ -47,54 +47,39 @@ describe('geometry', () => {
   });
 
   it('derives a band whose thickness is the stroke width', () => {
-    expect(geometry.outerRadius - geometry.innerRadius).toBeCloseTo(
-      geometry.strokeWidth,
-      6,
-    );
+    expect(geometry.outerRadius - geometry.innerRadius).toBeCloseTo(geometry.strokeWidth, 6);
   });
 });
 
 describe('segments', () => {
   it('orders largest first so the ring matches the legend', () => {
-    const segments = buildSegments(
-      [slice('a', 10), slice('b', 50), slice('c', 30)],
-      geometry,
-    );
+    const segments = buildSegments([slice('a', 10), slice('b', 50), slice('c', 30)], geometry);
     expect(segments.map(s => s.key)).toEqual(['b', 'c', 'a']);
   });
 
   it('starts at twelve o’clock and closes the circle', () => {
-    const segments = buildSegments(
-      [slice('a', 5), slice('b', 15), slice('c', 80)],
-      geometry,
-    );
-    expect(segments[0].startAngle).toBe(-90);
-    const last = segments[segments.length - 1];
-    expect(last.startAngle + last.sweepAngle).toBeCloseTo(270, 6); // -90 + 360
+    const segments = buildSegments([slice('a', 5), slice('b', 15), slice('c', 80)], geometry);
+    expect(segments[0]?.startAngle).toBe(-90);
+    const last = segments.at(-1);
+    expect((last?.startAngle ?? NaN) + (last?.sweepAngle ?? NaN)).toBeCloseTo(270, 6); // -90 + 360
   });
 
   it('keeps sweep angles proportional to value', () => {
-    const segments = buildSegments(
-      [slice('a', 50), slice('b', 25), slice('c', 25)],
-      geometry,
-    );
-    expect(segments[0].sweepAngle).toBeCloseTo(180, 6);
-    expect(segments[1].sweepAngle).toBeCloseTo(90, 6);
+    const segments = buildSegments([slice('a', 50), slice('b', 25), slice('c', 25)], geometry);
+    expect(segments[0]?.sweepAngle).toBeCloseTo(180, 6);
+    expect(segments[1]?.sweepAngle).toBeCloseTo(90, 6);
   });
 
   it('floors the DRAWN arc for a tiny category without moving its angles', () => {
     const segments = buildSegments([slice('big', 9999), slice('tiny', 1)], geometry);
     const tiny = segments[1];
-    expect(tiny.arc).toBeGreaterThanOrEqual(SEGMENT_GAP_WIDTH + MIN_VISIBLE_ARC);
+    expect(tiny?.arc).toBeGreaterThanOrEqual(SEGMENT_GAP_WIDTH + MIN_VISIBLE_ARC);
     // Angles must stay true or the ring drifts and fails to close.
-    expect(tiny.sweepAngle).toBeCloseTo(tiny.fraction * 360, 9);
+    expect(tiny?.sweepAngle).toBeCloseTo((tiny?.fraction ?? NaN) * 360, 9);
   });
 
   it('ignores zero and negative values', () => {
-    const segments = buildSegments(
-      [slice('a', 10), slice('zero', 0), slice('b', 20)],
-      geometry,
-    );
+    const segments = buildSegments([slice('a', 10), slice('zero', 0), slice('b', 20)], geometry);
     expect(segments.map(s => s.key)).toEqual(['b', 'a']);
   });
 
@@ -123,10 +108,7 @@ describe('constant-width separation', () => {
   };
 
   it('is identical at the inner and outer edge', () => {
-    const segments = buildSegments(
-      [slice('a', 40), slice('b', 30), slice('c', 30)],
-      geometry,
-    );
+    const segments = buildSegments([slice('a', 40), slice('b', 30), slice('c', 30)], geometry);
     for (const segment of segments) {
       const inner = carvedWidthAt(geometry.innerRadius, segment.startAngle);
       const outer = carvedWidthAt(geometry.outerRadius, segment.startAngle);
@@ -143,10 +125,7 @@ describe('constant-width separation', () => {
 });
 
 describe('touch hit testing', () => {
-  const segments = buildSegments(
-    [slice('food', 50), slice('fuel', 25), slice('rent', 25)],
-    geometry,
-  );
+  const segments = buildSegments([slice('food', 50), slice('fuel', 25), slice('rent', 25)], geometry);
   // food: -90..90 (top-right half), fuel: 90..180, rent: 180..270
 
   it('selects the segment under the touch point', () => {
@@ -185,9 +164,7 @@ describe('touch hit testing', () => {
     // The bug react-native-gifted-charts papers over with `edgesPressable`:
     // a grown segment's protruding edge must remain tappable.
     const grownEdge = pointAt(0, geometry.outerRadius + geometry.expand);
-    expect(segmentAtPoint(grownEdge.x, grownEdge.y, geometry, segments)?.key).toBe(
-      'food',
-    );
+    expect(segmentAtPoint(grownEdge.x, grownEdge.y, geometry, segments)?.key).toBe('food');
   });
 
   it('accepts a touch slightly inside or outside the band', () => {

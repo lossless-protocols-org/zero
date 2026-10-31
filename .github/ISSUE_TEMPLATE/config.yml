@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Bug reports and questions on Discord
+    url: https://discord.gg/2G7yYu9GY7
+    about: '#zero-bugs — one post per bug, template is pinned. Fastest way to reach us.'
+  - name: Release notes and discussion
+    url: https://discord.gg/qxD79s6v3H
+    about: '#zero-updates — what shipped, what is rolling out.'
+  - name: Email
+    url: mailto:hello@lossless.dev
+    about: For anything you would rather not post in public.

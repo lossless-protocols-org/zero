@@ -57,8 +57,26 @@ const MeshAvatar: React.FC<MeshAvatarProps> = ({name, size = 40, bgColor, textCo
     for (let i = 1; i < GRID_COUNT; i++) {
       const pos = step * i;
       lines.push(
-        <Line key={`h${i}`} x1={0} y1={pos} x2={size} y2={pos} stroke={meshColor} strokeWidth={StyleSheet.hairlineWidth} opacity={LINE_OPACITY} />,
-        <Line key={`v${i}`} x1={pos} y1={0} x2={pos} y2={size} stroke={meshColor} strokeWidth={StyleSheet.hairlineWidth} opacity={LINE_OPACITY} />,
+        <Line
+          key={`h${i}`}
+          x1={0}
+          y1={pos}
+          x2={size}
+          y2={pos}
+          stroke={meshColor}
+          strokeWidth={StyleSheet.hairlineWidth}
+          opacity={LINE_OPACITY}
+        />,
+        <Line
+          key={`v${i}`}
+          x1={pos}
+          y1={0}
+          x2={pos}
+          y2={size}
+          stroke={meshColor}
+          strokeWidth={StyleSheet.hairlineWidth}
+          opacity={LINE_OPACITY}
+        />,
       );
     }
     return lines;
@@ -69,12 +87,7 @@ const MeshAvatar: React.FC<MeshAvatarProps> = ({name, size = 40, bgColor, textCo
       <Svg width={size} height={size} style={StyleSheet.absoluteFill} pointerEvents="none">
         {meshLines}
       </Svg>
-      <PrimaryText
-        size={fontSize}
-        weight="bold"
-        color={textColor}
-        numberOfLines={1}
-        allowFontScaling={false}>
+      <PrimaryText size={fontSize} weight="bold" color={textColor} numberOfLines={1} allowFontScaling={false}>
         {initials}
       </PrimaryText>
     </View>

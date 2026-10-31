@@ -5,7 +5,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from './Icons';
 import PrimaryText from './PrimaryText';
 import useThemeColors from '../../hooks/useThemeColors';
-import {hasMigrationFailed} from '../../backend';
+import {useMigrationFailed} from '../../hooks/useMigrationFailed';
 import {gs, hitSlop} from '../../styles/globalStyles';
 
 /**
@@ -19,7 +19,8 @@ const MigrationWarningBanner = () => {
   const insets = useSafeAreaInsets();
   const [dismissed, setDismissed] = useState(false);
 
-  if (dismissed || !hasMigrationFailed()) {
+  const migrationFailed = useMigrationFailed();
+  if (dismissed || !migrationFailed) {
     return null;
   }
 
@@ -30,10 +31,10 @@ const MigrationWarningBanner = () => {
         gs.gap10,
         gs.px14,
         gs.py10,
+        gs.borderBottom1,
         {
           paddingTop: insets.top + 10,
           backgroundColor: colors.containerColor,
-          borderBottomWidth: 1,
           borderBottomColor: colors.accentOrange,
         },
       ]}>

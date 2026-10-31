@@ -3,14 +3,14 @@ import React, {memo, useCallback} from 'react';
 import Icon from '../atoms/Icons';
 import MeshAvatar from '../atoms/MeshAvatar';
 import useThemeColors from '../../hooks/useThemeColors';
-import {useAppDispatch, useAppSelector} from '../../redux/hooks';
-import {selectUserName, setUserName} from '../../redux/slice/userNameSlice';
+import {useUserName} from '../../hooks/useUserName';
 import {navigate} from '../../utils/navigationUtils';
 import PrimaryText from '../atoms/PrimaryText';
-import {updateUserById} from '../../watermelondb/services';
-import {selectUserId} from '../../redux/slice/userIdSlice';
 import {SheetManager} from 'react-native-actions-sheet';
 import {gs, hitSlop} from '../../styles/globalStyles';
+import {useTranslation} from 'react-i18next';
+import {useDialog} from '../../context/DialogContext';
+import {appendErrorLog, logRejection} from '../../utils/errorLog';
 
 interface HeaderContainerProps {
   headerText: string;
@@ -18,31 +18,31 @@ interface HeaderContainerProps {
 
 const HeaderContainer: React.FC<HeaderContainerProps> = ({headerText}) => {
   const colors = useThemeColors();
-  const dispatch = useAppDispatch();
-  const userName = useAppSelector(selectUserName);
-  const userId = useAppSelector(selectUserId);
+  const {t} = useTranslation();
+  const {showAlert} = useDialog();
+  const {userName, rename} = useUserName();
 
   const handleProfileClick = useCallback(() => {
     void SheetManager.show('change-name-sheet', {
       payload: {
         currentName: userName,
         onUpdate: (newName: string) => {
-          updateUserById(userId, {username: newName})
-            .then(() => dispatch(setUserName(newName)))
-            .catch(error => {
-              if (__DEV__) {
-                console.error('Error updating the name:', error);
-              }
-            });
+          rename(newName).catch((error: unknown) => {
+            appendErrorLog(error, false);
+            logRejection(showAlert({type: 'error', message: t('settings.saveFailed')}));
+          });
         },
       },
     });
-  }, [userName, userId, dispatch]);
+  }, [userName, rename, showAlert, t]);
 
   return (
     <View style={[gs.rowCenter, gs.mt15, gs.justifyBetween]}>
       <View style={[gs.rowCenter, gs.flex1, gs.gap12]}>
-        <TouchableOpacity onPress={handleProfileClick}>
+        <TouchableOpacity
+          onPress={handleProfileClick}
+          accessibilityRole="button"
+          accessibilityLabel={t('sheets.changeName')}>
           <MeshAvatar
             name={userName ?? ''}
             size={40}
@@ -51,9 +51,15 @@ const HeaderContainer: React.FC<HeaderContainerProps> = ({headerText}) => {
             meshColor={colors.buttonText}
           />
         </TouchableOpacity>
-        <PrimaryText size={16} weight="semibold">{headerText}</PrimaryText>
+        <PrimaryText size={16} weight="semibold" accessibilityRole="header">
+          {headerText}
+        </PrimaryText>
       </View>
-      <TouchableOpacity onPress={() => navigate('SettingsScreen')} hitSlop={hitSlop}>
+      <TouchableOpacity
+        onPress={() => navigate('SettingsScreen')}
+        hitSlop={hitSlop}
+        accessibilityRole="button"
+        accessibilityLabel={t('settings.title')}>
         <Icon name="settings" size={22} color={colors.secondaryText} />
       </TouchableOpacity>
     </View>

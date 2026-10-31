@@ -49,6 +49,10 @@ const IconPickerSheet: React.FC<SheetProps<'icon-picker-sheet'>> = React.memo(pr
   const renderIconItem = useCallback(
     ({item}: {item: string}) => (
       <TouchableOpacity
+        accessibilityRole="button"
+        // Icon names are kebab-case words ('shopping-bag'): read them as words.
+        accessibilityLabel={item.replaceAll('-', ' ')}
+        accessibilityState={{selected: selectedIcon === item}}
         style={[
           gs.m8,
           gs.center,
@@ -73,7 +77,7 @@ const IconPickerSheet: React.FC<SheetProps<'icon-picker-sheet'>> = React.memo(pr
         title: t('sheets.selectIcon'),
         showCloseButton: true,
         onClosePress: () => {
-          SheetManager.hide(props.sheetId);
+          void SheetManager.hide(props.sheetId);
         },
       }}
       onClose={handleClose}

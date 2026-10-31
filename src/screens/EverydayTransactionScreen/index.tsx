@@ -12,6 +12,7 @@ import PrimaryText from '../../components/atoms/PrimaryText';
 import Icon from '../../components/atoms/Icons';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {gs} from '../../styles/globalStyles';
+import {DataErrorBanner} from '../../components/atoms/DataErrorBanner';
 
 const EverydayTransactionScreen = () => {
   const route = useRoute<EverydayTransactionRouteProp>();
@@ -22,15 +23,10 @@ const EverydayTransactionScreen = () => {
 
   const listHeader = useMemo(
     () => (
-      <View
-        style={[
-          gs.h50,
-          gs.rounded5,
-          gs.rowBetweenCenter,
-          gs.px10,
-          {backgroundColor: colors.secondaryAccent},
-        ]}>
-        <PrimaryText size={13} weight="semibold" style={gs.textCenter}>{t('transaction.totalSpent')}</PrimaryText>
+      <View style={[gs.h50, gs.rounded5, gs.rowBetweenCenter, gs.px10, {backgroundColor: colors.secondaryAccent}]}>
+        <PrimaryText size={13} weight="semibold" style={gs.textCenter}>
+          {t('transaction.totalSpent')}
+        </PrimaryText>
         <PrimaryText size={13} weight="semibold" style={gs.textCenter}>
           {formatAmount(totalAmountForTheDay)}
         </PrimaryText>
@@ -58,6 +54,7 @@ const EverydayTransactionScreen = () => {
       <View style={[gs.mb20, gs.mt20]}>
         <AppHeader onPress={goBack} colors={colors} text={formattedDate} />
       </View>
+      <DataErrorBanner domains={['expense']} />
       <TransactionList
         allExpenses={allEverydayTransactions}
         targetDate={expenseDate}

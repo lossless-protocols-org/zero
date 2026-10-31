@@ -1,7 +1,7 @@
 import useThemeColors from '../../hooks/useThemeColors';
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Linking, Platform} from 'react-native';
+import {Linking} from 'react-native';
 import {requestStoragePermission} from '../../utils/dataUtils';
 import {isValidExportKey} from '../../backend/export/key';
 import {useDialog} from '../../context/DialogContext';
@@ -12,15 +12,17 @@ import {fetchCategories} from '../../redux/slice/categoryDataSlice';
 import {fetchDebtors} from '../../redux/slice/debtorDataSlice';
 import {fetchUserData} from '../../redux/slice/userIdSlice';
 import {fetchCurrency} from '../../redux/slice/currencyDataSlice';
-import {fetchExpenses} from '../../redux/slice/expenseDataSlice';
+import {refetchExpenses} from '../../redux/slice/expenseDataSlice';
 import {fetchAllDebts} from '../../redux/slice/debtDataSlice';
-import StorageService from '../../utils/asyncStorageService';
-import {setIsOnboarded} from '../../redux/slice/isOnboardedSlice';
+import {isOnboardedPreference} from '../../utils/onboarding';
 import {useAppDispatch} from '../../redux/hooks';
-import {refreshYearsCache} from '../../utils/availableYearsCache';
+import {refreshYearsCache} from '../../watermelondb/services/availableYearsCache';
 import {upgradeExportData} from '../../backend/export/upgrader';
-import type {ExportData} from '../../backend/export/format';
+import {isEnvelopeTooNew, type ExportData} from '../../backend/export/format';
+import {appendErrorLog, logRejection} from '../../utils/errorLog';
+import {formatDate} from '../../utils/dateUtils';
 import {validateExportEnvelope} from '../../backend/export/validate';
+import {MAX_IMPORT_BYTES, loadBackupFile} from '../../backend/import/loadBackupFile';
 
 type ImportedData = ExportData;
 
@@ -55,6 +57,14 @@ const allStatuses = (status: EntityStatus): SyncStatus => ({
   budgets: status,
 });
 
+// `as const` keeps the values literal so t() type-checks the keys; one entry per LoadedBackup reason.
+const IMPORT_FAILURE_MESSAGE_KEY = {
+  invalidPath: 'existingUser.invalidFilePath',
+  tooLarge: 'existingUser.fileTooLarge',
+  invalidJson: 'existingUser.invalidJson',
+  unreadable: 'existingUser.fileUnreadable',
+} as const;
+
 const EMPTY_STATS: SyncStats = {
   categories: 0,
   expenses: 0,
@@ -78,36 +88,16 @@ const useExistingUser = () => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(allStatuses('pending'));
   const [syncStats, setSyncStats] = useState<SyncStats>(EMPTY_STATS);
 
-  const normalizePath = (path: string | undefined): string => {
-    try {
-      if (path === undefined) {
-        throw new Error('Path is undefined');
-      }
-      if (Platform.OS === 'ios' || Platform.OS === 'android') {
-        const filePrefix = 'file:';
-        if (path.startsWith(filePrefix)) {
-          path = path.substring(filePrefix.length);
-        }
-        path = decodeURI(path);
-      }
-      return path;
-    } catch (e) {
-      if (__DEV__) {
-        console.error({msg: 'Failed to normalize path', data: e});
-      }
-      return '';
-    }
-  };
-
   const refreshStores = async () => {
     // fetchUserData must resolve FIRST: the entity thunks read userId from
     // redux state and would otherwise query with the stale/empty id.
     await dispatch(fetchUserData());
-    dispatch(fetchCategories());
-    dispatch(fetchDebtors());
-    dispatch(fetchCurrency());
-    dispatch(fetchExpenses());
-    dispatch(fetchAllDebts());
+    void dispatch(fetchCategories());
+    void dispatch(fetchDebtors());
+    void dispatch(fetchCurrency());
+    // Home opens on the current month; load just that, not the whole table.
+    await refetchExpenses(dispatch, {targetMonth: formatDate(new Date(), 'YYYY-MM')});
+    void dispatch(fetchAllDebts());
     // Budgets are month-scoped; Home/Reports refetch them on focus.
   };
 
@@ -127,7 +117,7 @@ const useExistingUser = () => {
           message: t('existingUser.storagePermissionRequired'),
         });
         if (confirmed) {
-          Linking.openSettings();
+          logRejection(Linking.openSettings());
         }
         return;
       }
@@ -146,23 +136,29 @@ const useExistingUser = () => {
       }
 
       const {0: res} = result;
-      const path = normalizePath(res.uri);
-      if (!path) {
-        setUploadMessage(t('existingUser.invalidFilePath'));
+      const loaded = await loadBackupFile({uri: res.uri, name: res.name, size: res.size, error: res.error}, path =>
+        RNFS.readFile(path, 'utf8'),
+      );
+      if (!loaded.ok) {
+        if (loaded.reason === 'unreadable') {
+          // The cause's text can quote the file's display name (iOS); appendErrorLog scrubs it (M8).
+          appendErrorLog(loaded.cause, false);
+        } else if (loaded.reason === 'invalidPath') {
+          appendErrorLog(new Error('import: the picker returned an undecodable uri'), false);
+        }
+        setUploadMessage(
+          t(IMPORT_FAILURE_MESSAGE_KEY[loaded.reason], {
+            maxMb: MAX_IMPORT_BYTES / (1024 * 1024),
+            sizeMb:
+              loaded.reason === 'tooLarge' && loaded.sizeBytes !== undefined
+                ? Math.round(loaded.sizeBytes / (1024 * 1024))
+                : 0,
+          }),
+        );
         return;
       }
 
-      const fileContent = await RNFS.readFile(path, 'utf8');
-
-      let jsonData: unknown;
-      try {
-        jsonData = JSON.parse(fileContent);
-      } catch {
-        setUploadMessage(t('existingUser.invalidJson'));
-        return;
-      }
-
-      const validation = validateExportEnvelope(jsonData);
+      const validation = validateExportEnvelope(loaded.json);
       if (!validation.success || !validation.data) {
         setUploadMessage(validation.error ?? t('existingUser.invalidExport'));
         return;
@@ -171,6 +167,12 @@ const useExistingUser = () => {
       const envelope = validation.data;
       if (!isValidExportKey(envelope.key)) {
         setUploadMessage(t('existingUser.invalidKey'));
+        return;
+      }
+      // A file from a newer app can carry data this build cannot restore;
+      // importing it anyway would drop that data silently (B8).
+      if (isEnvelopeTooNew(envelope.version)) {
+        setUploadMessage(t('existingUser.newerVersion'));
         return;
       }
 
@@ -193,23 +195,39 @@ const useExistingUser = () => {
       setFileName(res.name ?? 'data.json');
       setUploadMessage(t('existingUser.syncingData'));
       setIsSyncing(true);
-      setSyncStatus(allStatuses('syncing'));
 
-      const {userId, stats} = await importAllData(data);
+      // Each row turns "syncing" as its group is prepared, and every row turns
+      // "done" only once the single batch has committed (L3): a 20k restore
+      // shows progress instead of a frozen list.
+      const {userId, stats} = await importAllData(data, phase => {
+        if (phase === 'committed') {
+          setSyncStatus(allStatuses('done'));
+          return;
+        }
+        if (phase === 'writing') {
+          // One native call writes everything; nothing can repaint until it returns.
+          setUploadMessage(t('existingUser.writingData'));
+          return;
+        }
+        setSyncStatus(prev => ({...prev, [phase]: 'syncing'}));
+      });
 
-      // Refetch failures must not mark a committed import as failed.
-      try {
+      // Refetch failures must not mark a committed import as failed, and a
+      // failing year-cache rebuild must not block the store refresh (or Home
+      // would open on the user the import just replaced). Both run; each
+      // failure goes to Diagnostics.
+      const refreshes = await Promise.allSettled([
         // The year cache is keyed by user id and the import minted a new one;
         // rebuild it so the month picker reflects the restored data.
-        await refreshYearsCache(userId);
-        await refreshStores();
-      } catch (refreshError) {
-        if (__DEV__) {
-          console.error('Error refreshing stores after import:', refreshError);
+        refreshYearsCache(userId),
+        refreshStores(),
+      ]);
+      for (const outcome of refreshes) {
+        if (outcome.status === 'rejected') {
+          appendErrorLog(outcome.reason, false);
         }
       }
 
-      setSyncStatus(allStatuses('done'));
       setSyncStats({
         categories: stats.categories,
         expenses: stats.expenses,
@@ -222,9 +240,9 @@ const useExistingUser = () => {
       setIsSyncComplete(true);
       setUploadMessage(t('existingUser.allDataSynced'));
     } catch (error) {
-      if (__DEV__) {
-        console.error('Error importing data:', error);
-      }
+      // The on-screen message already says it failed; the log keeps the cause
+      // so Diagnostics can show it (nothing else records import failures).
+      appendErrorLog(error, false);
       setIsSyncing(false);
       setSyncStatus(allStatuses('error'));
       setSyncError(t('existingUser.syncFailed'));
@@ -243,8 +261,7 @@ const useExistingUser = () => {
   };
 
   const handleContinue = async () => {
-    StorageService.setItemSync('isOnboarded', JSON.stringify(true));
-    dispatch(setIsOnboarded(true));
+    isOnboardedPreference.set(true);
   };
 
   return {

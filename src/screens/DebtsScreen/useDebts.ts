@@ -5,12 +5,13 @@ import {fetchAllDebts, selectAllDebts} from '../../redux/slice/debtDataSlice';
 import {useCallback, useMemo, useState} from 'react';
 import {DebtorData as Debtor, DebtData as Debt} from '../../watermelondb/services';
 import {useFocusEffect} from '@react-navigation/native';
+import {isBorrowType} from '../../utils/debtType';
 
 const useDebts = () => {
   const colors = useThemeColors();
   const dispatch = useAppDispatch();
-  const debtors = useAppSelector(selectDebtorData) as Debtor[];
-  const allDebts = useAppSelector(selectAllDebts) as Debt[];
+  const debtors = useAppSelector(selectDebtorData);
+  const allDebts = useAppSelector(selectAllDebts);
   const [debtorType, setDebtorType] = useState('Person');
 
   const {personDebtors, otherAccountsDebtors} = useMemo(
@@ -26,7 +27,7 @@ const useDebts = () => {
     let lendings = 0;
 
     allDebts.forEach((debt: Debt) => {
-      if (debt.type === 'Borrow') {
+      if (isBorrowType(debt.type)) {
         borrowings += debt.amount;
       } else {
         lendings += debt.amount;
@@ -38,8 +39,8 @@ const useDebts = () => {
 
   useFocusEffect(
     useCallback(() => {
-      dispatch(fetchDebtors());
-      dispatch(fetchAllDebts());
+      void dispatch(fetchDebtors());
+      void dispatch(fetchAllDebts());
     }, [dispatch]),
   );
 

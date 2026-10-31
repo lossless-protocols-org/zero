@@ -1,7 +1,9 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {InteractionManager} from 'react-native';
+import {afterInteractions} from '../utils/afterInteractions';
 import type {SwipeableMethods} from 'react-native-gesture-handler/ReanimatedSwipeable';
-import StorageService from '../utils/asyncStorageService';
+import StorageService from '../utils/storage';
+import {swipeActionsPreference} from '../utils/swipeActions';
+import {usePreference} from './usePreference';
 
 const SWIPE_TUTORIAL_KEY_PREFIX = 'swipe_tutorial_seen_';
 
@@ -21,6 +23,7 @@ interface UseSwipeTutorialReturn {
 const useSwipeTutorial = ({screen, itemCount}: UseSwipeTutorialOptions): UseSwipeTutorialReturn => {
   const storageKey = SWIPE_TUTORIAL_KEY_PREFIX + screen;
   const alreadySeen = StorageService.getBoolean(storageKey);
+  const swipeEnabled = usePreference(swipeActionsPreference);
   const [active, setActive] = useState(false);
   const tutorialRef = useRef<SwipeableMethods | null>(null);
   const hasTriggeredRef = useRef(false);
@@ -32,7 +35,7 @@ const useSwipeTutorial = ({screen, itemCount}: UseSwipeTutorialOptions): UseSwip
   }, [storageKey]);
 
   useEffect(() => {
-    if (alreadySeen || hasTriggeredRef.current || itemCount < 1) {
+    if (alreadySeen || !swipeEnabled || hasTriggeredRef.current || itemCount < 1) {
       return;
     }
 
@@ -60,7 +63,7 @@ const useSwipeTutorial = ({screen, itemCount}: UseSwipeTutorialOptions): UseSwip
       );
     };
 
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = afterInteractions(() => {
       if (cancelled) {
         return;
       }
@@ -90,10 +93,10 @@ const useSwipeTutorial = ({screen, itemCount}: UseSwipeTutorialOptions): UseSwip
         clearTimeout(timer);
       }
     };
-  }, [alreadySeen, itemCount, storageKey]);
+  }, [alreadySeen, swipeEnabled, itemCount, storageKey]);
 
   return {
-    shouldShowTutorial: active && !alreadySeen,
+    shouldShowTutorial: active && !alreadySeen && swipeEnabled,
     tutorialRef,
     dismissTutorial,
   };

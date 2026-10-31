@@ -3,18 +3,11 @@ import {nanoid} from 'nanoid';
 import {database} from '../database';
 import Debtor from '../models/Debtor';
 import Debt from '../models/Debt';
-import {sanitizeString, DEFAULTS} from '../../backend/sanitize';
-
-// Type for debtor data - all properties initialized for Hidden Class optimization
-export interface DebtorData {
-  id: string;
-  title: string;
-  type: string;
-  debtorStatus: boolean;
-  userId: string;
-  icon: string;
-  color: string;
-}
+import {sanitizeString, DEFAULTS} from '../../utils/sanitize';
+import {assertUserId} from './assertUserId';
+import {isRecordNotFound} from './recordNotFound';
+import type {DebtorData} from '../../domain/types';
+export type {DebtorData};
 
 /**
  * Creates a new debtor
@@ -26,6 +19,7 @@ export const createDebtor = async (
   type: string,
   color: string | null,
 ): Promise<string> => {
+  assertUserId(userId, 'debtor');
   const id = nanoid(24);
   await database.write(async () => {
     await database.get<Debtor>('debtors').create(debtor => {
@@ -48,14 +42,8 @@ export const createDebtor = async (
 export const deleteDebtorById = async (debtorId: string): Promise<void> => {
   await database.write(async () => {
     const debtor = await database.get<Debtor>('debtors').find(debtorId);
-    const debts = await database
-      .get<Debt>('debts')
-      .query(Q.where('debtor_id', debtorId))
-      .fetch();
-    await database.batch(
-      ...debts.map(debt => debt.prepareDestroyPermanently()),
-      debtor.prepareDestroyPermanently(),
-    );
+    const debts = await database.get<Debt>('debts').query(Q.where('debtor_id', debtorId)).fetch();
+    await database.batch(...debts.map(debt => debt.prepareDestroyPermanently()), debtor.prepareDestroyPermanently());
   });
 };
 
@@ -91,13 +79,8 @@ export const updateDebtorById = async (
 /**
  * Gets all debtors by user ID
  */
-export const getAllDebtorsByUserId = async (
-  userId: string,
-): Promise<DebtorData[]> => {
-  const debtors = await database
-    .get<Debtor>('debtors')
-    .query(Q.where('user_id', userId))
-    .fetch();
+export const getAllDebtorsByUserId = async (userId: string): Promise<DebtorData[]> => {
+  const debtors = await database.get<Debtor>('debtors').query(Q.where('user_id', userId)).fetch();
   return debtors.map(d => ({
     id: d.id,
     title: d.title,
@@ -112,21 +95,28 @@ export const getAllDebtorsByUserId = async (
 /**
  * Gets a debtor by ID
  */
-export const getDebtorByDebtorId = async (
-  debtorId: string,
-): Promise<DebtorData | null> => {
+export const getDebtorByDebtorId = async (debtorId: string): Promise<DebtorData | null> => {
+  let debtor: Debtor;
   try {
-    const debtor = await database.get<Debtor>('debtors').find(debtorId);
-    return {
-      id: debtor.id,
-      title: debtor.title,
-      type: debtor.type,
-      debtorStatus: debtor.debtorStatus,
-      userId: debtor.userId,
-      icon: sanitizeString(debtor.icon, DEFAULTS.icon),
-      color: sanitizeString(debtor.color, DEFAULTS.color),
-    };
-  } catch {
-    return null;
+    debtor = await database.get<Debtor>('debtors').find(debtorId);
+  } catch (error) {
+    // "not found" is a legitimate answer (a debtor deleted while its screen
+    // was open). Anything else is a database failure and must not be read as
+    // "not found" (M6, v2.7.1); the caller's thunk rejection logs it.
+    // WatermelonDB 0.28 has no typed not-found error; Collection._fetchRecord
+    // throws exactly this invariant text, so nothing else can match it.
+    if (isRecordNotFound(error)) {
+      return null;
+    }
+    throw error;
   }
+  return {
+    id: debtor.id,
+    title: debtor.title,
+    type: debtor.type,
+    debtorStatus: debtor.debtorStatus,
+    userId: debtor.userId,
+    icon: sanitizeString(debtor.icon, DEFAULTS.icon),
+    color: sanitizeString(debtor.color, DEFAULTS.color),
+  };
 };

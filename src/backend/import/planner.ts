@@ -12,55 +12,47 @@
  *   never dropped: the missing category/debtor is auto-created instead.
  * - Expenses and debts are NOT deduplicated — identical rows are
  *   indistinguishable from legitimately repeated transactions.
+ * - Debt types are normalised to 'Borrow' | 'Lend'.
+ * - Dedupe by name is case-SENSITIVE on purpose: the app now refuses to create
+ *   a second active category/debtor whose name differs only by case, so two
+ *   spellings in one file came from different rows and are kept apart.
  */
 
 import type {ExportData} from '../export/validate';
-import {DEFAULTS, sanitizeString} from '../sanitize';
+import {DEFAULTS, sanitizeString} from '../../utils/sanitize';
 
-export interface PlannedCategory {
-  name: string;
+/** One row of the validated file. The planned shapes below are these plus what planning resolves (M18). */
+type FileRow<K extends keyof ExportData> = ExportData[K][number];
+
+type PlannedCategory = Omit<FileRow<'categories'>, 'categoryStatus' | 'icon' | 'color'> & {
   status: boolean;
   icon: string;
   color: string;
   autoCreated: boolean;
-}
+};
 
-export interface PlannedDebtor {
-  title: string;
+type PlannedDebtor = Omit<FileRow<'debtors'>, 'debtorStatus' | 'icon' | 'type' | 'color'> & {
   status: boolean;
   icon: string;
   type: string;
   color: string;
   autoCreated: boolean;
-}
+};
 
-export interface PlannedCurrency {
-  code: string;
-  symbol: string;
-  name: string;
-}
+type PlannedCurrency = FileRow<'currencies'>;
 
-export interface PlannedBudget {
-  amount: number;
-  month: string;
-  budgetType: string;
-}
+type PlannedBudget = Omit<FileRow<'budgets'>, 'category'> & {
+  /** Set for per-category budgets; resolved to a fresh id at import time. */
+  categoryName?: string;
+};
 
-export interface PlannedExpense {
-  title: string;
-  amount: number;
+type PlannedExpense = Omit<FileRow<'expenses'>, 'description' | 'category'> & {
   description: string;
   categoryName: string;
-  date: string;
-}
+};
 
-export interface PlannedDebt {
-  amount: number;
-  description: string;
-  debtorTitle: string;
-  date: string;
-  type: string;
-}
+/** `type` is already a DebtType: the schema folds free-text types into the two. */
+type PlannedDebt = Omit<FileRow<'debts'>, 'debtor'> & {debtorTitle: string};
 
 export interface ImportStats {
   categories: number;
@@ -73,7 +65,7 @@ export interface ImportStats {
   autoCreatedDebtors: number;
 }
 
-export interface ImportPlan {
+interface ImportPlan {
   categories: PlannedCategory[];
   debtors: PlannedDebtor[];
   currencies: PlannedCurrency[];
@@ -130,12 +122,20 @@ export const buildImportPlan = (data: ExportData): ImportPlan => {
 
   const budgetsByKey = new Map<string, PlannedBudget>();
   for (const budget of data.budgets) {
-    const key = `${budget.month}|${budget.budgetType}`;
+    const isCategoryBudget = budget.budgetType === 'category';
+    const categoryName = isCategoryBudget ? budget.category?.name : undefined;
+    // A category budget without a category (or whose category is not in the
+    // file) has nothing to attach to; drop it rather than import an orphan.
+    if (isCategoryBudget && (!categoryName || !categoriesByName.has(categoryName))) {
+      continue;
+    }
+    const key = `${budget.month}|${budget.budgetType}|${categoryName ?? ''}`;
     if (!budgetsByKey.has(key)) {
       budgetsByKey.set(key, {
         amount: budget.amount,
         month: budget.month,
         budgetType: budget.budgetType,
+        categoryName,
       });
     }
   }
@@ -148,6 +148,8 @@ export const buildImportPlan = (data: ExportData): ImportPlan => {
     date: expense.date,
   }));
 
+  // Types were folded into the two the app knows by the schema, so no row can
+  // land in a bucket that is counted but never shown (B7).
   const debts: PlannedDebt[] = data.debts.map(debt => ({
     amount: debt.amount,
     description: debt.description,

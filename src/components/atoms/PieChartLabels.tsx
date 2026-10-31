@@ -1,14 +1,21 @@
-import {TouchableOpacity, View} from 'react-native';
+import {StyleSheet, TouchableOpacity, View} from 'react-native';
+
+const TRANSPARENT = 'transparent';
 import React, {useCallback, useMemo} from 'react';
+import {useTranslation} from 'react-i18next';
 import PrimaryText from './PrimaryText';
 import Icon from './Icons';
-import {Colors} from '../../hooks/useThemeColors';
+import type {ThemeColors} from '../../hooks/useThemeColors';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {hexToRgba} from '../../utils/colorUtils';
-import {gs} from '../../styles/globalStyles';
+import {formatPercent} from '../../utils/numberUtils';
+import {gs, hitSlop} from '../../styles/globalStyles';
 
 interface Label {
+  /** Identity (the category id): selection and hiding match on it. */
   key: string;
+  /** The category name as shown. */
+  label: string;
   value: number;
   color: string;
   categoryId?: string;
@@ -16,81 +23,142 @@ interface Label {
 }
 
 interface PieChartLabelsProps {
-  colors: Colors;
+  colors: ThemeColors;
   slices: Array<Label>;
   /** Key of the slice selected in the chart, so the rows stay in sync. */
   activeKey?: string | null;
-  onCategoryPress?: (categoryId: string, categoryName: string, categoryColor: string, categoryIcon?: string) => void;
+  /** Slice keys the user has hidden from the chart; rows render dimmed. */
+  excludedKeys?: ReadonlySet<string>;
+  onToggleExclude?: (key: string) => void;
+  /** Per-category monthly budget in force, keyed by category id. */
+  categoryBudgets?: Record<string, {amount: number}>;
+  onCategoryPress?: (categoryId: string) => void;
 }
 
-const PieChartLabels: React.FC<PieChartLabelsProps> = React.memo(({colors, slices, activeKey, onCategoryPress}) => {
-  const formatAmount = useFormatAmount();
-  const total = useMemo(() => slices.reduce((sum, s) => sum + s.value, 0), [slices]);
-  const sorted = useMemo(() => [...slices].sort((a, b) => b.value - a.value), [slices]);
+const PieChartLabels: React.FC<PieChartLabelsProps> = React.memo(
+  ({colors, slices, activeKey, excludedKeys, onToggleExclude, categoryBudgets, onCategoryPress}) => {
+    const {t} = useTranslation();
+    const formatAmount = useFormatAmount();
+    // Percentages are of what is SHOWN: hiding a category re-bases the rest,
+    // which is the point of hiding it (the review asked to drop a dominant
+    // slice to read the others).
+    const total = useMemo(
+      () => slices.reduce((sum, s) => (excludedKeys?.has(s.key) ? sum : sum + s.value), 0),
+      [slices, excludedKeys],
+    );
+    const sorted = useMemo(() => [...slices].sort((a, b) => b.value - a.value), [slices]);
 
-  const handlePress = useCallback(
-    (slice: Label) => {
-      if (onCategoryPress && slice.categoryId) {
-        onCategoryPress(slice.categoryId, slice.key, slice.color, slice.categoryIcon);
-      }
-    },
-    [onCategoryPress],
-  );
-
-  const isTappable = !!onCategoryPress;
-
-  return (
-    <View style={gs.mt20}>
-      {sorted.map(slice => {
-        const pct = total > 0 ? Math.round((slice.value / total) * 100) : 0;
-        const isActive = activeKey === slice.key;
-        const content = (
-          <View
-            key={slice.key}
-            style={[
-              gs.rowCenter,
-              gs.rounded12,
-              gs.gap8,
-              gs.mb6,
-              {
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-                backgroundColor: colors.secondaryAccent,
-                // Mirrors the chart's selection so the two read as one control.
-                borderWidth: 1,
-                borderColor: isActive ? slice.color : 'transparent',
-              },
-            ]}>
-            <View style={[gs.size10, gs.roundedFull, {backgroundColor: slice.color}]} />
-            <PrimaryText size={13} color={colors.primaryText} numberOfLines={1} style={gs.flex1}>
-              {slice.key}
-            </PrimaryText>
-            <PrimaryText size={13} weight="semibold" variant="number" color={colors.primaryText}>
-              {formatAmount(slice.value)}
-            </PrimaryText>
-            <View style={[gs.px5, gs.py3, gs.rounded5, {backgroundColor: hexToRgba(slice.color, 0.125)}]}>
-              <PrimaryText size={11} weight="semibold" variant="number" color={slice.color}>
-                {pct}%
-              </PrimaryText>
-            </View>
-            {isTappable && (
-              <Icon name="chevron-right" size={14} color={colors.secondaryText} />
-            )}
-          </View>
-        );
-
-        if (isTappable) {
-          return (
-            <TouchableOpacity key={slice.key} onPress={() => handlePress(slice)} activeOpacity={0.7}>
-              {content}
-            </TouchableOpacity>
-          );
+    const handlePress = useCallback(
+      (slice: Label) => {
+        if (onCategoryPress && slice.categoryId) {
+          onCategoryPress(slice.categoryId);
         }
+      },
+      [onCategoryPress],
+    );
 
-        return content;
-      })}
-    </View>
-  );
-});
+    const isTappable = !!onCategoryPress;
+
+    return (
+      <View style={gs.mt20}>
+        {sorted.map(slice => {
+          const excluded = excludedKeys?.has(slice.key) ?? false;
+          const pct = !excluded && total > 0 ? Math.round((slice.value / total) * 100) : 0;
+          const isActive = activeKey === slice.key;
+          const budget = slice.categoryId ? categoryBudgets?.[slice.categoryId] : undefined;
+          const budgetRatio = budget ? slice.value / budget.amount : 0;
+          const overBudget = !!budget && slice.value > budget.amount;
+          const content = (
+            <View
+              style={[
+                gs.rounded12,
+                gs.mb6,
+                gs.px14,
+                gs.py10,
+                styles.row,
+                excluded ? styles.excluded : undefined,
+                // Mirrors the chart's selection so the two read as one control.
+                {backgroundColor: colors.secondaryAccent, borderColor: isActive ? slice.color : TRANSPARENT},
+              ]}>
+              <View style={[gs.rowCenter, gs.gap8]}>
+                <View style={[gs.size10, gs.roundedFull, {backgroundColor: slice.color}]} />
+                <PrimaryText size={13} color={colors.primaryText} numberOfLines={1} style={gs.flex1}>
+                  {slice.label}
+                </PrimaryText>
+                <PrimaryText size={13} weight="semibold" variant="number" color={colors.primaryText}>
+                  {formatAmount(slice.value)}
+                </PrimaryText>
+                <View
+                  style={[gs.px5, gs.py3, gs.rounded5, styles.pct, {backgroundColor: hexToRgba(slice.color, 0.125)}]}>
+                  <PrimaryText size={11} weight="semibold" variant="number" color={slice.color}>
+                    {excluded ? '–' : formatPercent(pct)}
+                  </PrimaryText>
+                </View>
+                {onToggleExclude ? (
+                  <TouchableOpacity
+                    onPress={() => onToggleExclude(slice.key)}
+                    hitSlop={hitSlop}
+                    accessibilityRole="button"
+                    accessibilityState={{selected: !excluded}}
+                    accessibilityLabel={
+                      excluded
+                        ? t('reports.showCategory', {name: slice.label})
+                        : t('reports.hideCategory', {name: slice.label})
+                    }>
+                    <Icon name={excluded ? 'eye-off' : 'eye'} size={15} color={colors.secondaryText} />
+                  </TouchableOpacity>
+                ) : null}
+                {isTappable && <Icon name="chevron-right" size={14} color={colors.secondaryText} />}
+              </View>
+              {budget ? (
+                <View style={gs.mt8}>
+                  <View style={[gs.rounded4, gs.h4, {backgroundColor: colors.secondaryContainerColor}]}>
+                    <View
+                      style={[
+                        gs.rounded4,
+                        gs.h4,
+                        {
+                          width: `${Math.min(budgetRatio * 100, 100)}%`,
+                          backgroundColor: overBudget ? colors.accentOrange : slice.color,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <PrimaryText
+                    size={10}
+                    variant="number"
+                    color={overBudget ? colors.accentOrange : colors.secondaryText}
+                    style={gs.mt3}>
+                    {t('reports.categoryBudgetLine', {
+                      spent: formatAmount(slice.value),
+                      budget: formatAmount(budget.amount),
+                    })}
+                  </PrimaryText>
+                </View>
+              ) : null}
+            </View>
+          );
+
+          if (isTappable) {
+            return (
+              <TouchableOpacity key={slice.key} onPress={() => handlePress(slice)} activeOpacity={0.7}>
+                {content}
+              </TouchableOpacity>
+            );
+          }
+
+          return <View key={slice.key}>{content}</View>;
+        })}
+      </View>
+    );
+  },
+);
 
 export default PieChartLabels;
+
+const styles = StyleSheet.create({
+  row: {borderWidth: 1},
+  // 0.65 keeps a hidden row's text at 4.5:1 (M31: 0.45 was 2.74).
+  excluded: {opacity: 0.65},
+  pct: {minWidth: 40, alignItems: 'center'},
+});

@@ -1,13 +1,15 @@
-import React, {createContext, useContext, useState, useCallback, useRef, useMemo, type ReactNode} from 'react';
-import {Modal, Pressable, TouchableOpacity, View} from 'react-native';
-import {useTranslation} from 'react-i18next';
-import PrimaryText from '../components/atoms/PrimaryText';
-import Icon from '../components/atoms/Icons';
-import {useThemeColors} from './ThemeContext';
-import {gs} from '../styles/globalStyles';
-import {hexToRgba} from '../utils/colorUtils';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+  type ReactNode,
+} from 'react';
 
-type DialogType = 'success' | 'warning' | 'error' | 'info';
+export type DialogType = 'success' | 'warning' | 'error' | 'info';
 
 /**
  * One line of a structured list inside a dialog.
@@ -19,7 +21,7 @@ type DialogType = 'success' | 'warning' | 'error' | 'info';
  * a sentence. Bullets are structured instead: left-aligned, evenly spaced, and
  * each with an icon that carries meaning on its own.
  */
-export interface DialogBullet {
+interface DialogBullet {
   /** Icon registry name, e.g. 'share-2'. */
   icon: string;
   text: string;
@@ -42,28 +44,49 @@ const DialogContext = createContext<DialogContextType | undefined>(undefined);
 
 interface InternalDialog extends DialogConfig {
   resolve: (value: boolean) => void;
+  reject: (reason: Error) => void;
   showCancel: boolean;
 }
 
-const TYPE_ICON: Record<DialogType, string> = {
-  success: 'badge-check',
-  warning: 'shield-alert',
-  error: 'alert-circle',
-  info: 'badge-info',
-};
+/** Fade-out time of the Modal before the next queued dialog is presented. */
+const DISMISS_DELAY_MS = 400;
+
+/**
+ * Rejection for dialogs still open when the provider unmounts (the app is
+ * tearing down, or an ErrorBoundary replaced the tree). Tagged so the error
+ * log records it as a consequence, never as the unhandled cause (M5).
+ */
+export class DialogUnmountedError extends Error {
+  constructor() {
+    super('Dialog provider unmounted');
+    this.name = 'DialogUnmountedError';
+  }
+}
+
+/** What the dialog view draws; the provider owns the queue and the promises. */
+export interface DialogViewProps {
+  visible: boolean;
+  dialog: (DialogConfig & {showCancel: boolean}) | null;
+  /** true = OK, false = Cancel, backdrop or Android back. */
+  onClose: (confirmed: boolean) => void;
+}
 
 interface DialogProviderProps {
   children: ReactNode;
+  /**
+   * Draws the dialog. Passed in (App passes components/molecules/DialogView)
+   * so this context does not import UI components (M9).
+   */
+  DialogView: React.ComponentType<DialogViewProps>;
 }
 
-export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
-  const colors = useThemeColors();
-  const {t} = useTranslation();
+export const DialogProvider: React.FC<DialogProviderProps> = ({children, DialogView}) => {
   const [visible, setVisible] = useState(false);
   const [display, setDisplay] = useState<InternalDialog | null>(null);
   const activeRef = useRef<InternalDialog | null>(null);
   const queueRef = useRef<InternalDialog[]>([]);
   const dismissingRef = useRef(false);
+  const showNextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const present = useCallback((dialog: InternalDialog) => {
     activeRef.current = dialog;
@@ -72,6 +95,7 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
   }, []);
 
   const showNext = useCallback(() => {
+    showNextTimerRef.current = null;
     dismissingRef.current = false;
     if (queueRef.current.length > 0) {
       const next = queueRef.current.shift();
@@ -83,15 +107,43 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
     activeRef.current = null;
   }, [present]);
 
+  // Idempotent (M5, v2.7.1): a second tap during the fade used to schedule
+  // showNext twice, and with a dialog queued the second call cleared
+  // activeRef under the dialog it had just presented — its OK then resolved
+  // nothing and the caller's `await showDialog()` never resumed.
   const dismiss = useCallback(
     (result: boolean) => {
-      activeRef.current?.resolve(result);
+      const active = activeRef.current;
+      if (!active) {
+        return;
+      }
+      active.resolve(result);
       activeRef.current = null;
       dismissingRef.current = true;
       setVisible(false);
-      setTimeout(showNext, 400);
+      showNextTimerRef.current = setTimeout(showNext, DISMISS_DELAY_MS);
     },
     [showNext],
+  );
+
+  // A dialog still open (or queued) when the provider goes away would leave
+  // its caller awaiting forever; reject instead so the caller's error path runs.
+  useEffect(
+    () => () => {
+      if (showNextTimerRef.current) {
+        clearTimeout(showNextTimerRef.current);
+      }
+      // Full reset, so a remount of this instance (Fast Refresh) starts clean.
+      showNextTimerRef.current = null;
+      dismissingRef.current = false;
+      const pending = [activeRef.current, ...queueRef.current];
+      activeRef.current = null;
+      queueRef.current = [];
+      for (const dialog of pending) {
+        dialog?.reject(new DialogUnmountedError());
+      }
+    },
+    [],
   );
 
   const enqueue = useCallback(
@@ -107,8 +159,8 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
 
   const showDialog = useCallback(
     (config: DialogConfig): Promise<boolean> => {
-      return new Promise(resolve => {
-        enqueue({...config, resolve, showCancel: true});
+      return new Promise((resolve, reject) => {
+        enqueue({...config, resolve, reject, showCancel: true});
       });
     },
     [enqueue],
@@ -116,10 +168,11 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
 
   const showAlert = useCallback(
     (config: Omit<DialogConfig, 'cancelLabel'>): Promise<void> => {
-      return new Promise(resolve => {
+      return new Promise((resolve, reject) => {
         enqueue({
           ...config,
           resolve: () => resolve(),
+          reject,
           showCancel: false,
         });
       });
@@ -129,128 +182,10 @@ export const DialogProvider: React.FC<DialogProviderProps> = ({children}) => {
 
   const contextValue = useMemo(() => ({showDialog, showAlert}), [showDialog, showAlert]);
 
-  // Backdrop tap / Android back = cancel for confirmations. For alerts (no
-  // cancel button) it simply closes, which is what `resolve()` already does.
-  const handleDismissRequest = useCallback(() => {
-    dismiss(false);
-  }, [dismiss]);
-
-  const dialogType = display?.type ?? 'info';
-
-  // Themed scrim: a fixed black wash sat oddly over the dark theme.
-  const overlayColor = useMemo(
-    () => hexToRgba(colors.sameBlack ?? '#000000', 0.45),
-    [colors.sameBlack],
-  );
-
-  const accentColor = useMemo(() => {
-    switch (dialogType) {
-      case 'success':
-        return colors.accentGreen;
-      case 'warning':
-        return colors.accentOrange;
-      case 'error':
-        return colors.accentRed;
-      default:
-        return colors.accentBlue;
-    }
-  }, [dialogType, colors]);
-
   return (
     <DialogContext.Provider value={contextValue}>
       {children}
-      <Modal
-        visible={visible}
-        animationType="fade"
-        transparent
-        statusBarTranslucent
-        // Android hardware back previously did nothing while a dialog was up
-        // (and RN warns without this). Treat it as a cancel.
-        onRequestClose={handleDismissRequest}>
-        <Pressable
-          style={[gs.flex1, gs.center, {backgroundColor: overlayColor}]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.close')}
-          onPress={handleDismissRequest}>
-          <Pressable style={[gs.wFull, gs.itemsCenter]} onPress={event => event.stopPropagation()}>
-            <View style={[gs.roundedTop24, {backgroundColor: accentColor, height: 10, width: '80%'}]} />
-            <View
-              style={[
-                gs.center,
-                gs.py20,
-                gs.px20,
-                {
-                  backgroundColor: colors.secondaryAccent,
-                  width: '80%',
-                  borderBottomLeftRadius: 8,
-                  borderBottomRightRadius: 8,
-                },
-              ]}>
-              <View style={[gs.size40, gs.roundedFull, gs.center, gs.mb10, {backgroundColor: hexToRgba(accentColor, 0.125)}]}>
-                <Icon name={TYPE_ICON[dialogType]} size={22} color={accentColor} />
-              </View>
-              <PrimaryText size={13} color={colors.primaryText} style={gs.textCenter}>
-                {display?.message}
-              </PrimaryText>
-              {display?.bullets?.length ? (
-                <View style={[gs.wFull, gs.mt15, gs.gap12]}>
-                  {display.bullets.map(bullet => (
-                    <View key={bullet.text} style={[gs.row, gs.itemsStart, gs.gap10]}>
-                      <View
-                        style={[
-                          gs.size24,
-                          gs.rounded8,
-                          gs.center,
-                          {backgroundColor: hexToRgba(accentColor, 0.125)},
-                        ]}>
-                        <Icon name={bullet.icon} size={13} color={accentColor} />
-                      </View>
-                      <PrimaryText
-                        size={12}
-                        color={colors.secondaryText}
-                        style={[gs.flex1, gs.textLeft]}>
-                        {bullet.text}
-                      </PrimaryText>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-              <View
-                style={[
-                  gs.rowCenter,
-                  gs.mt15,
-                  gs.gap12,
-                  {justifyContent: display?.showCancel ? 'space-between' : 'center'},
-                ]}>
-                {display?.showCancel && (
-                  <TouchableOpacity
-                    onPress={() => dismiss(false)}
-                    activeOpacity={0.7}
-                    accessibilityLabel={display.cancelLabel ?? t('common.cancel')}
-                    accessibilityRole="button">
-                    <View style={[gs.w60, gs.h35, gs.rounded5, gs.center, {backgroundColor: colors.accentRed}]}>
-                      <PrimaryText size={13} weight="semibold" color={colors.sameWhite}>
-                        {display.cancelLabel ?? t('common.cancel')}
-                      </PrimaryText>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  onPress={() => dismiss(true)}
-                  activeOpacity={0.7}
-                  accessibilityLabel={display?.okLabel ?? t('common.ok')}
-                  accessibilityRole="button">
-                  <View style={[gs.w60, gs.h35, gs.rounded5, gs.center, {backgroundColor: colors.accentGreen}]}>
-                    <PrimaryText size={13} weight="semibold" color={colors.buttonText}>
-                      {display?.okLabel ?? t('common.ok')}
-                    </PrimaryText>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <DialogView visible={visible} dialog={display} onClose={dismiss} />
     </DialogContext.Provider>
   );
 };

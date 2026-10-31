@@ -2,7 +2,7 @@ import {Keyboard, Platform, TouchableOpacity, View} from 'react-native';
 import React, {useCallback} from 'react';
 import Icon from './Icons';
 import PrimaryText from './PrimaryText';
-import {formatDate} from '../../utils/dateUtils';
+import {formatDate, formatDisplayDate} from '../../utils/dateUtils';
 import DateTimePicker, {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import useThemeColors from '../../hooks/useThemeColors';
 import {SheetManager} from 'react-native-actions-sheet';
@@ -37,7 +37,7 @@ const DatePicker: React.FC<DatePickerProps> = React.memo(
       Keyboard.dismiss();
 
       if (Platform.OS === 'ios') {
-        SheetManager.show('date-picker-sheet', {
+        void SheetManager.show('date-picker-sheet', {
           payload: {
             selectedDate: createdAt,
             minDate,
@@ -55,20 +55,17 @@ const DatePicker: React.FC<DatePickerProps> = React.memo(
 
     return (
       <View style={gs.mb15}>
-        {label && <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>{label}</PrimaryText>}
+        {label && (
+          <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>
+            {label}
+          </PrimaryText>
+        )}
         <TouchableOpacity
           onPress={handleOpenDatePicker}
           activeOpacity={0.7}
-          style={[
-            gs.h48,
-            gs.rounded12,
-            gs.px14,
-            gs.rowCenter,
-            gs.gap8,
-            {backgroundColor: colors.secondaryAccent},
-          ]}>
+          style={[gs.minH48, gs.rounded12, gs.px14, gs.rowCenter, gs.gap8, {backgroundColor: colors.secondaryAccent}]}>
           <Icon name="calendar" size={18} color={colors.secondaryText} />
-          <PrimaryText size={14}>{formatDate(createdAt, 'Do MMM YYYY')}</PrimaryText>
+          <PrimaryText size={14}>{formatDisplayDate(createdAt, 'date')}</PrimaryText>
         </TouchableOpacity>
 
         {Platform.OS === 'android' && showDatePicker && (
@@ -76,7 +73,9 @@ const DatePicker: React.FC<DatePickerProps> = React.memo(
             value={new Date(createdAt)}
             mode="date"
             is24Hour={false}
-            display="default"
+            // Spinner on Android too: iOS already scrolls, and the one review
+            // that mentioned the date field asked for exactly that feel.
+            display="spinner"
             onChange={handleDateChange}
             minimumDate={minDate}
             maximumDate={maxDate}

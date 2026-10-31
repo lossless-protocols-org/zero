@@ -1,31 +1,20 @@
-import StorageService from './asyncStorageService';
+import {createMmkvPreference, oneOf} from './mmkvPreference';
+
+export type WeekStartDay = 'sunday' | 'monday';
 
 /**
  * User preference for which day the Reports calendar week begins on.
  * Sunday is the default because it is the app's historical behaviour —
  * existing users see no change until they opt in to Monday.
  */
+export const weekStartPreference = createMmkvPreference<WeekStartDay>(
+  'weekStartDay',
+  oneOf(['sunday', 'monday']),
+  'sunday',
+);
 
-export type WeekStartDay = 'sunday' | 'monday';
-
-const WEEK_START_KEY = 'weekStartDay';
-const VALID_VALUES: WeekStartDay[] = ['sunday', 'monday'];
-
-export const getWeekStartDay = (): WeekStartDay => {
-  const saved = StorageService.getItemSync(WEEK_START_KEY);
-  if (saved && (VALID_VALUES as string[]).includes(saved)) {
-    return saved as WeekStartDay;
-  }
-  return 'sunday';
-};
-
-export const setWeekStartDay = (day: WeekStartDay): void => {
-  StorageService.setItemSync(WEEK_START_KEY, day);
-};
-
-/** How many positions the Sunday-first weekday arrays shift left. */
-export const weekStartOffset = (start: WeekStartDay): 0 | 1 =>
-  start === 'monday' ? 1 : 0;
+/** How many positions the Sunday-first weekday arrays shift left. @internal test */
+export const weekStartOffset = (start: WeekStartDay): 0 | 1 => (start === 'monday' ? 1 : 0);
 
 /** Rotates a Sunday-first weekday-name array to begin on the chosen day. */
 export const rotateWeekdays = (names: string[], start: WeekStartDay): string[] => {

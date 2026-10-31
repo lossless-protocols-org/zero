@@ -37,7 +37,7 @@ import Icon from './Icons';
 import {gs} from '../../styles/globalStyles';
 import {useTranslation} from 'react-i18next';
 
-export interface CustomBottomSheetHeader {
+interface CustomBottomSheetHeader {
   title?: string;
   showCloseButton?: boolean;
   customComponent?: ReactNode;
@@ -45,7 +45,7 @@ export interface CustomBottomSheetHeader {
   onClosePress?: () => void;
 }
 
-export interface CustomBottomSheetProps {
+interface CustomBottomSheetProps {
   sheetId: string;
   children: ReactNode;
   header?: CustomBottomSheetHeader | null;
@@ -87,10 +87,14 @@ function CustomBottomSheetComponent({
       {
         backgroundColor: colors.containerColor,
         paddingBottom: useBottomSafeAreaPadding ? 16 : 0,
+        // Landscape, edge-to-edge: the navigation bar sits over one side of the
+        // sheet and swallowed taps on the close button. Pad by the inset.
+        paddingLeft: safeAreaInsets.left,
+        paddingRight: safeAreaInsets.right,
       },
       containerStyle,
     ];
-  }, [colors.containerColor, useBottomSafeAreaPadding, containerStyle]);
+  }, [colors.containerColor, useBottomSafeAreaPadding, containerStyle, safeAreaInsets.left, safeAreaInsets.right]);
 
   const indicatorStyles = useMemo(() => {
     return [gs.w40, gs.h4, gs.rounded2, {backgroundColor: colors.secondaryText}, indicatorStyle];
@@ -108,7 +112,7 @@ function CustomBottomSheetComponent({
     if (header?.onClosePress) {
       header.onClosePress();
     } else {
-      SheetManager.hide(sheetId);
+      void SheetManager.hide(sheetId);
     }
   }, [header, sheetId]);
 
@@ -142,12 +146,13 @@ function CustomBottomSheetComponent({
             style={[
               gs.px16,
               gs.py12,
-              {borderBottomWidth: 1, borderBottomColor: colors.secondaryContainerColor},
+              gs.borderBottom1,
+              {borderBottomColor: colors.secondaryContainerColor},
               header.style,
             ]}>
             <View style={gs.rowBetweenCenter}>
               {header.title && (
-                <PrimaryText size={18} weight="semibold" style={gs.flex1}>
+                <PrimaryText size={18} weight="semibold" style={gs.flex1} accessibilityRole="header">
                   {header.title}
                 </PrimaryText>
               )}
@@ -190,7 +195,7 @@ function CustomBottomSheetComponent({
       useBottomSafeAreaPadding={useBottomSafeAreaPadding}
       animated={animated}
       containerStyle={containerStyles}
-      indicatorStyle={!header && showIndicator ? indicatorStyles : {width: 0, height: 0}}
+      indicatorStyle={!header && showIndicator ? indicatorStyles : gs.size0}
       headerAlwaysVisible={!!header}
       CustomHeaderComponent={renderHeader}
       onOpen={handleOpen}

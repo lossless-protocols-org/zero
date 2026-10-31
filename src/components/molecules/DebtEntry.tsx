@@ -1,5 +1,5 @@
-import React, {useState, memo, useCallback} from 'react';
-import {View, TouchableOpacity} from 'react-native';
+import React, {useState, memo, useRef} from 'react';
+import {View, TouchableOpacity, TextInput} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import AppHeader from '../../components/atoms/AppHeader';
 import CustomInput from '../../components/atoms/CustomInput';
@@ -7,96 +7,58 @@ import PrimaryButton from '../../components/atoms/PrimaryButton';
 import PrimaryView from '../../components/atoms/PrimaryView';
 import {goBack} from '../../utils/navigationUtils';
 import useThemeColors from '../../hooks/useThemeColors';
-import {createDebt, updateDebtById} from '../../watermelondb/services';
-import {useAppDispatch, useAppSelector} from '../../redux/hooks';
-import {selectUserId} from '../../redux/slice/userIdSlice';
-import {fetchAllDebts, fetchDebtsByDebtor} from '../../redux/slice/debtDataSlice';
 import DatePicker from '../atoms/DatePicker';
-import {DebtsScreenProp} from '../../screens/AddDebtsScreen';
-import {getISODateTime} from '../../utils/dateUtils';
-import {expenseAmountSchema, expenseSchema} from '../../utils/validationSchema';
+import {expenseSchema} from '../../i18n/validationSchema';
+import {BORROW, LEND} from '../../utils/debtType';
+import {logRejection} from '../../utils/errorLog';
 import PrimaryText from '../atoms/PrimaryText';
 import {gs} from '../../styles/globalStyles';
 import AmountInput from '../atoms/AmountInput';
+import {useDebtForm, type EditedDebt} from '../../hooks/useDebtForm';
 
 interface DebtEntryProps {
-  buttonText: string;
-  route: DebtsScreenProp;
+  debtor: {debtorId: string; debtorName: string};
+  /** The debt being edited; absent when adding one. */
+  editing?: EditedDebt;
 }
 
-const DebtEntry: React.FC<DebtEntryProps> = ({buttonText, route}) => {
+const DebtEntry: React.FC<DebtEntryProps> = ({debtor, editing}) => {
   const {t} = useTranslation();
   const colors = useThemeColors();
-  const dispatch = useAppDispatch();
-  const {debtId = '', debtDescription = '', amount = 0, debtorName = '', debtDate = '', debtorId = '', debtType = 'Borrow'} = route.params ?? {};
-  const isAddButton = buttonText === 'Add';
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const [debtName, setDebtName] = useState(isAddButton ? '' : debtDescription);
-  const [debtAmount, setDebtAmount] = useState(isAddButton ? '' : String(amount));
-  const [createdAt, setCreatedAt] = useState(isAddButton ? getISODateTime() : debtDate);
+  const {debtorName} = debtor;
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [debtsType, setDebtsType] = useState(isAddButton ? 'Borrow' : debtType);
-  const userId = useAppSelector(selectUserId);
-
-  const debtAmountError = hasInteracted ? expenseAmountSchema?.safeParse(Number(debtAmount)).error?.issues || [] : [];
-
-  const isValid =
-    expenseSchema.safeParse(debtName).success && expenseAmountSchema.safeParse(Number(debtAmount)).success;
-
-  const handleAddDebt = useCallback(async () => {
-    if (!isValid) {
-      return;
-    }
-    try {
-      await createDebt(userId, Number(debtAmount), debtName, debtorId, createdAt, debtsType);
-      dispatch(fetchAllDebts());
-      dispatch(fetchDebtsByDebtor(debtorId));
-      goBack();
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error creating debt:', error);
-      }
-    }
-  }, [isValid, userId, debtAmount, debtName, debtorId, createdAt, debtsType, dispatch]);
-
-  const handleUpdateDebt = useCallback(async () => {
-    if (!isValid) {
-      return;
-    }
-    try {
-      await updateDebtById(debtId, Number(debtAmount), debtName, createdAt, debtsType);
-
-      dispatch(fetchAllDebts());
-      dispatch(fetchDebtsByDebtor(debtorId));
-      goBack();
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error updating debt:', error);
-      }
-    }
-  }, [isValid, debtId, debtorId, debtAmount, debtName, createdAt, debtsType, dispatch]);
-
-  // Gates validation errors until the user leaves the field (see ExpenseEntry).
-  const handleAmountBlur = useCallback(() => {
-    setHasInteracted(true);
-  }, []);
+  const amountRef = useRef<React.ElementRef<typeof TextInput>>(null);
+  const {
+    debtName,
+    setDebtName,
+    debtAmount,
+    setDebtAmount,
+    createdAt,
+    setCreatedAt,
+    debtsType,
+    setDebtsType,
+    debtAmountError,
+    isValid,
+    handleAmountBlur,
+    save,
+  } = useDebtForm(debtor.debtorId, editing);
 
   return (
     <PrimaryView colors={colors} style={gs.justifyBetween} dismissKeyboardOnTouch>
       <View>
         <View style={[gs.mb20, gs.mt20]}>
-          <AppHeader onPress={goBack} colors={colors} text={isAddButton ? t('debt.addTitle') : t('debt.editTitle')} />
+          <AppHeader onPress={goBack} colors={colors} text={editing ? t('debt.editTitle') : t('debt.addTitle')} />
         </View>
 
         <PrimaryText size={12} color={colors.secondaryText} style={gs.mb8}>
           {debtorName}
         </PrimaryText>
         <View style={[gs.row, gs.gap8, gs.mb15]}>
-          {(['Borrow', 'Lend'] as const).map(debtTypeOption => {
+          {([BORROW, LEND] as const).map(debtTypeOption => {
             const isSelected = debtsType === debtTypeOption;
-            const label = debtTypeOption === 'Borrow' ? t('debts.borrowing') : t('debts.lending');
+            const label = debtTypeOption === BORROW ? t('debts.borrowing') : t('debts.lending');
             let bgColor = colors.secondaryAccent;
-            if (isSelected && debtTypeOption === 'Borrow') {
+            if (isSelected && debtTypeOption === BORROW) {
               bgColor = colors.accentOrange;
             } else if (isSelected) {
               bgColor = colors.accentGreen;
@@ -106,13 +68,10 @@ const DebtEntry: React.FC<DebtEntryProps> = ({buttonText, route}) => {
                 key={debtTypeOption}
                 onPress={() => setDebtsType(debtTypeOption)}
                 activeOpacity={0.7}
-                style={[
-                  gs.py8,
-                  gs.px14,
-                  gs.rounded12,
-                  gs.center,
-                  {backgroundColor: bgColor},
-                ]}>
+                accessibilityRole="button"
+                accessibilityState={{selected: isSelected}}
+                accessibilityLabel={label}
+                style={[gs.py8, gs.minTouch, gs.px14, gs.rounded12, gs.center, {backgroundColor: bgColor}]}>
                 <PrimaryText
                   size={13}
                   weight={isSelected ? 'semibold' : 'regular'}
@@ -131,14 +90,21 @@ const DebtEntry: React.FC<DebtEntryProps> = ({buttonText, route}) => {
           placeholder={t('debt.descriptionPlaceholder')}
           label={t('transaction.descriptionLabel')}
           schema={expenseSchema}
+          returnKeyType="next"
+          onSubmitEditing={() => amountRef.current?.focus()}
         />
 
-        <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>{t('transaction.amountLabel')}</PrimaryText>
+        <PrimaryText size={12} color={colors.secondaryText} style={gs.mb5}>
+          {t('transaction.amountLabel')}
+        </PrimaryText>
         <AmountInput
+          ref={amountRef}
           value={debtAmount}
           onChangeText={setDebtAmount}
           onBlur={handleAmountBlur}
-          style={{marginBottom: debtAmountError.length > 0 ? 5 : 15}}
+          returnKeyType="done"
+          accessibilityLabel={t('transaction.amountLabel')}
+          style={debtAmountError.length > 0 ? gs.mb5 : gs.mb15}
         />
         {debtAmountError.length > 0 && (
           <View style={gs.mb10}>
@@ -163,9 +129,9 @@ const DebtEntry: React.FC<DebtEntryProps> = ({buttonText, route}) => {
 
       <View style={gs.mb10p}>
         <PrimaryButton
-          onPress={isAddButton ? handleAddDebt : handleUpdateDebt}
+          onPress={() => logRejection(save())}
           colors={colors}
-          buttonTitle={isAddButton ? t('common.add') : t('common.update')}
+          buttonTitle={editing ? t('common.update') : t('common.add')}
           disabled={!isValid}
         />
       </View>

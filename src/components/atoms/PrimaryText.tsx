@@ -1,25 +1,35 @@
-import {Text, TextStyle, StyleProp, Pressable} from 'react-native';
+import {Text, TextStyle, StyleProp, Pressable, type TextProps} from 'react-native';
 import React, {ReactNode, useMemo, memo} from 'react';
 import useThemeColors from '../../hooks/useThemeColors';
 
 type FontWeight = 'regular' | 'medium' | 'semibold' | 'bold';
 type FontVariant = 'text' | 'number';
 
-const TEXT_FONTS: Record<FontWeight, string> = {
+const FONTS: Record<FontWeight, string> = {
   regular: 'GoogleSansCode-Regular',
   medium: 'GoogleSansCode-Medium',
   semibold: 'GoogleSansCode-SemiBold',
   bold: 'GoogleSansCode-Bold',
 };
 
-const NUMBER_FONTS: Record<FontWeight, string> = {
-  regular: 'GoogleSansCode-Regular',
-  medium: 'GoogleSansCode-Medium',
-  semibold: 'GoogleSansCode-SemiBold',
-  bold: 'GoogleSansCode-Bold',
-};
+// The number variant used to point at an identical second font map. It now
+// means one thing: tabular (fixed-width) digits, so amounts in a column line up
+// and a counting value does not jiggle as its digits change.
+const NUMBER_FONT_VARIANT: TextStyle['fontVariant'] = ['tabular-nums'];
 
-interface PrimaryTextProps {
+/** Passed straight to the Text: screen-reader roles and labels (M28/M29), and the
+ * font-scale cap one-line amounts need so large text cannot truncate a number (M30). */
+type PassThroughProps = Pick<
+  TextProps,
+  | 'accessibilityRole'
+  | 'accessibilityLabel'
+  | 'accessibilityLiveRegion'
+  | 'accessible'
+  | 'maxFontSizeMultiplier'
+  | 'adjustsFontSizeToFit'
+>;
+
+interface PrimaryTextProps extends PassThroughProps {
   children?: ReactNode;
   style?: StyleProp<TextStyle>;
   size?: number;
@@ -47,21 +57,22 @@ const PrimaryText: React.FC<PrimaryTextProps> = ({
   onPress,
   selectable = false,
   allowFontScaling,
+  ...passThrough
 }) => {
   const colors = useThemeColors();
-  const fonts = variant === 'number' ? NUMBER_FONTS : TEXT_FONTS;
 
   const resolvedEllipsizeMode = ellipsizeMode ?? (numberOfLines ? 'tail' : undefined);
 
   const textStyle = useMemo<TextStyle>(
     () => ({
       fontSize: size,
-      fontFamily: fonts[weight],
+      fontFamily: FONTS[weight],
+      fontVariant: variant === 'number' ? NUMBER_FONT_VARIANT : undefined,
       includeFontPadding: false,
       color: color ?? colors.primaryText,
       flexShrink: numberOfLines ? 1 : undefined,
     }),
-    [size, weight, fonts, color, colors.primaryText, numberOfLines],
+    [size, weight, variant, color, colors.primaryText, numberOfLines],
   );
 
   const textElement = (
@@ -70,7 +81,8 @@ const PrimaryText: React.FC<PrimaryTextProps> = ({
       numberOfLines={numberOfLines}
       ellipsizeMode={resolvedEllipsizeMode}
       selectable={selectable}
-      allowFontScaling={allowFontScaling}>
+      allowFontScaling={allowFontScaling}
+      {...passThrough}>
       {children}
     </Text>
   );

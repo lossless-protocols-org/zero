@@ -1,11 +1,11 @@
 import React from 'react';
-import {useAppSelector} from '../redux/hooks';
-import {selectIsOnboarded} from '../redux/slice/isOnboardedSlice';
+import {isOnboardedPreference} from '../utils/onboarding';
 import HomeStack from './HomeStack';
 import OnboardingStack from './OnboardingStack';
+import {usePreference} from '../hooks/usePreference';
 
 const MainStack = () => {
-  const isOnboarded = useAppSelector(selectIsOnboarded);
+  const isOnboarded = usePreference(isOnboardedPreference);
   return isOnboarded ? <HomeStack /> : <OnboardingStack />;
 };
 

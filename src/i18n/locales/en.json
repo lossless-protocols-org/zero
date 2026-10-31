@@ -15,8 +15,13 @@
     "change": "Change",
     "choose": "Choose",
     "unknown": "Unknown",
+    "defaultUserName": "User",
+    "recordMissing": "This item no longer exists. It may have been deleted on another screen.",
+    "recordLoadFailed": "This item couldn't be loaded. The cause is recorded in Settings → Diagnostics.",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "rowActionsHint": "Actions available: edit, delete",
+    "moreActions": "More actions"
   },
   "tabs": {
     "home": "Home",
@@ -30,7 +35,17 @@
   },
   "welcome": {
     "title": "Welcome to",
-    "subtitle": "Your finances, your device, your control."
+    "subtitle": "Your finances, your device, your control.",
+    "existingDataPrompt_one": "This device already has {{count}} transaction saved from before. Keep it?",
+    "existingDataPrompt_other": "This device already has {{count}} transactions saved from before. Keep them?",
+    "keepData": "Keep my data",
+    "startFresh": "Start fresh",
+    "deleteExistingConfirm_one": "Delete the {{count}} saved transaction and start from scratch? This cannot be undone.",
+    "deleteExistingConfirm_other": "Delete all {{count}} saved transactions and start from scratch? This cannot be undone.",
+    "existingRecordsPrompt": "This device already has debts, people or budgets saved from before. Keep them?",
+    "deleteRecordsConfirm": "Delete the saved debts, people and budgets and start from scratch? This cannot be undone.",
+    "deleteOrphanedConfirm": "This device still has saved transactions, debts, people or budgets. Delete them and start from scratch? This cannot be undone. To keep them, cancel and restore a backup instead.",
+    "deleteFailed": "Your data couldn't be deleted, so nothing was changed. Please try again."
   },
   "carousel": {
     "slide1Title": "Track Expenses",
@@ -50,6 +65,7 @@
     "syncing": "Syncing...",
     "allDone": "All done",
     "syncingData": "Syncing your data...",
+    "writingData": "Saving everything to the database...",
     "uploadFile": "Upload your file",
     "syncProfile": "Profile",
     "syncCategories": "Categories",
@@ -62,13 +78,16 @@
     "recoveredEntries_one": "{{count}} missing category or debtor was recreated from your transactions.",
     "recoveredEntries_other": "{{count}} missing categories/debtors were recreated from your transactions.",
     "storagePermissionRequired": "Storage permission is required to upload your backup file",
-    "invalidFilePath": "Invalid file path",
+    "invalidFilePath": "zero couldn't read this file's location. Copy it to Downloads and pick it from there.",
     "invalidJson": "File is not valid JSON. Please select a zero export file.",
+    "fileTooLarge": "This file is {{sizeMb}} MB. This version of zero can restore backups up to {{maxMb}} MB.",
+    "fileUnreadable": "zero couldn't open this file. Copy it to Downloads or Files and pick it from there.",
     "invalidExport": "This file is not a valid Zero export.",
     "invalidKey": "Invalid key. Please upload a valid zero export file.",
     "allDataSynced": "All data synced successfully!",
     "syncFailed": "Failed to sync data. Please try again.",
-    "syncError": "Error syncing data. Try again."
+    "syncError": "Error syncing data. Try again.",
+    "newerVersion": "This backup was made by a newer version of zero. Update the app, then try again."
   },
   "personalize": {
     "title": "What should we",
@@ -80,7 +99,8 @@
   "onboarding": {
     "title": "Pick your",
     "titleSuffix": "categories",
-    "subtitle": "Select the ones you want to track"
+    "subtitle": "Select the ones you want to track",
+    "saveFailed": "That couldn't be saved. Please try again."
   },
   "chooseCurrency": {
     "title": "Choose your",
@@ -97,7 +117,10 @@
     "perDay": "day",
     "leftToday": "left today",
     "overToday": "over today",
-    "addTransaction": "Add new transaction"
+    "addTransaction": "Add new transaction",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "nextMonthUnavailable": "Next month, not available yet"
   },
   "reports": {
     "title": "Reports",
@@ -105,7 +128,10 @@
     "avgPerDay": "Avg/day",
     "setBudget": "Set a monthly budget",
     "less": "Less",
-    "more": "More"
+    "more": "More",
+    "hideCategory": "Hide {{name}} from the chart",
+    "showCategory": "Show {{name}} in the chart",
+    "categoryBudgetLine": "{{spent}} of {{budget}} budget"
   },
   "debts": {
     "title": "Debts",
@@ -128,15 +154,19 @@
     "settled": "Settled",
     "addDebt": "Add new debt",
     "settlePrompt": "First you need to settle payment with {{name}}",
-    "settleConfirm": "You want to settle payment with {{name}}?",
+    "settleConfirm": "Settle up with {{name}}? A settlement entry of {{amount}} will be added so the balance reads zero. Past entries stay.",
     "noEntriesYet": "No entries yet",
-    "noOneHereYet": "No one here yet"
+    "noOneHereYet": "No one here yet",
+    "alreadySettled": "Nothing to settle — the balance with {{name}} is already zero.",
+    "settlementDescription": "Settled up",
+    "actionFailed": "That couldn't be saved. Please try again."
   },
   "categories": {
     "title": "Categories",
     "addCategory": "Add new category"
   },
   "transaction": {
+    "deletedAnnounce": "Transaction deleted. Undo is available.",
     "addTitle": "Add Transaction",
     "editTitle": "Edit Transaction",
     "titleLabel": "Title",
@@ -151,11 +181,13 @@
     "dailyRemaining": "{{amount}} left today",
     "dailyExceeded": "{{amount}} over today",
     "deleted": "Transaction deleted",
+    "deleteFailed": "This transaction couldn't be deleted, so it is back in the list. Please try again.",
     "totalSpent": "Total Spent",
     "noTransactionsOnDate": "No transactions on {{date}}",
     "noTransactionsInCategory": "No transactions in {{category}}",
     "txnCount_one": "{{count}} txn",
-    "txnCount_other": "{{count}} txns"
+    "txnCount_other": "{{count}} txns",
+    "saveFailed": "That transaction couldn't be saved. Please try again."
   },
   "category": {
     "addTitle": "Add Category",
@@ -167,7 +199,8 @@
     "colorLabel": "Color",
     "orPickFromDefaults": "or pick from defaults",
     "deleteConfirm": "Delete this category? Past transactions keep it, but you won't be able to pick it for new ones.",
-    "createFailed": "That category couldn't be saved. Please try again."
+    "createFailed": "That category couldn't be saved. Please try again.",
+    "saveFailed": "That category couldn't be saved. Please try again."
   },
   "debtor": {
     "addTitle": "Add Person",
@@ -176,13 +209,15 @@
     "nameLabel": "Name",
     "namePlaceholder": "eg. John Doe or Axis",
     "deleteConfirm": "Delete {{name}}?",
-    "deleteWithDebtsConfirm": "Delete {{name}} and all their entries? This can't be undone."
+    "deleteWithDebtsConfirm": "Delete {{name}} and all their entries? This can't be undone.",
+    "saveFailed": "That couldn't be saved. Please try again."
   },
   "debt": {
     "addTitle": "Add Debt",
     "editTitle": "Edit Debt",
     "descriptionPlaceholder": "eg. Coffee",
-    "deleteConfirm": "Delete this entry? This can't be undone."
+    "deleteConfirm": "Delete this entry? This can't be undone.",
+    "saveFailed": "That entry couldn't be saved. Please try again."
   },
   "settings": {
     "title": "Settings",
@@ -209,6 +244,8 @@
     "deleteSubtitle": "This action cannot be undone",
     "reportBug": "Report a bug",
     "reportBugSubtitle": "Found an issue? Let us know",
+    "community": "Community",
+    "communitySubtitle": "Updates and discussion on Discord",
     "rateApp": "Rate the app",
     "rateAppSubtitle": "Enjoying zero? Your feedback helps!",
     "sourceCode": "Source code",
@@ -226,7 +263,9 @@
     "deleteConfirm": "Are you sure you want to delete all your data? This cannot be undone.",
     "export": "Export",
     "exportSuccess": "Export complete. Find the file in your share sheet or Downloads.",
-    "exportError": "There is an error in exporting your data",
+    "exportError": "Your data couldn't be exported, so no file was written. Please try again. The cause is recorded in Diagnostics.",
+    "exportInvalidRow": "Export stopped: {{detail}}. This entry could not be restored from a backup. Edit it in the app, then export again.",
+    "exportNoUser": "No user profile was found, so a backup can't be written. Restart the app; if this persists, use Report a bug — do not reinstall, your entries are still on this device.",
     "storagePermission": "You need to manually give permission for the storage to download your data",
     "language": "Language",
     "currentLanguage": "English",
@@ -241,9 +280,15 @@
     "whatLeavesDeviceStore": "The app store you installed from knows you downloaded zero.",
     "whatLeavesDeviceExports": "Backups you export live wherever you save or send them.",
     "whatLeavesDeviceBackup": "A device-level backup you switch on may include this app's data.",
-    "whatLeavesDeviceAccess": "Anyone who can unlock your phone can open zero and read it."
+    "whatLeavesDeviceAccess": "Anyone who can unlock your phone can open zero and read it.",
+    "saveFailed": "That change couldn't be saved. Please try again.",
+    "swipeActions": "Swipe to edit or delete",
+    "swipeActionsSubtitle": "Off: long-press a row instead, so a stray swipe can't delete anything",
+    "linkFailed": "That link couldn't be opened on this device."
   },
   "sheets": {
+    "selectDate": "Select date",
+    "colourOption": "Colour {{index}} of {{count}}",
     "selectTheme": "Select Theme",
     "selectMonthYear": "Select Month & Year",
     "changeName": "Change Name",
@@ -264,7 +309,14 @@
     "setBudgetButton": "Set Budget",
     "removeBudget": "Remove Budget",
     "moreLanguages": "More languages coming soon",
-    "selectWeekStart": "Week starts on"
+    "selectWeekStart": "Week starts on",
+    "scopeOverall": "Overall",
+    "setCategoryBudget": "Budget for {{name}}",
+    "budgetScopeLabel": "Budget for",
+    "categoryBudgetLabel": "Monthly limit for this category",
+    "removeRecurringPrompt": "This budget repeats every month. Remove it for {{month}} only, or from {{month}} onward? Earlier months keep their budget either way.",
+    "removeFromThisMonth": "From this month on",
+    "removeThisMonthOnly": "This month only"
   },
   "emptyState": {
     "transactions": "No transactions yet",
@@ -277,9 +329,22 @@
     "message": "The app ran into an unexpected error.\nYour data is safe.",
     "retry": "Try Again"
   },
+  "dataError": {
+    "banner": "Some of your data couldn't be loaded.",
+    "hint": "Leave and reopen this screen to try again. The cause is recorded in Settings → Diagnostics.",
+    "noUserDialog": "Your profile couldn't be found in this device's data, so nothing can be loaded or backed up. Your entries may still be on this device — do not reinstall. Use Report a bug in Settings so we can help.",
+    "dialog": "Something couldn't be loaded from your data file. Your entries are safe. The cause is recorded in Settings → Diagnostics; if this keeps happening, export a backup and reinstall."
+  },
+  "dialog": {
+    "typeSuccess": "Done",
+    "typeWarning": "Warning",
+    "typeError": "Error",
+    "typeInfo": "Note"
+  },
   "databaseError": {
     "title": "Database failed to load",
-    "message": "Your data file may be corrupted.\nPlease restart the app. If this persists,\nreinstall Zero — your exported backups are safe."
+    "message": "Zero couldn't open your data file. The file has been kept as it is.\nRestart the app or update it from the store. Please don't uninstall — that deletes the file. Share the error report so it can be recovered.",
+    "share": "Share error report"
   },
   "calendar": {
     "today": "Today",
@@ -295,13 +360,18 @@
     "expenseMaxLength": "Expense cannot exceed 25 characters.",
     "descriptionMinLength": "Expense Description must be at least 1 character long.",
     "descriptionMaxLength": "Expense Description cannot exceed 50 characters.",
-    "amountMin": "Expense Amount must be at least 0.01.",
-    "amountMax": "Expense Amount cannot exceed 1000000.",
+    "amountMin": "Amount must be at least {{min}}.",
+    "amountMax": "Amount cannot exceed {{max}}.",
     "categoryLettersOnly": "Category Name can only contain letters, numbers, spaces, apostrophes and hyphens.",
     "categoryMinLength": "Category Name must be at least 1 character long.",
-    "categoryMaxLength": "Category Name cannot exceed 18 characters.",
+    "categoryMaxLength": "Category Name cannot exceed {{max}} characters.",
     "unknownError": "Unknown validation error",
-    "invalidField": "Invalid field \"{{path}}\": {{message}}"
+    "invalidField": "Invalid field \"{{path}}\": {{message}}",
+    "amountDecimals_zero": "{{code}} amounts have no decimal places.",
+    "amountDecimals_one": "{{code}} amounts can have at most {{count}} decimal place.",
+    "amountDecimals_other": "{{code}} amounts can have at most {{count}} decimal places.",
+    "duplicateCategory": "A category with this name already exists.",
+    "duplicateDebtor": "Someone with this name already exists."
   },
   "backup": {
     "iHaveBackup": "I have a backup"
@@ -330,6 +400,7 @@
     "gotIt": "Got it"
   },
   "crashReport": {
+    "unhandledMessage": "Something went wrong in the background last time. A report with the error and your device model is ready — no transactions, names or amounts. Share it with the developer?",
     "message": "zero closed unexpectedly last time. A report with the error and your device model is ready — no transactions, names or amounts. Share it with the developer?",
     "share": "Share",
     "notNow": "Not now",
@@ -342,7 +413,11 @@
     "share": "Share log",
     "clear": "Clear",
     "clearConfirm": "Clear the diagnostics log?",
+    "clearFailed": "The log couldn't be cleared. Restart the app and try again.",
     "fatal": "FATAL",
-    "error": "ERROR"
+    "error": "ERROR",
+    "email": "Email log",
+    "emailEntry": "Email this error",
+    "noMailApp": "No mail app is set up on this device. Use Share log instead."
   }
 }

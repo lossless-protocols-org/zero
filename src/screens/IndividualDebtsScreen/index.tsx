@@ -1,4 +1,6 @@
 import {RefreshControl, TouchableOpacity, View} from 'react-native';
+import {BORROW, LEND} from '../../utils/debtType';
+import type {DebtType} from '../../domain/types';
 import React, {useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -15,6 +17,8 @@ import DebtList from '../../components/molecules/DebtList';
 import useFormatAmount from '../../hooks/useFormatAmount';
 import {gs, hitSlop} from '../../styles/globalStyles';
 import {hexToRgba} from '../../utils/colorUtils';
+import {DataErrorBanner} from '../../components/atoms/DataErrorBanner';
+import {logRejection} from '../../utils/errorLog';
 
 const IndividualDebtsScreen = () => {
   const route = useRoute<IndividualDebtsScreenRouteProp>();
@@ -38,9 +42,12 @@ const IndividualDebtsScreen = () => {
   const {t} = useTranslation();
   const formatAmount = useFormatAmount();
 
-  const [debtsType, setDebtsType] = useState('Borrow');
-  const currentDebts = debtsType === 'Borrow' ? sortedBorrowings : sortedLendings;
-  const {shouldShowTutorial, tutorialRef, dismissTutorial} = useSwipeTutorial({screen: 'debt', itemCount: currentDebts.length});
+  const [debtsType, setDebtsType] = useState<DebtType>(BORROW);
+  const currentDebts = debtsType === BORROW ? sortedBorrowings : sortedLendings;
+  const {shouldShowTutorial, tutorialRef, dismissTutorial} = useSwipeTutorial({
+    screen: 'debt',
+    itemCount: currentDebts.length,
+  });
   const insets = useSafeAreaInsets();
 
   const netColor = useMemo(() => {
@@ -75,13 +82,7 @@ const IndividualDebtsScreen = () => {
             </PrimaryText>
           </View>
           <View
-            style={[
-              gs.flex1,
-              gs.py10,
-              gs.px14,
-              gs.rounded12,
-              {backgroundColor: hexToRgba(colors.accentGreen, 0.078)},
-            ]}>
+            style={[gs.flex1, gs.py10, gs.px14, gs.rounded12, {backgroundColor: hexToRgba(colors.accentGreen, 0.078)}]}>
             <PrimaryText size={11} color={colors.accentGreen} style={gs.mb5}>
               {t('debts.lent')}
             </PrimaryText>
@@ -132,41 +133,60 @@ const IndividualDebtsScreen = () => {
 
         <View style={[gs.row, gs.gap8, gs.mb15]}>
           <TouchableOpacity
-            onPress={() => setDebtsType('Borrow')}
+            onPress={() => setDebtsType(BORROW)}
+            accessibilityRole="tab"
+            accessibilityState={{selected: debtsType === BORROW}}
             activeOpacity={0.7}
             style={[
               gs.py8,
+              gs.minTouch,
               gs.px14,
               gs.rounded12,
-              {backgroundColor: debtsType === 'Borrow' ? colors.primaryText : colors.secondaryAccent},
+              {backgroundColor: debtsType === BORROW ? colors.primaryText : colors.secondaryAccent},
             ]}>
             <PrimaryText
               size={13}
               weight="semibold"
-              color={debtsType === 'Borrow' ? colors.buttonText : colors.secondaryText}>
+              color={debtsType === BORROW ? colors.buttonText : colors.secondaryText}>
               {t('debts.borrowed')}
             </PrimaryText>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => setDebtsType('Lend')}
+            onPress={() => setDebtsType(LEND)}
+            accessibilityRole="tab"
+            accessibilityState={{selected: debtsType === LEND}}
             activeOpacity={0.7}
             style={[
               gs.py8,
+              gs.minTouch,
               gs.px14,
               gs.rounded12,
-              {backgroundColor: debtsType === 'Lend' ? colors.primaryText : colors.secondaryAccent},
+              {backgroundColor: debtsType === LEND ? colors.primaryText : colors.secondaryAccent},
             ]}>
             <PrimaryText
               size={13}
               weight="semibold"
-              color={debtsType === 'Lend' ? colors.buttonText : colors.secondaryText}>
+              color={debtsType === LEND ? colors.buttonText : colors.secondaryText}>
               {t('debts.lent')}
             </PrimaryText>
           </TouchableOpacity>
         </View>
       </View>
     ),
-    [colors, formatAmount, debtsType, debtorTotal, handleDeleteDebtor, handleMarkAsPaid, handleUpdateDebtor, netColor, netLabel, totalBorrowings, totalLendings, t],
+    [
+      colors,
+      formatAmount,
+      debtsType,
+      debtorTotal,
+      handleDeleteDebtor,
+      handleMarkAsPaid,
+      handleUpdateDebtor,
+      netColor,
+      netLabel,
+      totalBorrowings,
+      totalLendings,
+      t,
+    ],
   );
 
   return (
@@ -174,20 +194,23 @@ const IndividualDebtsScreen = () => {
       <View style={[gs.px16, gs.mb15, gs.mt20]}>
         <AppHeader onPress={goBack} colors={colors} text={debtorName ?? ''} />
       </View>
+      <View style={gs.px16}>
+        <DataErrorBanner domains={['debt', 'debtor', 'individualDebtor']} />
+      </View>
       {shouldShowTutorial && <SwipeTutorialTooltip onDismiss={dismissTutorial} />}
       <DebtList
         colors={colors}
         handleEditDebt={handleEditDebt}
-        handleDeleteDebt={handleDeleteDebt}
+        handleDeleteDebt={debtId => logRejection(handleDeleteDebt(debtId))}
         individualDebts={currentDebts}
         ListHeaderComponent={ListHeader}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         tutorialSwipeRef={tutorialRef}
       />
-      <View style={[gs.absolute, gs.right15, gs.zIndex1, {bottom: Math.max(insets.bottom, 15) + 5}]}>
+      <View style={[gs.absolute, gs.end15, gs.zIndex1, {bottom: Math.max(insets.bottom, 15) + 5}]}>
         <TouchableOpacity
           style={[gs.size50, gs.rounded8, gs.center, {backgroundColor: colors.secondaryBackground}]}
-          onPress={() => navigate('AddDebtsScreen', {debtorId, debtorName})}
+          onPress={() => navigate('AddDebtsScreen', {debtorId})}
           hitSlop={hitSlop}
           accessibilityLabel={t('debts.addDebt')}
           accessibilityRole="button">

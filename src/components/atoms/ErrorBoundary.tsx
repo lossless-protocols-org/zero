@@ -70,7 +70,9 @@ class ErrorBoundary extends Component<Props, State> {
       const c = getErrorBoundaryColors();
       return (
         <View style={[styles.container, {backgroundColor: c.background}]}>
-          <PrimaryText size={40} weight="bold" color={c.text}>:(</PrimaryText>
+          <PrimaryText size={40} weight="bold" color={c.text}>
+            :(
+          </PrimaryText>
           <PrimaryText size={16} weight="semibold" color={c.text} style={styles.title}>
             {i18n.t('errorBoundary.title')}
           </PrimaryText>

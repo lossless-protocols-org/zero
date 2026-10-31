@@ -17,9 +17,7 @@ export interface MockLocale {
   isRTL: boolean;
 }
 
-const DEFAULT_LOCALES: MockLocale[] = [
-  {languageTag: 'en-US', languageCode: 'en', countryCode: 'US', isRTL: false},
-];
+const DEFAULT_LOCALES: MockLocale[] = [{languageTag: 'en-US', languageCode: 'en', countryCode: 'US', isRTL: false}];
 
 let locales: MockLocale[] = DEFAULT_LOCALES;
 let numberFormatSettings = {decimalSeparator: '.', groupingSeparator: ','};
@@ -32,10 +30,7 @@ export const setMockLocales = (next: MockLocale[]): void => {
   locales = next;
 };
 
-export const setMockNumberFormatSettings = (next: {
-  decimalSeparator: string;
-  groupingSeparator: string;
-}): void => {
+export const setMockNumberFormatSettings = (next: {decimalSeparator: string; groupingSeparator: string}): void => {
   numberFormatSettings = next;
 };
 

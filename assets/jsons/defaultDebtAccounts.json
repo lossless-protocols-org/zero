@@ -3,30 +3,30 @@
     "_id": "5f75cddc0ef99a4714df8e6c",
     "name": "Credit Card",
     "icon": "credit-card",
-    "color": "#FF6347"
+    "color": "#D06850"
   },
   {
     "_id": "5f75cddc0ef99a3704df8e6d",
     "name": "Person",
     "icon": "user",
-    "color": "#1E90FF"
+    "color": "#3A85B5"
   },
   {
     "_id": "5f75cddc0eg99a4704df8e6e",
     "name": "Emi",
     "icon": "banknote",
-    "color": "#4B0082"
+    "color": "#8078C0"
   },
   {
     "_id": "5f75cddc1ef98a4704df8e6f",
     "name": "Loan",
     "icon": "landmark",
-    "color": "#32CD32"
+    "color": "#3D9960"
   },
   {
     "_id": "5f75cddc1ef99a4704df8e6f",
     "name": "Other",
     "icon": "circle-dollar-sign",
-    "color": "#FF8C00"
+    "color": "#BF6B30"
   }
 ]

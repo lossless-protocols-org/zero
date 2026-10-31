@@ -1,128 +1,109 @@
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import useThemeColors from '../../hooks/useThemeColors';
+import useMonthNavigation from '../../hooks/useMonthNavigation';
+import useBudgetActions from '../../hooks/useBudgetActions';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {
-  getCurrentYear,
   getWeekdayShortNames,
-  getDaysInMonth,
-  getMonthNumber,
-  getMonthNames,
+  daysInMonth as countDaysInMonth,
   formatDate,
+  formatDisplayDate,
 } from '../../utils/dateUtils';
-
-const MONTHS = getMonthNames();
-
 import {useFocusEffect} from '@react-navigation/native';
-import {getWeekStartDay, rotateWeekdays, type WeekStartDay} from '../../utils/weekStart';
+import {rotateWeekdays, weekStartPreference} from '../../utils/weekStart';
 import {fetchExpensesByMonth, selectExpenseData} from '../../redux/slice/expenseDataSlice';
-import {selectMonthIndex, selectYear, setMonthSelection} from '../../redux/slice/monthSelectionSlice';
 import {selectCurrencyCode, selectCurrencySymbol} from '../../redux/slice/currencyDataSlice';
 import {selectUserId} from '../../redux/slice/userIdSlice';
-import {fetchBudgetsByMonth, selectCurrentBudget} from '../../redux/slice/budgetDataSlice';
-import {upsertBudget, deleteBudget} from '../../watermelondb/services/budgetService';
-import {ExpenseData as ExpenseDocType} from '../../watermelondb/services';
-import {loadAvailableYears} from '../../utils/availableYearsCache';
-
-interface TransactionWithCategory extends ExpenseDocType {
-  category?: {
-    name?: string;
-    icon?: string;
-    color?: string;
-  };
-}
-
-const CURRENT_YEAR = getCurrentYear();
-const CURRENT_MONTH_INDEX = new Date().getMonth();
+import {fetchBudgetsByMonth, selectCategoryBudgets, selectCurrentBudget} from '../../redux/slice/budgetDataSlice';
+import {fetchCategories} from '../../redux/slice/categoryDataSlice';
+import {loadAvailableYears} from '../../watermelondb/services/availableYearsCache';
+import {logRejection} from '../../utils/errorLog';
+import {sumAmounts} from '../../utils/numberUtils';
+import {usePreference} from '../../hooks/usePreference';
 
 const useReports = () => {
   const colors = useThemeColors();
   const dispatch = useAppDispatch();
-  const [availableYears, setAvailableYears] = useState<number[]>([CURRENT_YEAR]);
+  const {
+    selectedMonthIndex,
+    selectedYear,
+    selectedMonthName,
+    yearMonth,
+    isCurrentMonth,
+    currentYear,
+    canGoForward,
+    handleMonthYearSelect,
+    shiftMonth,
+  } = useMonthNavigation();
+  const [availableYears, setAvailableYears] = useState<number[]>(() => [currentYear]);
 
-  const selectedMonthIndex = useAppSelector(selectMonthIndex);
-  const selectedYear = useAppSelector(selectYear);
-  const selectedMonth = MONTHS[selectedMonthIndex];
-
-  const filteredTransactions = useAppSelector(selectExpenseData) as TransactionWithCategory[];
+  const filteredTransactions = useAppSelector(selectExpenseData);
   const currencySymbol = useAppSelector(selectCurrencySymbol);
   const currencyCode = useAppSelector(selectCurrencyCode);
+  const categoryBudgets = useAppSelector(state => selectCategoryBudgets(state, yearMonth));
 
-  // Week-start preference. Re-read on focus: this screen stays mounted while
-  // Settings is pushed on top, so a plain module read would go stale after
-  // the user changes the option and navigates back.
-  const [weekStart, setWeekStart] = useState<WeekStartDay>(getWeekStartDay);
+  // Subscribed: this screen stays mounted while Settings changes the option.
+  const weekStart = usePreference(weekStartPreference);
   useFocusEffect(
     useCallback(() => {
-      setWeekStart(getWeekStartDay());
-    }, []),
+      void dispatch(fetchCategories());
+    }, [dispatch]),
   );
   const dayNames = useMemo(() => rotateWeekdays(getWeekdayShortNames(), weekStart), [weekStart]);
   const userId = useAppSelector(selectUserId);
 
-  const yearMonth = `${selectedYear}-${getMonthNumber(selectedMonth)}`;
-
   useEffect(() => {
     if (userId) {
-      loadAvailableYears(userId).then(years => {
-        if (years.length > 0) {
-          setAvailableYears(years);
-        }
-      });
+      logRejection(
+        loadAvailableYears(userId).then(years => {
+          if (years.length > 0) {
+            setAvailableYears(years);
+          }
+        }),
+      );
     }
   }, [userId]);
 
-  useEffect(() => {
-    if (userId) {
-      dispatch(fetchExpensesByMonth(yearMonth));
-      dispatch(fetchBudgetsByMonth(yearMonth));
-    }
-  }, [dispatch, userId, yearMonth]);
-
-  const currentBudget = useAppSelector(selectCurrentBudget);
-
-  const handleMonthYearSelect = useCallback(
-    (monthIndex: number, year: number) => {
-      dispatch(setMonthSelection({monthIndex, year}));
-    },
-    [dispatch],
+  // On focus, as Home does: the expense and budget slices hold one month for
+  // every screen, so another screen may have replaced this one's meanwhile.
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) {
+        void dispatch(fetchExpensesByMonth(yearMonth));
+        void dispatch(fetchBudgetsByMonth(yearMonth));
+      }
+    }, [dispatch, userId, yearMonth]),
   );
 
-  const totalAmountForMonth = useMemo(
-    () => (filteredTransactions ?? []).reduce((sum: number, transaction: TransactionWithCategory) => sum + transaction.amount, 0),
-    [filteredTransactions],
-  );
+  const currentBudget = useAppSelector(state => selectCurrentBudget(state, yearMonth));
 
-  const daysInMonth = useMemo(() => getDaysInMonth(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
+  const totalAmountForMonth = useMemo(() => sumAmounts(filteredTransactions ?? []), [filteredTransactions]);
+
+  const daysInMonth = countDaysInMonth(selectedYear, selectedMonthIndex);
 
   const todayTotal = useMemo(() => {
-    const isCurrentMonth = selectedYear === CURRENT_YEAR && selectedMonthIndex === CURRENT_MONTH_INDEX;
-    if (!isCurrentMonth) {return 0;}
+    if (!isCurrentMonth) {
+      return 0;
+    }
     const todayStr = formatDate(new Date(), 'YYYY-MM-DD');
     return (filteredTransactions ?? []).reduce(
-      (sum: number, t: TransactionWithCategory) => (t.date.startsWith(todayStr) ? sum + t.amount : sum), 0,
+      (sum: number, t) => (t.date.startsWith(todayStr) ? sum + t.amount : sum),
+      0,
     );
-  }, [filteredTransactions, selectedYear, selectedMonthIndex]);
+  }, [filteredTransactions, isCurrentMonth]);
 
-  const handleBudgetSave = useCallback(
-    async (amount: number, everyMonth: boolean) => {
-      if (!userId) {return;}
-      const month = everyMonth ? `recurring:${yearMonth}` : yearMonth;
-      await upsertBudget(userId, amount, month);
-      dispatch(fetchBudgetsByMonth(yearMonth));
-    },
-    [userId, yearMonth, dispatch],
-  );
-
-  const handleBudgetRemove = useCallback(async () => {
-    if (!currentBudget) {return;}
-    await deleteBudget(currentBudget.id);
-    dispatch(fetchBudgetsByMonth(yearMonth));
-  }, [currentBudget, yearMonth, dispatch]);
+  const monthLabel = `${selectedMonthName} ${selectedYear}`;
+  // The header pill shares its row with two stat tiles: "Oct 2026", in the locale's form.
+  const shortMonthLabel = formatDisplayDate(`${yearMonth}-01`, 'monthYear');
+  const {handleBudgetSave, handleBudgetRemove} = useBudgetActions(yearMonth, monthLabel);
 
   return {
     colors,
     selectedYear,
-    selectedMonth,
+    selectedMonthIndex,
+    monthLabel,
+    shortMonthLabel,
+    yearMonth,
     filteredTransactions,
     currencySymbol,
     currencyCode,
@@ -130,11 +111,14 @@ const useReports = () => {
     weekStart,
     availableYears,
     handleMonthYearSelect,
+    shiftMonth,
+    canGoForward,
     totalAmountForMonth,
     daysInMonth,
     todayTotal,
-    isCurrentMonth: selectedYear === CURRENT_YEAR && selectedMonthIndex === CURRENT_MONTH_INDEX,
+    isCurrentMonth,
     currentBudget,
+    categoryBudgets,
     handleBudgetSave,
     handleBudgetRemove,
   };

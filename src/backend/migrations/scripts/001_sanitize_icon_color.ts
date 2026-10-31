@@ -1,7 +1,7 @@
 import {database} from '../../../watermelondb/database';
 import Category from '../../../watermelondb/models/Category';
 import Debtor from '../../../watermelondb/models/Debtor';
-import {isPoisonedValue, sanitizeString, DEFAULTS} from '../../sanitize';
+import {isPoisonedValue, sanitizeString, DEFAULTS} from '../../../utils/sanitize';
 
 interface DataMigration {
   version: number;
@@ -24,8 +24,12 @@ const up = async (): Promise<void> => {
       const colorBad = isPoisonedValue(cat.color);
       if (iconBad || colorBad) {
         await cat.update(c => {
-          if (iconBad) { c.icon = sanitizeString(cat.icon, DEFAULTS.icon); }
-          if (colorBad) { c.color = sanitizeString(cat.color, DEFAULTS.color); }
+          if (iconBad) {
+            c.icon = sanitizeString(cat.icon, DEFAULTS.icon);
+          }
+          if (colorBad) {
+            c.color = sanitizeString(cat.color, DEFAULTS.color);
+          }
         });
       }
     }
@@ -36,8 +40,12 @@ const up = async (): Promise<void> => {
       const colorBad = isPoisonedValue(debtor.color);
       if (iconBad || colorBad) {
         await debtor.update(d => {
-          if (iconBad) { d.icon = sanitizeString(debtor.icon, DEFAULTS.icon); }
-          if (colorBad) { d.color = sanitizeString(debtor.color, DEFAULTS.color); }
+          if (iconBad) {
+            d.icon = sanitizeString(debtor.icon, DEFAULTS.icon);
+          }
+          if (colorBad) {
+            d.color = sanitizeString(debtor.color, DEFAULTS.color);
+          }
         });
       }
     }

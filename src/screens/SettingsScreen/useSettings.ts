@@ -1,6 +1,5 @@
 import {useTranslation} from 'react-i18next';
-import {selectUserName, setUserName} from '../../redux/slice/userNameSlice';
-import {selectUserId} from '../../redux/slice/userIdSlice';
+import {useUserName} from '../../hooks/useUserName';
 import {
   selectCurrencyCode,
   selectCurrencyId,
@@ -14,17 +13,19 @@ import {getAppVersion} from '../../utils/getVersion';
 import {useTheme, ThemeMode} from '../../context/ThemeContext';
 import {useDialog} from '../../context/DialogContext';
 import {retryMigrations} from '../../backend';
-import StorageService from '../../utils/asyncStorageService';
-import {updateUserById, updateCurrencyById, deleteAllData} from '../../watermelondb/services';
-import {upsertBudget, deleteBudget} from '../../watermelondb/services/budgetService';
+import {updateCurrencyById, deleteAllData} from '../../watermelondb/services';
 import {Linking, Platform} from 'react-native';
-import {setIsOnboarded} from '../../redux/slice/isOnboardedSlice';
-import {fetchAllData, selectAllData} from '../../redux/slice/allDataSlice';
+import {isOnboardedPreference} from '../../utils/onboarding';
 import {fetchBudgetsByMonth, selectCurrentBudget} from '../../redux/slice/budgetDataSlice';
-import {selectMonthIndex, selectYear} from '../../redux/slice/monthSelectionSlice';
-import {getMonthNumber, getMonthNames} from '../../utils/dateUtils';
+import {fetchCategories} from '../../redux/slice/categoryDataSlice';
 import {useAppDispatch, useAppSelector} from '../../redux/hooks';
 import {appendErrorLog} from '../../utils/errorLog';
+import {DISCORD_UPDATES_URL, GITHUB_REPO_URL} from '../../constants/links';
+import useMonthNavigation from '../../hooks/useMonthNavigation';
+import useBudgetActions from '../../hooks/useBudgetActions';
+import {swipeActionsPreference} from '../../utils/swipeActions';
+import {useReportFailure} from '../../hooks/useReportFailure';
+import {usePreference} from '../../hooks/usePreference';
 
 /**
  * Result of an export attempt.
@@ -36,19 +37,15 @@ export type ExportOutcome = 'saved' | 'cancelled' | 'failed';
 
 const useSettings = () => {
   const {t} = useTranslation();
-  const userName = useAppSelector(selectUserName);
-  const userId = useAppSelector(selectUserId);
+  const {userName, rename} = useUserName();
   const currencyId = useAppSelector(selectCurrencyId);
   const currencyCode = useAppSelector(selectCurrencyCode);
   const currencyName = useAppSelector(selectCurrencyName);
   const currencySymbol = useAppSelector(selectCurrencySymbol);
-  const allData = useAppSelector(selectAllData);
 
-  const selectedMonthIndex = useAppSelector(selectMonthIndex);
-  const selectedYear = useAppSelector(selectYear);
-  const MONTHS = getMonthNames();
-  const yearMonth = `${selectedYear}-${getMonthNumber(MONTHS[selectedMonthIndex])}`;
-  const currentBudget = useAppSelector(selectCurrentBudget);
+  const {yearMonth, selectedMonthName, selectedYear} = useMonthNavigation();
+  const currentBudget = useAppSelector(state => selectCurrentBudget(state, yearMonth));
+  const swipeActionsEnabled = usePreference(swipeActionsPreference);
 
   const {colors, themeMode, setThemeMode} = useTheme();
   const {showDialog, showAlert} = useDialog();
@@ -56,34 +53,52 @@ const useSettings = () => {
 
   const dispatch = useAppDispatch();
 
+  // Exports read the database at tap time (B8), so nothing is preloaded
+  // here for them (L2).
   useFocusEffect(
     useCallback(() => {
-      dispatch(fetchAllData());
-      dispatch(fetchBudgetsByMonth(yearMonth));
+      void dispatch(fetchBudgetsByMonth(yearMonth));
+      void dispatch(fetchCategories());
     }, [dispatch, yearMonth]),
   );
 
-  const handleThemeSelection = useCallback(async (theme: string) => {
-    try {
-      await setThemeMode(theme as ThemeMode);
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error saving theme preference:', error);
-      }
-    }
-  }, [setThemeMode]);
+  // Every preference write below used to swallow its failure behind __DEV__
+  // (production nulls console.*), so a failed save looked identical to a
+  // successful one. Now it is logged to Diagnostics and said out loud (B5).
+  const reportSaveFailure = useReportFailure('settings.saveFailed');
 
-  const handleNameUpdate = useCallback(async (newName: string) => {
-    if (!userId) return;
-    try {
-      await updateUserById(userId, {username: newName});
-      dispatch(setUserName(newName));
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error updating the name:', error);
+  const handleThemeSelection = useCallback(
+    async (theme: ThemeMode) => {
+      try {
+        await setThemeMode(theme);
+      } catch (error) {
+        await reportSaveFailure(error);
       }
-    }
-  }, [userId, dispatch]);
+    },
+    [setThemeMode, reportSaveFailure],
+  );
+
+  const handleNameUpdate = useCallback(
+    async (newName: string) => {
+      try {
+        await rename(newName);
+      } catch (error) {
+        await reportSaveFailure(error);
+      }
+    },
+    [rename, reportSaveFailure],
+  );
+
+  const handleSwipeActionsToggle = useCallback(
+    (enabled: boolean) => {
+      try {
+        swipeActionsPreference.set(enabled);
+      } catch (error) {
+        void reportSaveFailure(error);
+      }
+    },
+    [reportSaveFailure],
+  );
 
   const handleCurrencyUpdate = useCallback(
     async (currency: {code: string; name: string; symbol: string}) => {
@@ -102,61 +117,56 @@ const useSettings = () => {
         };
         dispatch(setCurrencyData(updatedCurrencyData));
       } catch (error) {
-        if (__DEV__) {
-          console.error('Error updating the currency:', error);
-        }
+        await reportSaveFailure(error);
       }
     },
-    [currencyId, dispatch],
+    [currencyId, dispatch, reportSaveFailure],
+  );
+
+  // External links: a device with no browser used to fail silently.
+  const openLink = useCallback(
+    async (url: string) => {
+      try {
+        await Linking.openURL(url);
+      } catch (error) {
+        appendErrorLog(error, false);
+        await showAlert({type: 'error', message: t('settings.linkFailed')});
+      }
+    },
+    [showAlert, t],
   );
 
   const handleReportBug = useCallback(() => {
-    const bugSheetURL = 'https://docs.google.com/spreadsheets/d/187UDxJbFloEUkxxX29ZJnAI7HSdhAAdSbIcAByc8CDU/edit?usp=sharing';
-    Linking.openURL(bugSheetURL).catch(err => {
-      if (__DEV__) {
-        console.error('Error opening bug report sheet:', err);
-      }
-    });
-  }, []);
+    const bugSheetURL =
+      'https://docs.google.com/spreadsheets/d/187UDxJbFloEUkxxX29ZJnAI7HSdhAAdSbIcAByc8CDU/edit?usp=sharing';
+    void openLink(bugSheetURL);
+  }, [openLink]);
 
   const handleRateNow = useCallback(() => {
     const url = Platform.select({
       ios: 'https://apps.apple.com/app/zero-offline-expense-tracker/id6759560225?action=write-review',
       default: 'https://play.google.com/store/apps/details?id=com.anotherwhy.zero',
     });
-    Linking.openURL(url).catch(err => {
-      if (__DEV__) {
-        console.error('Error opening store:', err);
-      }
-    });
-  }, []);
+    void openLink(url);
+  }, [openLink]);
 
   const handleGithub = useCallback(() => {
-    const githubRepoURL = 'https://github.com/indranilbhuin/zero';
-    Linking.openURL(githubRepoURL).catch(err => {
-      if (__DEV__) {
-        console.error('Error opening GitHub:', err);
-      }
-    });
-  }, []);
+    void openLink(GITHUB_REPO_URL);
+  }, [openLink]);
+
+  const handleCommunity = useCallback(() => {
+    void openLink(DISCORD_UPDATES_URL);
+  }, [openLink]);
 
   const handlePrivacyPolicy = useCallback(() => {
     const privacyPolicyURL = 'https://lossless.dev/zero/privacy';
-    Linking.openURL(privacyPolicyURL).catch(err => {
-      if (__DEV__) {
-        console.error('Error opening Privacy Policy:', err);
-      }
-    });
-  }, []);
+    void openLink(privacyPolicyURL);
+  }, [openLink]);
 
   const handleTermsAndConditions = useCallback(() => {
     const termsURL = 'https://lossless.dev/zero/terms';
-    Linking.openURL(termsURL).catch(err => {
-      if (__DEV__) {
-        console.error('Error opening Terms and Conditions:', err);
-      }
-    });
-  }, []);
+    void openLink(termsURL);
+  }, [openLink]);
 
   /**
    * Delete-everything flow, with the backup step treated as a real gate.
@@ -171,48 +181,50 @@ const useSettings = () => {
    * user can retry or explicitly choose Skip, which is a deliberate,
    * backup-free deletion rather than an accidental one.
    */
-  const handleDeleteAllData = useCallback(async (exportFn?: () => Promise<ExportOutcome>) => {
-    const wantsBackup = await showDialog({
-      type: 'info',
-      message: t('settings.deleteBackupPrompt'),
-      okLabel: t('settings.export'),
-      cancelLabel: t('common.skip'),
-    });
+  const handleDeleteAllData = useCallback(
+    async (exportFn?: () => Promise<ExportOutcome>) => {
+      const wantsBackup = await showDialog({
+        type: 'info',
+        message: t('settings.deleteBackupPrompt'),
+        okLabel: t('settings.export'),
+        cancelLabel: t('common.skip'),
+      });
 
-    if (wantsBackup && exportFn) {
-      const outcome = await exportFn();
-      if (outcome !== 'saved') {
-        // 'failed' has already surfaced its own error (or the storage-permission
-        // dialog); 'cancelled' means the user backed out of the share sheet.
-        // Either way there is no backup, so stop before the irreversible step.
-        await showAlert({
-          type: 'error',
-          message: t('settings.deleteBackupFailed'),
-        });
+      if (wantsBackup && exportFn) {
+        const outcome = await exportFn();
+        if (outcome !== 'saved') {
+          // 'failed' has already surfaced its own error (or the storage-permission
+          // dialog); 'cancelled' means the user backed out of the share sheet.
+          // Either way there is no backup, so stop before the irreversible step.
+          await showAlert({
+            type: 'error',
+            message: t('settings.deleteBackupFailed'),
+          });
+          return;
+        }
+      }
+
+      const confirmed = await showDialog({
+        type: 'warning',
+        message: t('settings.deleteConfirm'),
+      });
+      if (!confirmed) return;
+
+      try {
+        await deleteAllData();
+      } catch (error) {
+        // Never leave the user on a "deleted" screen with their data intact.
+        appendErrorLog(error, false);
+        await showAlert({type: 'error', message: t('settings.deleteFailed')});
         return;
       }
-    }
-
-    const confirmed = await showDialog({
-      type: 'warning',
-      message: t('settings.deleteConfirm'),
-    });
-    if (!confirmed) return;
-
-    try {
-      await deleteAllData();
-    } catch (error) {
-      // Never leave the user on a "deleted" screen with their data intact.
-      appendErrorLog(error instanceof Error ? error : new Error(String(error)), false);
-      await showAlert({type: 'error', message: t('settings.deleteFailed')});
-      return;
-    }
-    StorageService.setItemSync('isOnboarded', JSON.stringify(false));
-    dispatch(setIsOnboarded(false));
-  }, [dispatch, showAlert, showDialog, t]);
+      isOnboardedPreference.set(false);
+    },
+    [showAlert, showDialog, t],
+  );
 
   const handleExportResult = useCallback(
-    async (success: boolean) => {
+    async (success: boolean, message?: string) => {
       if (success) {
         await showAlert({
           type: 'success',
@@ -221,7 +233,7 @@ const useSettings = () => {
       } else {
         await showAlert({
           type: 'error',
-          message: t('settings.exportError'),
+          message: message ?? t('settings.exportError'),
         });
       }
     },
@@ -232,9 +244,7 @@ const useSettings = () => {
     const succeeded = await retryMigrations();
     await showAlert({
       type: succeeded ? 'success' : 'error',
-      message: succeeded
-        ? t('settings.dataWarningRetrySucceeded')
-        : t('settings.dataWarningRetryFailed'),
+      message: succeeded ? t('settings.dataWarningRetrySucceeded') : t('settings.dataWarningRetryFailed'),
     });
     return succeeded;
   }, [showAlert, t]);
@@ -245,39 +255,15 @@ const useSettings = () => {
       message: t('settings.storagePermission'),
     });
     if (confirmed) {
-      Linking.openSettings();
+      // Some OEM builds have no Settings activity to open; keep the cause in Diagnostics.
+      await Linking.openSettings().catch((error: unknown) => {
+        appendErrorLog(error, false);
+      });
     }
   }, [showDialog, t]);
 
-  const handleBudgetSave = useCallback(
-    async (amount: number, everyMonth: boolean) => {
-      if (!userId) {return;}
-      const month = everyMonth ? `recurring:${yearMonth}` : yearMonth;
-      try {
-        await upsertBudget(userId, amount, month);
-      } catch (error) {
-        // Was an unguarded await: a failed write rejected into the void, the
-        // sheet closed, and the budget simply was not there afterwards.
-        appendErrorLog(error instanceof Error ? error : new Error(String(error)), false);
-        await showAlert({type: 'error', message: t('settings.budgetSaveFailed')});
-        return;
-      }
-      dispatch(fetchBudgetsByMonth(yearMonth));
-    },
-    [userId, yearMonth, dispatch, showAlert, t],
-  );
-
-  const handleBudgetRemove = useCallback(async () => {
-    if (!currentBudget) {return;}
-    try {
-      await deleteBudget(currentBudget.id);
-    } catch (error) {
-      appendErrorLog(error instanceof Error ? error : new Error(String(error)), false);
-      await showAlert({type: 'error', message: t('settings.budgetSaveFailed')});
-      return;
-    }
-    dispatch(fetchBudgetsByMonth(yearMonth));
-  }, [currentBudget, yearMonth, dispatch, showAlert, t]);
+  const budgetMonthLabel = `${selectedMonthName} ${selectedYear}`;
+  const {handleBudgetSave, handleBudgetRemove} = useBudgetActions(yearMonth, budgetMonthLabel);
 
   return {
     appVersion,
@@ -291,16 +277,19 @@ const useSettings = () => {
     currencyCode,
     currencyName,
     currentBudget,
-    budgetMonthLabel: `${MONTHS[selectedMonthIndex]} ${selectedYear}`,
+    budgetMonthLabel,
+    yearMonth,
     handleBudgetSave,
     handleBudgetRemove,
+    swipeActionsEnabled,
+    handleSwipeActionsToggle,
     handleReportBug,
+    handleCommunity,
     handleRateNow,
     handleGithub,
     handlePrivacyPolicy,
     handleTermsAndConditions,
     handleDeleteAllData,
-    allData,
     handleExportResult,
     handleRetryMigrations,
     showAlert,

@@ -19,42 +19,15 @@ import type {Database} from '@nozbe/watermelondb';
 import type {User, Category, Expense, Currency, Debtor, Debt, Budget} from '../src/watermelondb/models';
 import type {ExportData} from '../src/backend/export/format';
 
-jest.mock('../src/watermelondb/database', () => {
-  const {Database: Db} = require('@nozbe/watermelondb');
-  const Loki = require('@nozbe/watermelondb/adapters/lokijs').default;
-  const {schema: s} = require('../src/watermelondb/schema');
-  const {migrations: m} = require('../src/watermelondb/migrations');
-  const models = require('../src/watermelondb/models');
+jest.mock('../src/watermelondb/database', () =>
+  require('../src/testing/lokiDatabase').lokiDatabaseModule('importServiceTest'),
+);
 
-  const db = new Db({
-    adapter: new Loki({
-      schema: s,
-      migrations: m,
-      useWebWorker: false,
-      useIncrementalIndexedDB: false,
-      dbName: 'importServiceTest',
-      // Without these, loki keeps an autosave timer alive and jest never
-      // exits — which would hang CI rather than fail it.
-      extraLokiOptions: {autosave: false, persistenceMethod: 'memory'},
-    }),
-    modelClasses: [
-      models.User,
-      models.Category,
-      models.Expense,
-      models.Currency,
-      models.Debtor,
-      models.Debt,
-      models.Budget,
-    ],
-  });
-
-  return {database: db, getDatabase: () => db, getDatabaseError: () => null, default: db};
-});
-
- 
+// required after jest.mock so the mock applies; each cast names the module's own type
 const {database} = require('../src/watermelondb/database') as {database: Database};
- 
-const {importAllData} = require('../src/watermelondb/services/importService') as typeof import('../src/watermelondb/services/importService');
+
+const {importAllData} =
+  require('../src/watermelondb/services/importService') as typeof import('../src/watermelondb/services/importService');
 
 const backup = (overrides: Partial<ExportData> = {}): ExportData => ({
   users: [{username: 'Ada', email: ''}],
@@ -108,8 +81,8 @@ describe('importAllData', () => {
     expect(stats.budgets).toBe(1);
 
     const budget = (await database.get<Budget>('budgets').query().fetch())[0];
-    expect(budget.amount).toBe(30000);
-    expect(budget.month).toBe('recurring:2026-08');
+    expect(budget?.amount).toBe(30000);
+    expect(budget?.month).toBe('recurring:2026-08');
   });
 
   it('preserves soft-delete status instead of resurrecting everything', async () => {
@@ -128,8 +101,8 @@ describe('importAllData', () => {
     const fuel = categories.filter(c => c.name === 'Fuel');
 
     expect(fuel).toHaveLength(1);
-    expect(fuel[0].categoryStatus).toBe(true);
-    expect(fuel[0].color).toBe('#222222');
+    expect(fuel[0]?.categoryStatus).toBe(true);
+    expect(fuel[0]?.color).toBe('#222222');
   });
 
   it('never drops an expense whose category is missing from the backup', async () => {
@@ -160,8 +133,8 @@ describe('importAllData', () => {
       expect(categoryIds.has(expense.categoryId)).toBe(true);
       expect(expense.userId).toBe(userId);
     }
-    expect(debts[0].debtorId).toBe(debtors[0].id);
-    expect(debts[0].userId).toBe(userId);
+    expect(debts[0]?.debtorId).toBe(debtors[0]?.id);
+    expect(debts[0]?.userId).toBe(userId);
   });
 
   it('is idempotent — re-importing the same file does not duplicate rows', async () => {
@@ -183,9 +156,7 @@ describe('importAllData', () => {
     await importAllData(
       backup({
         users: [{username: 'Grace', email: ''}],
-        expenses: [
-          {title: 'Only one', amount: 1, description: '', category: {name: 'Fuel'}, date: '2026-08-09'},
-        ],
+        expenses: [{title: 'Only one', amount: 1, description: '', category: {name: 'Fuel'}, date: '2026-08-09'}],
       }),
     );
 
@@ -193,31 +164,59 @@ describe('importAllData', () => {
     const expenses = await database.get<Expense>('expenses').query().fetch();
 
     expect(users).toHaveLength(1);
-    expect(users[0].username).toBe('Grace');
+    expect(users[0]?.username).toBe('Grace');
     expect(expenses).toHaveLength(1);
-    expect(expenses[0].title).toBe('Only one');
+    expect(expenses[0]?.title).toBe('Only one');
+  });
+
+  it('throws (and rolls back) on a planned row whose category or debtor has no id, instead of writing an empty reference', async () => {
+    await importAllData(backup());
+    const before = await countAll();
+
+    // The planner auto-creates every referenced name, so this cannot happen
+    // through buildImportPlan today; simulate a future planner bug.
+    // require() is untyped; it is the same module, so `typeof import` is exact.
+    const planner = require('../src/backend/import/planner') as typeof import('../src/backend/import/planner');
+    const realPlan = planner.buildImportPlan(backup({users: [{username: 'Grace', email: ''}]}));
+    const spy = jest.spyOn(planner, 'buildImportPlan').mockReturnValue({
+      ...realPlan,
+      expenses: [
+        ...realPlan.expenses,
+        {title: 'Orphan', amount: 1, description: '', categoryName: 'No such category', date: '2026-08-04'},
+      ],
+    });
+
+    try {
+      await expect(importAllData(backup({users: [{username: 'Grace', email: ''}]}))).rejects.toThrow(
+        'Import plan references a category that was not planned',
+      );
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(await countAll()).toEqual(before);
+    const users = await database.get<User>('users').query().fetch();
+    expect(users[0]?.username).toBe('Ada');
   });
 
   it('rolls back completely when the write fails, leaving existing data intact', async () => {
     await importAllData(backup());
     const before = await countAll();
     const usersBefore = await database.get<User>('users').query().fetch();
-    expect(usersBefore[0].username).toBe('Ada');
+    expect(usersBefore[0]?.username).toBe('Ada');
 
     // Fail while preparing the LAST entity type, i.e. after the wipe and after
     // every other prepareCreate has been staged. If the transaction were not
     // atomic, this is exactly the point where the device would be left with
     // its old data destroyed and the new data half-written.
     const budgets = database.get<Budget>('budgets');
-    const spy = jest
-      .spyOn(budgets, 'prepareCreate')
-      .mockImplementation(() => {
-        throw new Error('simulated failure mid-import');
-      });
+    const spy = jest.spyOn(budgets, 'prepareCreate').mockImplementation(() => {
+      throw new Error('simulated failure mid-import');
+    });
 
-    await expect(
-      importAllData(backup({users: [{username: 'Grace', email: ''}]})),
-    ).rejects.toThrow('simulated failure mid-import');
+    await expect(importAllData(backup({users: [{username: 'Grace', email: ''}]}))).rejects.toThrow(
+      'simulated failure mid-import',
+    );
 
     spy.mockRestore();
 
@@ -227,6 +226,6 @@ describe('importAllData', () => {
     const usersAfter = await database.get<User>('users').query().fetch();
     expect(usersAfter).toHaveLength(1);
     // The original user must still be here — NOT the one from the failed import.
-    expect(usersAfter[0].username).toBe('Ada');
+    expect(usersAfter[0]?.username).toBe('Ada');
   });
 });

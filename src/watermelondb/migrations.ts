@@ -1,7 +1,15 @@
-import {schemaMigrations, createTable} from '@nozbe/watermelondb/Schema/migrations';
+import {schemaMigrations, createTable, unsafeExecuteSql} from '@nozbe/watermelondb/Schema/migrations';
+import {EXPENSES_USER_DATE_INDEX_SQL, STATUS_INDEXES_SQL} from './indexes';
 
 export const migrations = schemaMigrations({
   migrations: [
+    {
+      // 2.7.1: indexes only, no data or column change (backups stay envelope v4).
+      // The composite index makes month/day queries an index range; the two
+      // status indexes are the ones the no-op v2 step below left out.
+      toVersion: 4,
+      steps: [unsafeExecuteSql(EXPENSES_USER_DATE_INDEX_SQL + STATUS_INDEXES_SQL)],
+    },
     {
       toVersion: 3,
       steps: [

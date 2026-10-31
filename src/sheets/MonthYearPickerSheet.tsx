@@ -1,10 +1,11 @@
-import {TouchableOpacity, View} from 'react-native';
+import {TouchableOpacity, View, StyleSheet} from 'react-native';
 import React, {useCallback, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {SheetManager, SheetProps, ScrollView} from 'react-native-actions-sheet';
 import useThemeColors from '../hooks/useThemeColors';
 import {CustomBottomSheet} from '../components/atoms/CustomBottomSheet';
 import PrimaryText from '../components/atoms/PrimaryText';
+import PrimaryButton from '../components/atoms/PrimaryButton';
 import {getMonthNamesShort, getCurrentYear} from '../utils/dateUtils';
 import {gs} from '../styles/globalStyles';
 
@@ -50,7 +51,9 @@ const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'>> = Re
       header={{
         title: t('sheets.selectMonthYear'),
         showCloseButton: true,
-        onClosePress: () => void SheetManager.hide(props.sheetId),
+        onClosePress: () => {
+          void SheetManager.hide(props.sheetId);
+        },
       }}
       gestureEnabled>
       <View style={[gs.px16, gs.pb10, gs.pt5]}>
@@ -62,6 +65,7 @@ const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'>> = Re
                   style={[
                     gs.px12,
                     gs.py8,
+                    gs.minTouch,
                     gs.rounded8,
                     {
                       backgroundColor: year === pickerYear ? colors.accentGreen : colors.secondaryAccent,
@@ -89,16 +93,17 @@ const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'>> = Re
               <TouchableOpacity
                 key={month}
                 disabled={disabled}
+                accessibilityRole="button"
+                accessibilityState={{selected: isActive, disabled}}
+                accessibilityLabel={month}
                 onPress={() => setPickerMonthIndex(index)}
                 style={[
                   gs.py10,
                   gs.rounded8,
                   gs.center,
-                  {
-                    width: '22.5%',
-                    backgroundColor: isActive ? colors.accentGreen : colors.secondaryAccent,
-                    opacity: disabled ? 0.35 : 1,
-                  },
+                  styles.cell,
+                  disabled ? gs.dimmed : undefined,
+                  {backgroundColor: isActive ? colors.accentGreen : colors.secondaryAccent},
                 ]}>
                 <PrimaryText
                   size={13}
@@ -111,21 +116,14 @@ const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'>> = Re
           })}
         </View>
 
-        <TouchableOpacity
-          onPress={handleConfirm}
-          style={[
-            gs.py12,
-            gs.rounded10,
-            gs.center,
-            {backgroundColor: colors.accentGreen},
-          ]}>
-          <PrimaryText size={14} weight="semibold" color={colors.buttonText}>
-            {t('common.done')}
-          </PrimaryText>
-        </TouchableOpacity>
+        <PrimaryButton onPress={handleConfirm} colors={colors} buttonTitle={t('common.done')} />
       </View>
     </CustomBottomSheet>
   );
 });
 
 export default MonthYearPickerSheet;
+
+const styles = StyleSheet.create({
+  cell: {width: '22.5%'},
+});

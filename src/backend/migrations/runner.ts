@@ -1,7 +1,8 @@
-import StorageService from '../../utils/asyncStorageService';
+import StorageService from '../../utils/storage';
 import {DATA_MIGRATIONS} from './registry';
 import {appendErrorLog} from '../../utils/errorLog';
 import {getAppVersion} from '../../utils/getVersion';
+import {getDatabaseError} from '../../watermelondb/database';
 
 const MIGRATION_VERSION_KEY = 'data_migration_version';
 const MIGRATION_RETRY_KEY = 'data_migration_retry_count';
@@ -24,12 +25,22 @@ const clearMigrationFailure = (): void => {
 
 /**
  * User-initiated retry (Settings banner): clears the permanent-failure flag
- * and re-runs pending migrations. Returns true if they now succeed.
+ * and re-runs pending migrations. True only when every migration has now run:
+ * a retry that fails again is attempt 1 of a fresh count, so "not flagged as
+ * failed" is not success (it hid the Settings warning while still broken).
  */
 export const retryMigrations = async (): Promise<boolean> => {
   clearMigrationFailure();
   await runMigrations();
-  return !hasMigrationFailed();
+  const latest = Math.max(0, ...DATA_MIGRATIONS.map(m => m.version));
+  const completed = (StorageService.getNumber(MIGRATION_VERSION_KEY) ?? 0) >= latest;
+  if (!completed) {
+    // The user asked and it still failed: keep the warning up (banner and
+    // Settings) rather than wait three more launches to raise it again.
+    StorageService.setBoolean(MIGRATION_FAILED_KEY, true);
+    StorageService.setItemSync(MIGRATION_FAILED_APP_VERSION_KEY, getAppVersion());
+  }
+  return completed;
 };
 
 /**
@@ -55,9 +66,7 @@ export const runMigrations = async (): Promise<void> => {
 
   const currentVersion = StorageService.getNumber(MIGRATION_VERSION_KEY) ?? 0;
 
-  const pending = DATA_MIGRATIONS
-    .filter(m => m.version > currentVersion)
-    .sort((a, b) => a.version - b.version);
+  const pending = DATA_MIGRATIONS.filter(m => m.version > currentVersion).sort((a, b) => a.version - b.version);
 
   if (pending.length === 0) {
     StorageService.setNumber(MIGRATION_RETRY_KEY, 0);
@@ -70,6 +79,11 @@ export const runMigrations = async (): Promise<void> => {
       StorageService.setNumber(MIGRATION_VERSION_KEY, migration.version);
       StorageService.setNumber(MIGRATION_RETRY_KEY, 0);
     } catch (error) {
+      if (getDatabaseError()) {
+        // The database itself failed to open; that is not this migration's
+        // fault and must not burn one of its retries (App shows the fallback).
+        break;
+      }
       const retryCount = (StorageService.getNumber(MIGRATION_RETRY_KEY) ?? 0) + 1;
       StorageService.setNumber(MIGRATION_RETRY_KEY, retryCount);
 

@@ -49,9 +49,7 @@ describe('navigate', () => {
   it('dispatches a navigate action with params', () => {
     const dispatch = jest.fn();
     setNavigationRef({dispatch} as never);
-    navigate('AddDebtsScreen', {debtorId: 'd1', debtorName: 'Sam'});
-    expect(dispatch).toHaveBeenCalledWith(
-      CommonActions.navigate({name: 'AddDebtsScreen', params: {debtorId: 'd1', debtorName: 'Sam'}}),
-    );
+    navigate('AddDebtsScreen', {debtorId: 'd1'});
+    expect(dispatch).toHaveBeenCalledWith(CommonActions.navigate({name: 'AddDebtsScreen', params: {debtorId: 'd1'}}));
   });
 });

@@ -7,25 +7,26 @@ import {navigate} from '../../utils/navigationUtils';
 import {softDeleteCategoryById} from '../../watermelondb/services';
 import {useDialog} from '../../context/DialogContext';
 import {useTranslation} from 'react-i18next';
+import {appendErrorLog} from '../../utils/errorLog';
 
 const useCategory = () => {
   const colors = useThemeColors();
   const dispatch = useAppDispatch();
-  const {showDialog} = useDialog();
+  const {showDialog, showAlert} = useDialog();
   const {t} = useTranslation();
   const categories = useAppSelector(selectActiveCategories);
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      dispatch(fetchCategories());
+      void dispatch(fetchCategories());
     }, [dispatch]),
   );
 
   useEffect(() => {
     if (!refreshing) return;
 
-    dispatch(fetchCategories()).finally(() => {
+    void dispatch(fetchCategories()).finally(() => {
       setRefreshing(false);
     });
   }, [refreshing, dispatch]);
@@ -34,39 +35,32 @@ const useCategory = () => {
     setRefreshing(true);
   }, []);
 
-  const handleEdit = useCallback((
-    categoryId: string,
-    categoryName: string,
-    categoryIcon: string,
-    categoryColor: string,
-  ) => {
-    navigate('UpdateCategoryScreen', {
-      categoryId,
-      categoryName,
-      categoryIcon,
-      categoryColor,
-    });
+  const handleEdit = useCallback((categoryId: string) => {
+    navigate('UpdateCategoryScreen', {categoryId});
   }, []);
 
-  const handleDelete = useCallback(async (categoryId: string) => {
-    // Soft delete keeps historical expenses intact, but there is no in-app way
-    // to bring a category back — so confirm before removing it.
-    const confirmed = await showDialog({
-      type: 'warning',
-      message: t('category.deleteConfirm'),
-    });
-    if (!confirmed) {
-      return;
-    }
-    try {
-      await softDeleteCategoryById(categoryId);
-      dispatch(fetchCategories());
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error deleting category:', categoryId, error);
+  const handleDelete = useCallback(
+    async (categoryId: string) => {
+      // Soft delete keeps historical expenses intact, but there is no in-app way
+      // to bring a category back — so confirm before removing it.
+      const confirmed = await showDialog({
+        type: 'warning',
+        message: t('category.deleteConfirm'),
+      });
+      if (!confirmed) {
+        return;
       }
-    }
-  }, [dispatch, showDialog, t]);
+      try {
+        await softDeleteCategoryById(categoryId);
+      } catch (error) {
+        appendErrorLog(error, false);
+        await showAlert({type: 'error', message: t('category.saveFailed')});
+        return;
+      }
+      void dispatch(fetchCategories());
+    },
+    [dispatch, showAlert, showDialog, t],
+  );
 
   return {
     colors,

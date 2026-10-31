@@ -21,7 +21,7 @@ const SplashScreen = () => {
           <PrimaryText size={18} color={colors.secondaryText}>
             {t('splash.tagline')}
           </PrimaryText>
-          <PrimaryText size={18} color={colors.secondaryText} style={{opacity: 0.5}}>
+          <PrimaryText size={18} color={colors.secondaryText} style={gs.opacity50}>
             {t('splash.taglineSuffix')}
           </PrimaryText>
         </View>

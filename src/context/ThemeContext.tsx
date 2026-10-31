@@ -1,9 +1,10 @@
-import React, {createContext, useContext, useState, useCallback, useMemo, type ReactNode} from 'react';
+import React, {createContext, useContext, useMemo, type ReactNode} from 'react';
 import {useColorScheme} from 'react-native';
-import StorageService from '../utils/asyncStorageService';
+import {createMmkvPreference, oneOf} from '../utils/mmkvPreference';
+import {usePreference} from '../hooks/usePreference';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
-export type ResolvedTheme = 'light' | 'dark';
+type ResolvedTheme = 'light' | 'dark';
 
 export interface ThemeColors {
   primaryBackground: string;
@@ -23,6 +24,8 @@ export interface ThemeColors {
   sameWhite: string;
   accentRed: string;
   lightAccent: string;
+  /** The resting edge of an input: 3:1 against page and card (M31). */
+  inputBorder: string;
 }
 
 const LightColors: ThemeColors = {
@@ -43,6 +46,7 @@ const LightColors: ThemeColors = {
   sameWhite: '#FAFBF7',
   accentRed: '#C4503C',
   lightAccent: '#F5F6F2',
+  inputBorder: '#85857F',
 };
 
 const DarkColors: ThemeColors = {
@@ -63,6 +67,7 @@ const DarkColors: ThemeColors = {
   sameWhite: '#FAFBF7',
   accentRed: '#FF6347',
   lightAccent: '#313131',
+  inputBorder: '#8A8A8A',
 };
 
 interface ThemeContextType {
@@ -79,17 +84,15 @@ interface ThemeProviderProps {
   children: ReactNode;
 }
 
-const getInitialThemeMode = (): ThemeMode => {
-  const saved = StorageService.getItemSync('themePreference');
-  if (saved && ['light', 'dark', 'system'].includes(saved)) {
-    return saved as ThemeMode;
-  }
-  return 'system';
-};
+const themePreference = createMmkvPreference<ThemeMode>(
+  'themePreference',
+  oneOf(['light', 'dark', 'system']),
+  'system',
+);
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({children}) => {
   const systemColorScheme = useColorScheme();
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(getInitialThemeMode);
+  const themeMode = usePreference(themePreference);
 
   const resolvedTheme: ResolvedTheme = useMemo(() => {
     if (themeMode === 'system') {
@@ -107,10 +110,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({children}) => {
   // No Appearance listener needed: useColorScheme() above already re-renders
   // this provider when the system theme changes.
 
-  const setThemeMode = useCallback((mode: ThemeMode) => {
-    StorageService.setItemSync('themePreference', mode);
-    setThemeModeState(mode);
-  }, []);
+  const setThemeMode = themePreference.set;
 
   const value = useMemo(
     () => ({

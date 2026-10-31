@@ -1,5 +1,5 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
-import {RootState} from '../rootReducer';
+import type {RootState} from '../rootReducer';
 import {getCurrentYear} from '../../utils/dateUtils';
 
 interface MonthSelection {
@@ -7,12 +7,14 @@ interface MonthSelection {
   year: number;
 }
 
+const initialMonthSelection: MonthSelection = {
+  monthIndex: new Date().getMonth(),
+  year: getCurrentYear(),
+};
+
 const monthSelectionSlice = createSlice({
   name: 'monthSelection',
-  initialState: {
-    monthIndex: new Date().getMonth(),
-    year: getCurrentYear(),
-  } as MonthSelection,
+  initialState: initialMonthSelection,
   reducers: {
     setMonthSelection: (state, action: PayloadAction<MonthSelection>) => {
       state.monthIndex = action.payload.monthIndex;

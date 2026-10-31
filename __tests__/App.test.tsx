@@ -10,9 +10,14 @@ import App from '../App';
 // module so the tree renders instead of the DatabaseErrorFallback.
 jest.mock('../src/watermelondb/database', () => ({
   database: {
-    get: jest.fn(() => {
-      throw new Error('no database in the render smoke test');
-    }),
+    // The start-up probe counts the users table (M3); every other access
+    // yields empty results so the tree renders instead of the fallback.
+    get: jest.fn(() => ({
+      query: () => ({fetchCount: async () => 0, fetch: async () => [], unsafeFetchRaw: async () => []}),
+      find: async () => {
+        throw new Error('no database in the render smoke test');
+      },
+    })),
     write: jest.fn(async (work: () => Promise<unknown>) => work()),
     batch: jest.fn(),
   },

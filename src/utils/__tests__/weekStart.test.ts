@@ -8,9 +8,7 @@ describe('rotateWeekdays', () => {
   });
 
   it('starts with Monday and wraps Sunday to the end', () => {
-    expect(rotateWeekdays(SUNDAY_FIRST, 'monday')).toEqual([
-      'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
-    ]);
+    expect(rotateWeekdays(SUNDAY_FIRST, 'monday')).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
   });
 
   it('handles an empty array', () => {

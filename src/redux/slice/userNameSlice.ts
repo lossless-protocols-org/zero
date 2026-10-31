@@ -1,6 +1,6 @@
 import {createSlice, type PayloadAction} from '@reduxjs/toolkit';
-import {RootState} from '../rootReducer';
-import {fetchUserData} from './userIdSlice';
+import type {RootState} from '../rootReducer';
+import {fetchUserData, NO_USER_ROW} from './userIdSlice';
 
 const initialState = {
   userName: '',
@@ -15,9 +15,15 @@ const userNameSlice = createSlice({
     },
   },
   extraReducers: builder => {
-    builder.addCase(fetchUserData.fulfilled, (state, action) => {
-      state.userName = action.payload.userName;
-    });
+    builder
+      .addCase(fetchUserData.fulfilled, (state, action) => {
+        state.userName = action.payload.userName;
+      })
+      .addCase(fetchUserData.rejected, (state, action) => {
+        if (action.payload === NO_USER_ROW) {
+          state.userName = '';
+        }
+      });
   },
 });
 

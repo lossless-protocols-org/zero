@@ -1,9 +1,7 @@
 import {expensesToCsv} from '../csv';
 import type {ExportData} from '../validate';
 
-const expense = (
-  overrides: Partial<ExportData['expenses'][number]> = {},
-): ExportData['expenses'][number] => ({
+const expense = (overrides: Partial<ExportData['expenses'][number]> = {}): ExportData['expenses'][number] => ({
   title: 'Chai',
   amount: 20,
   description: '',
@@ -88,11 +86,31 @@ describe('formula injection', () => {
     expect(csv).toContain("'=HYPERLINK");
   });
 
-  it('covers every dangerous leading character', () => {
-    for (const prefix of ['=', '+', '-', '@']) {
-      const csv = expensesToCsv([row(`${prefix}danger`)]);
-      expect(csv).toContain(`'${prefix}danger`);
+  it('covers every dangerous leading character, in every text column (M33)', () => {
+    for (const prefix of ['=', '+', '-', '@', '\t', '\r']) {
+      const value = `${prefix}danger`;
+      const csv = expensesToCsv([
+        {title: value, amount: 1, description: value, category: {name: value}, date: '2026-08-01'},
+      ]);
+      // Title, description and category: all three neutralised (a CR also forces quoting).
+      const neutralised = csv.split(`'${prefix}danger`).length - 1;
+      expect({prefix, neutralised}).toEqual({prefix, neutralised: 3});
     }
+  });
+
+  it('neutralises a formula hidden behind leading spaces (sheets trim them first)', () => {
+    const csv = expensesToCsv([row('  =1+1')]);
+    expect(csv).toContain("'  =1+1");
+  });
+
+  it('neutralises the full-width triggers East Asian spreadsheets also evaluate', () => {
+    for (const prefix of ['\uFF1D', '\uFF0B', '\uFF0D', '\uFF20']) {
+      expect(expensesToCsv([row(`${prefix}1+1`)])).toContain(`'${prefix}1+1`);
+    }
+  });
+
+  it('neutralises a formula behind a zero-width space', () => {
+    expect(expensesToCsv([row('\u200B=1+1')])).toContain("'\u200B=1+1");
   });
 
   it('still quotes a neutralised field that also contains a comma', () => {
@@ -108,4 +126,3 @@ describe('formula injection', () => {
     expect(csv).not.toContain("'1");
   });
 });
-

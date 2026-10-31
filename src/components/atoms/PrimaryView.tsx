@@ -1,4 +1,12 @@
-import {Keyboard, Platform, StatusBar, TouchableWithoutFeedback, View, ViewStyle} from 'react-native';
+import {
+  Keyboard,
+  Platform,
+  StatusBar,
+  TouchableWithoutFeedback,
+  View,
+  ViewStyle,
+  useWindowDimensions,
+} from 'react-native';
 import React, {ReactNode, memo} from 'react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme, ThemeColors} from '../../context/ThemeContext';
@@ -43,6 +51,12 @@ const PrimaryView: React.FC<PrimaryViewProps> = ({
   const colors = propColors || contextColors;
 
   const bottomPadding = useBottomPadding ? (Platform.OS === 'ios' ? insets.bottom : insets.bottom + 10) : 0;
+  // Edge-to-edge means the landscape navigation bar sits over our content on
+  // one side. Pad at least the inset there; the usual 4% gutter wins otherwise.
+  const {width} = useWindowDimensions();
+  const gutter = useSidePadding ? Math.round(width * 0.04) : 0;
+  const paddingLeft = Math.max(gutter, insets.left);
+  const paddingRight = Math.max(gutter, insets.right);
 
   const content = (
     <View
@@ -52,12 +66,14 @@ const PrimaryView: React.FC<PrimaryViewProps> = ({
           backgroundColor: colors.primaryBackground,
           paddingTop: insets.top,
           paddingBottom: bottomPadding,
-          paddingLeft: useSidePadding ? '4%' : 0,
-          paddingRight: useSidePadding ? '4%' : 0,
+          paddingLeft,
+          paddingRight,
         },
         style,
       ]}>
-      <StatusBar backgroundColor={colors.primaryBackground} barStyle={isDark ? 'light-content' : 'dark-content'} />
+      {/* No backgroundColor: the app draws edge-to-edge (Android 15+ / RN 0.88), so the
+          status bar is translucent over our own background and RN 0.88 dropped the prop. */}
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       {children}
     </View>
   );
