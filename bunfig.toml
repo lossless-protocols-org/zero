@@ -1,48 +1,13 @@
-# Configuration for `bun test` ONLY. The canonical test runner is jest
-# (`bun run test`) — it runs the FULL suite. `bun test` covers the pure
-# suites; the exclusions below are files bun fundamentally cannot run.
+# Configuration for `bun test`, which runs ONLY the five SQLite suites
+# (__tests__/sqlite/*.bun.test.ts): they execute WatermelonDB's encoded SQL,
+# migrations and query plans on bun's built-in SQLite, which jest cannot load.
+#
+# Run them with `bun run test:sqlite` (= `bun test ./__tests__/sqlite`). Every other suite runs under jest (`bun run test`), the one
+# runner. There is no ignore list to keep in step any more: until 2.8 a
+# 27-entry list here decided which suites bun skipped, and it was already
+# stale (audit 2026-11-08 §7.3).
 
 [test]
 preload = ["./bun-preload.ts"]
-pathIgnorePatterns = [
-  # react-native ships Flow-typed sources (`import typeof ...`) that bun
-  # cannot parse; the App render smoke test is jest-only.
-  "__tests__/**",
-  # imports @react-navigation/native → react-native Flow sources bun cannot parse; jest-only
-  "src/utils/__tests__/navigationUtils.test.ts",
-  # imports lucide → react-native-svg → react-native Flow sources bun cannot parse; jest-only
-  "src/components/atoms/__tests__/IconRegistry.test.ts",
-  # imports the store → WatermelonDB's node adapter, which needs better-sqlite3; jest-only
-  "src/redux/__tests__/store.test.ts",
-  # imports react-native (Platform, Share) → Flow sources bun cannot parse; jest-only
-  "src/screens/SettingsScreen/__tests__/exportFiles.test.ts",
-  # uses jest.mock on the services barrel, which bun does not hoist; jest-only
-  "src/watermelondb/services/__tests__/availableYearsCache.test.ts",
-  # imports react-native (Platform, PermissionsAndroid) → Flow sources bun cannot parse; jest-only
-  "src/utils/__tests__/unhandledChains.test.ts",
-  # renders DialogProvider (react-native Modal) → Flow sources bun cannot parse; jest-only
-  "src/context/__tests__/DialogContext.test.tsx",
-  # uses jest.mock on DialogContext / react-i18next, which bun does not hoist; jest-only
-  "src/hooks/__tests__/useReportFailure.test.tsx",
-  "src/hooks/__tests__/useBudgetActions.test.tsx",
-  "src/hooks/__tests__/useUndoableDelete.test.tsx",
-  "src/hooks/__tests__/useRecord.test.tsx",
-  "src/hooks/__tests__/useUserName.test.tsx",
-  "src/hooks/__tests__/useCategoryForm.test.tsx",
-  "src/components/molecules/__tests__/settingsAndHeatmap.test.tsx",
-  "src/components/molecules/__tests__/dialogAccessibility.test.tsx",
-  "src/components/molecules/__tests__/categoryDonutKeys.test.tsx",
-  "src/components/atoms/__tests__/swipeableRowAccessibility.test.tsx",
-  # imports Icons → lucide → react-native-svg Flow sources bun cannot parse; jest-only
-  "src/components/atoms/__tests__/iconMirroring.test.tsx",
-  # renders gesture-handler / reanimated touchables → Flow sources bun cannot parse; jest-only
-  "src/components/atoms/__tests__/swipeTutorialTooltip.test.tsx",
-  "src/components/atoms/__tests__/dailyBudgetRow.test.tsx",
-  "src/components/atoms/__tests__/undoStrip.test.tsx",
-  # renders react-native touchables → Flow sources bun cannot parse; jest-only
-  "src/components/atoms/__tests__/MonthNavigator.test.tsx",
-  # jest.isolateModules (fresh install of the handler per test); bun has no equivalent; jest-only
-  "src/utils/__tests__/globalErrorHandler.test.ts",
-  # vendored third-party docs, not our tests
-  "references/**",
-]
+# Vendored docs and old experiments, not our tests.
+pathIgnorePatterns = ["references/**"]

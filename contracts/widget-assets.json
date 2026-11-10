@@ -1,0 +1,88 @@
+{
+  "$comment": "The home-screen widget's colours and made-up preview figures, for both platforms, in one place (audit 2026-11-08 §6.3). scripts/widget-assets.mjs writes the Android resources and the generated regions of the Swift files from this; `--check` (CI) fails when any of them was edited by hand. Each role lists the platform names that use it; `app` names the ThemeContext token a role must equal (__tests__/contract/widgetAssets.test.ts). Android 12+ draws from the wallpaper (`dynamic`, Material 3 tonal palettes); everything else is fixed.",
+  "preview": {
+    "$comment": "The widget picker's made-up month: never user data. JS formats these in the user's currency (features/widgets/snapshot.ts); the static fallbacks below (Android 12-14 previewLayout, the iOS gallery before the app has run) use en-US grouping.",
+    "spentMonth": 12345,
+    "spentToday": 450,
+    "budgetLeft": 2655,
+    "budgetProgress": 0.62
+  },
+  "palette": {
+    "surface": {
+      "android": "widget_surface",
+      "light": "#ECEEE7",
+      "dark": "#1F1F1F",
+      "dynamic": {"light": "system_neutral1_50", "dark": "system_neutral1_900"},
+      "app": {"light": "containerColor", "dark": "containerColor"}
+    },
+    "onSurface": {
+      "android": "widget_on_surface",
+      "light": "#1A1A1A",
+      "dark": "#FFFFFF",
+      "dynamic": {"light": "system_neutral1_900", "dark": "system_neutral1_50"},
+      "app": {"light": "primaryText", "dark": "primaryText"}
+    },
+    "onSurfaceVariant": {
+      "android": "widget_on_surface_variant",
+      "light": "#4A4A4A",
+      "dark": "#CCCCCC",
+      "dynamic": {"light": "system_neutral2_700", "dark": "system_neutral2_200"}
+    },
+    "primary": {
+      "$comment": "Darker than the app's accentGreen in light mode, so white text on it reaches 4.5:1 at widget sizes.",
+      "android": "widget_primary",
+      "light": "#5E7A31",
+      "dark": "#B1FB98",
+      "dynamic": {"light": "system_accent1_600", "dark": "system_accent1_200"}
+    },
+    "onPrimary": {
+      "android": "widget_on_primary",
+      "light": "#FFFFFF",
+      "dark": "#0F2A06",
+      "dynamic": {"light": "system_accent1_0", "dark": "system_accent1_800"}
+    },
+    "tonal": {
+      "android": "widget_tonal",
+      "light": "#D5DEC4",
+      "dark": "#2E3A28",
+      "dynamic": {"light": "system_accent2_100", "dark": "system_accent2_700"}
+    },
+    "onTonal": {
+      "android": "widget_on_tonal",
+      "light": "#2F3E16",
+      "dark": "#C8F5B4",
+      "dynamic": {"light": "system_accent2_900", "dark": "system_accent2_100"}
+    },
+    "track": {
+      "android": "widget_track",
+      "light": "#D3D8C9",
+      "dark": "#3A3A3A",
+      "dynamic": {"light": "system_neutral2_100", "dark": "system_neutral2_700"}
+    },
+    "warning": {
+      "$comment": "Over budget: 4.5:1 or better on the surface for small text. Fixed on Android 12+ too (no tonal palette is a warning).",
+      "android": "widget_warning",
+      "ios": "warning",
+      "light": "#8F5300",
+      "dark": "#FFB74D"
+    },
+    "accent": {
+      "$comment": "iOS: the system tints or glasses widgets itself on iOS 26+ Home Screens (accented rendering); these apply in full colour.",
+      "ios": "accent",
+      "light": "#6E8B3D",
+      "dark": "#B1FB98",
+      "app": {"light": "accentGreen", "dark": "accentGreen"}
+    },
+    "onAccent": {
+      "ios": "onAccent",
+      "light": "#FFFFFF",
+      "dark": "#0F2A06"
+    },
+    "background": {
+      "ios": "surface",
+      "light": "#FAFAF8",
+      "dark": "#1A1A1A",
+      "app": {"light": "primaryBackground"}
+    }
+  }
+}

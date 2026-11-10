@@ -5,7 +5,7 @@ export type TabParamList = {
   HomeScreen: undefined;
   ReportsScreen: undefined;
   CategoryScreen: undefined;
-  DebtsScreen: undefined;
+  MoneyScreen: undefined;
 };
 
 /**
@@ -18,7 +18,15 @@ export type HomeStackParamList = {
   SettingsScreen: undefined;
   DiagnosticsScreen: undefined;
   AddTransactionsScreen: undefined;
+  /** The quick-add sheet over the app (zero://quick): which entry, and a widget chip's category. */
+  /** `amount` and `title`: "Add again" opens the sheet filled in (validated in linking.ts). */
+  QuickAddScreen: {kind?: 'expense' | 'income'; categoryId?: string; amount?: string; title?: string} | undefined;
   UpdateTransactionScreen: {expenseId: string};
+  /** Records (no refundId) or edits money that came back on an expense. */
+  RefundScreen: {expenseId: string; refundId?: string};
+  /** `yearMonth`: the month the Money tab showed; the date defaults into it. */
+  AddIncomeScreen: {yearMonth?: string};
+  UpdateIncomeScreen: {incomeId: string};
   AddCategoryScreen: undefined;
   UpdateCategoryScreen: {categoryId: string};
   EverydayTransactionScreen: {isDate: IsoDay};

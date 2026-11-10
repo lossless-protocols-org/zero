@@ -29,6 +29,8 @@ const CATEGORY_KEYS: ReadonlyMap<string, ParseKeys> = new Map<string, ParseKeys>
   ['Education', 'defaultCategories.education'],
   ['Gifts', 'defaultCategories.gifts'],
   ['Other', 'defaultCategories.other'],
+  // Seeded on first use of money in (categoryService.DEFAULT_INCOME_CATEGORY).
+  ['Income', 'money.incomeCategory'],
   [UNKNOWN_NAME, 'common.unknown'],
 ]);
 

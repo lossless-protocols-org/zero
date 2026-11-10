@@ -37,8 +37,28 @@ module.exports = [
     },
   },
   {
+    // Named exports only (house rule; audit 2026-11-08 §5): one name per
+    // thing across the codebase, greppable, and renamed by tooling. No
+    // eslint-plugin-import (no new dependency): the core rule bans the syntax.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: [
+      // React Native codegen reads a TurboModule spec only as a default export.
+      'src/native/specs/**',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {selector: 'ExportDefaultDeclaration', message: 'Use a named export (house rule: no export default).'},
+        {
+          selector: "ExportSpecifier[exported.name='default']",
+          message: 'Use a named export (house rule: no export default).',
+        },
+      ],
+    },
+  },
+  {
     // Test setup/preload files run in the test runner, not the app.
-    files: ['jest.setup.js', 'jest.config.js', 'bun-preload.ts', 'src/testing/**'],
+    files: ['jest.setup.js', 'jest.config.js', 'bun-preload.ts'],
     languageOptions: {
       globals: {jest: 'readonly', require: 'readonly', module: 'writable'},
     },

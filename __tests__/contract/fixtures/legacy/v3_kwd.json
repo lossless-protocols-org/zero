@@ -1,0 +1,82 @@
+{
+  "key": "zeroAAAAAAAAAAAAAAA3",
+  "version": 3,
+  "data": {
+    "users": [
+      {
+        "username": "Dana",
+        "email": ""
+      }
+    ],
+    "categories": [
+      {
+        "name": "Food",
+        "categoryStatus": true,
+        "icon": "utensils-crossed",
+        "color": "#6E8E55"
+      },
+      {
+        "name": "Gifts",
+        "categoryStatus": true,
+        "icon": "gift",
+        "color": "#7D8225"
+      }
+    ],
+    "expenses": [
+      {
+        "title": "Dates",
+        "amount": 1.125,
+        "description": "",
+        "category": {
+          "name": "Food"
+        },
+        "date": "2026-06-09T10:32:32"
+      },
+      {
+        "title": "Gift",
+        "amount": 12.5,
+        "description": "x, \"quoted\"",
+        "category": {
+          "name": "Gifts"
+        },
+        "date": "2026-06-10T18:00:00"
+      }
+    ],
+    "currencies": [
+      {
+        "code": "KWD",
+        "symbol": "KD",
+        "name": "Kuwaiti Dinar"
+      }
+    ],
+    "debtors": [
+      {
+        "title": "Omar",
+        "debtorStatus": true,
+        "icon": "user",
+        "type": "Person",
+        "color": "#3A85B5"
+      }
+    ],
+    "debts": [
+      {
+        "amount": 5,
+        "description": "",
+        "debtor": {
+          "title": "Omar"
+        },
+        "date": "2026-06-11T12:00:00",
+        "type": "Borrow"
+      },
+      {
+        "amount": 5,
+        "description": "Settled up",
+        "debtor": {
+          "title": "Omar"
+        },
+        "date": "2026-06-12T12:00:00",
+        "type": "Lend"
+      }
+    ]
+  }
+}

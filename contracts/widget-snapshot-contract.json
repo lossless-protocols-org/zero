@@ -1,0 +1,247 @@
+{
+  "ready": {
+    "v": 1,
+    "state": "ready",
+    "locale": "en-IN",
+    "monthKey": "2026-11",
+    "todayKey": "2026-11-06",
+    "monthLabel": "November",
+    "spentMonth": "₹45,029",
+    "spentToday": "₹120",
+    "zero": "₹0",
+    "budget": {
+      "progress": 1,
+      "over": true,
+      "text": "₹15,029 over budget"
+    },
+    "incomeLine": "Received ₹80,000 · Kept ₹34,971",
+    "labels": {
+      "today": "Today",
+      "addExpense": "Add expense",
+      "addIncome": "Money in",
+      "summary": "November: ₹45,029 spent. Today: ₹120."
+    },
+    "quick": [
+      {
+        "id": "cat_food",
+        "name": "Food"
+      },
+      {
+        "id": "cat_grocery",
+        "name": "Grocery"
+      }
+    ],
+    "categories": [
+      {
+        "id": "cat_food",
+        "name": "Food"
+      },
+      {
+        "id": "cat_grocery",
+        "name": "Grocery"
+      }
+    ],
+    "incomeCategoryId": "cat_income",
+    "money": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "live": {
+      "spentMonth": 45029,
+      "spentToday": 120,
+      "received": 80000,
+      "budget": 30000,
+      "templates": {
+        "left": "%@ left",
+        "over": "%@ over budget",
+        "back": "%@ back",
+        "received": "Received %1$@ · Kept %2$@",
+        "overReceived": "Received %1$@ · %2$@ over",
+        "summary": "%1$@: %2$@ spent. Today: %3$@."
+      }
+    },
+    "again": [
+      {
+        "title": "Chai",
+        "categoryId": "cat_food",
+        "categoryName": "Food",
+        "amount": 20,
+        "amountText": "₹20"
+      }
+    ],
+    "last": {
+      "title": "Chai",
+      "categoryId": "cat_food",
+      "categoryName": "Food",
+      "amount": 20,
+      "amountText": "₹20"
+    },
+    "preview": {
+      "spentMonth": "₹12,345",
+      "spentToday": "₹450",
+      "budgetText": "₹2,655 left"
+    },
+    "computedAt": 1793980000000
+  },
+  "hidden": {
+    "v": 1,
+    "state": "ready",
+    "locale": "en-IN",
+    "monthKey": "2026-11",
+    "todayKey": "2026-11-06",
+    "monthLabel": "November",
+    "spentMonth": "••••",
+    "spentToday": "••••",
+    "zero": "••••",
+    "budget": null,
+    "incomeLine": "Received •••• · Kept ••••",
+    "labels": {
+      "today": "Today",
+      "addExpense": "Add expense",
+      "addIncome": "Money in",
+      "summary": "November: •••• spent. Today: ••••."
+    },
+    "quick": [
+      {
+        "id": "cat_food",
+        "name": "Food"
+      },
+      {
+        "id": "cat_grocery",
+        "name": "Grocery"
+      }
+    ],
+    "categories": [
+      {
+        "id": "cat_food",
+        "name": "Food"
+      },
+      {
+        "id": "cat_grocery",
+        "name": "Grocery"
+      }
+    ],
+    "incomeCategoryId": "cat_income",
+    "money": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "live": null,
+    "again": [],
+    "last": null,
+    "preview": {
+      "spentMonth": "₹12,345",
+      "spentToday": "₹450",
+      "budgetText": "₹2,655 left"
+    },
+    "computedAt": 1793980000000
+  },
+  "underBudget": {
+    "v": 1,
+    "state": "ready",
+    "locale": "en-IN",
+    "monthKey": "2026-11",
+    "todayKey": "2026-11-06",
+    "monthLabel": "November",
+    "spentMonth": "₹7,500",
+    "spentToday": "₹120",
+    "zero": "₹0",
+    "budget": {
+      "progress": 0.25,
+      "over": false,
+      "text": "₹22,500 left"
+    },
+    "incomeLine": null,
+    "labels": {
+      "today": "Today",
+      "addExpense": "Add expense",
+      "addIncome": "Money in",
+      "summary": "November: ₹7,500 spent. Today: ₹120."
+    },
+    "quick": [],
+    "categories": [],
+    "incomeCategoryId": "cat_income",
+    "money": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "live": {
+      "spentMonth": 7500,
+      "spentToday": 120,
+      "received": 0,
+      "budget": 30000,
+      "templates": {
+        "left": "%@ left",
+        "over": "%@ over budget",
+        "back": "%@ back",
+        "received": "Received %1$@ · Kept %2$@",
+        "overReceived": "Received %1$@ · %2$@ over",
+        "summary": "%1$@: %2$@ spent. Today: %3$@."
+      }
+    },
+    "again": [],
+    "last": null,
+    "preview": {
+      "spentMonth": "₹12,345",
+      "spentToday": "₹450",
+      "budgetText": "₹2,655 left"
+    },
+    "computedAt": 1793980000000
+  },
+  "setup": {
+    "v": 1,
+    "state": "setup",
+    "locale": "en-IN",
+    "monthKey": "",
+    "todayKey": "",
+    "monthLabel": "",
+    "spentMonth": "",
+    "spentToday": "",
+    "zero": "",
+    "budget": null,
+    "incomeLine": null,
+    "labels": {
+      "today": "",
+      "addExpense": "",
+      "addIncome": "",
+      "summary": ""
+    },
+    "quick": [],
+    "categories": [],
+    "incomeCategoryId": null,
+    "money": null,
+    "live": null,
+    "again": [],
+    "last": null,
+    "preview": {
+      "spentMonth": "",
+      "spentToday": "",
+      "budgetText": ""
+    },
+    "computedAt": 1793980000000
+  }
+}

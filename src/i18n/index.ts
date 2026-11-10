@@ -1,7 +1,7 @@
 import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
-import {getFormatLocale, setLocaleOverride} from '../utils/locale';
-import {setCalendarLabels, setDayjsLocale} from '../utils/dateUtils';
+import {getFormatLocale, setLocaleOverride} from '../platform/locale';
+import {setCalendarLabels, setDayjsLocale} from '../platform/dateFormat';
 import en from './locales/en.json';
 
 const resources = {
@@ -36,4 +36,4 @@ export const applyLocaleOverride = (locale: string | null): void => {
   void i18n.changeLanguage(setLocaleOverride(locale));
 };
 
-export default i18n;
+export {i18n};

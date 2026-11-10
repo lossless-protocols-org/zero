@@ -1,0 +1,53 @@
+# First run, end to end (audit 2026-11-08 §7.6): a fresh install through
+# onboarding, the first expense, and a backup export. Clears the app's data:
+# run it on an emulator or a test device, never on a phone with real data.
+#
+#   bun run test:e2e                       (every flow in this folder)
+#   maestro test __tests__/e2e/first-run.yaml -e APP_ID=com.anotherwhy.zero.qa
+#
+# Selectors are the English copy and accessibility labels (src/i18n/locales/en.json),
+# so a copy change shows up here as a failing step, not a silent pass. Every step
+# was checked by hand on the QA build (Android emulator, 2026-11-09).
+appId: ${APP_ID}
+env:
+  APP_ID: com.anotherwhy.zero
+---
+- launchApp:
+    clearState: true
+
+# Welcome → name → categories → currency
+- tapOn: 'Get Started'
+- tapOn: 'eg. Indranil'
+- inputText: 'Asha'
+- hideKeyboard # Continue sits under the keyboard
+- tapOn: 'Continue'
+- assertVisible: 'Select the ones you want to track'
+- tapOn: 'Food'
+- tapOn: 'Continue'
+- assertVisible: 'Select the currency you use daily'
+- tapOn: 'Search currency...'
+- inputText: 'Indian'
+- hideKeyboard
+- tapOn: 'Indian Rupee'
+- tapOn: 'Continue'
+
+# Home: the first expense
+- assertVisible: 'Hey, Asha'
+- tapOn: 'Add new transaction'
+- tapOn: 'eg. Biryani'
+- inputText: 'Chai'
+- hideKeyboard
+- tapOn: '0' # the empty amount field (the "Amount" label above it would take the tap)
+- inputText: '20'
+- hideKeyboard
+- tapOn: 'Food'
+- tapOn: 'Add'
+- assertVisible: '1 transaction'
+- assertVisible: 'Chai'
+
+# Settings: export a backup (Android exports at once; the confirmation names where the file is)
+- tapOn: 'Settings'
+- scrollUntilVisible:
+    element: 'Export data'
+- tapOn: 'Export data'
+- assertVisible: 'Export complete.*'

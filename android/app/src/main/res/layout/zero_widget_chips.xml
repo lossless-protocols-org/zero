@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared category chips (medium-quick, large): one tap to the quick-add sheet
+     with that category chosen. Gone until WidgetRenderer fills them. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/quick_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:visibility="gone">
+
+    <TextView
+        android:id="@+id/quick_1"
+        style="@style/ZeroWidget.Chip" />
+
+    <TextView
+        android:id="@+id/quick_2"
+        style="@style/ZeroWidget.Chip"
+        android:layout_marginStart="6dp" />
+
+    <TextView
+        android:id="@+id/quick_3"
+        style="@style/ZeroWidget.Chip"
+        android:layout_marginStart="6dp" />
+
+    <TextView
+        android:id="@+id/quick_4"
+        style="@style/ZeroWidget.Chip"
+        android:layout_marginStart="6dp" />
+</LinearLayout>

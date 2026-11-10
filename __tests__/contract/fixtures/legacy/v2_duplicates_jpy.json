@@ -1,0 +1,79 @@
+{
+  "key": "zeroAAAAAAAAAAAAA_02",
+  "version": 2,
+  "data": {
+    "users": [
+      {
+        "username": "Chie",
+        "email": ""
+      }
+    ],
+    "categories": [
+      {
+        "name": "Fuel",
+        "categoryStatus": false,
+        "icon": "car",
+        "color": "#111111"
+      },
+      {
+        "name": "Fuel",
+        "categoryStatus": true,
+        "icon": "car",
+        "color": "#222222"
+      },
+      {
+        "name": "Food",
+        "categoryStatus": true,
+        "icon": "pizza",
+        "color": "#87CEFA"
+      }
+    ],
+    "expenses": [
+      {
+        "title": "Ramen",
+        "amount": 980,
+        "description": "",
+        "category": {
+          "name": "Food"
+        },
+        "date": "2026-04-07"
+      },
+      {
+        "title": "Gas",
+        "amount": 5400,
+        "description": "",
+        "category": {
+          "name": "Fuel"
+        },
+        "date": "2026-04-08T07:30:00"
+      }
+    ],
+    "currencies": [
+      {
+        "code": "JPY",
+        "symbol": "¥",
+        "name": "Japanese Yen"
+      }
+    ],
+    "debtors": [
+      {
+        "title": "Ken",
+        "debtorStatus": true,
+        "icon": "user",
+        "type": "Person",
+        "color": "#3A85B5"
+      }
+    ],
+    "debts": [
+      {
+        "amount": 3000,
+        "description": "",
+        "debtor": {
+          "title": "Ken"
+        },
+        "date": "2026-04-09",
+        "type": "Lend"
+      }
+    ]
+  }
+}

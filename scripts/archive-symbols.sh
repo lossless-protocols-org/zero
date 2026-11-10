@@ -5,7 +5,7 @@
 #
 #   scripts/archive-symbols.sh <version> <versionCode> [path/to/zero.xcarchive]
 #
-# Android pieces are required (AAB, APK, Hermes map); the APK's versionCode
+# Android pieces are required (AAB, APK, Hermes map, R8 mapping.txt from 2.8); the APK's versionCode
 # must match when aapt is available. With an Xcode archive, the iOS Hermes map
 # (written by the bundle phase to ios/build/sourcemaps/) and the app dSYM are
 # required too, and the map must not be older than the archive. Everything is
@@ -36,7 +36,9 @@ fail() {
 aab="$outputs/bundle/release/app-release.aab"
 apk="$outputs/apk/release/app-release.apk"
 map="$root/android/app/build/generated/sourcemaps/react/release/index.android.bundle.map"
-for file in "$aab" "$apk" "$map"; do
+# R8 is on from 2.8: without this file no Java/Kotlin frame can be read back.
+r8map="$outputs/mapping/release/mapping.txt"
+for file in "$aab" "$apk" "$map" "$r8map"; do
   [[ -f "$file" ]] || fail "missing $file — build it first (bun run android:release, android:release:apk)."
 done
 
@@ -65,6 +67,7 @@ trap 'rm -rf "$stage"' EXIT
 cp "$aab" "$stage/app-release-vc${code}.aab"
 cp "$apk" "$stage/app-release-vc${code}.apk"
 cp "$map" "$stage/index.android.bundle.map"
+cp "$r8map" "$stage/mapping.txt"
 if [[ -n "$archive" ]]; then
   mkdir -p "$stage/ios"
   cp "$ios_map" "$stage/ios/main.jsbundle.map"

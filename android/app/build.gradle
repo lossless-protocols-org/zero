@@ -62,30 +62,31 @@ react {
 }
 
 /**
- * Runs R8/ProGuard on release builds to shrink and obfuscate the Java bytecode.
- *
- * Deliberately OFF. Enabling it is a standalone piece of work, not a flag flip:
- * WatermelonDB models rely on decorators and reflective field access, and the
- * Nitro/Reanimated JSI bindings are reached from native code, so keep rules
- * must be written in proguard-rules.pro and validated on a real device
- * (create/edit/delete an expense, run a backup export + restore, open Reports)
- * against an actual release build — a successful compile proves nothing here.
- * Until that pass happens, shipping unminified is the safe choice.
+ * R8 shrinks and obfuscates release builds (2.8; Play Vitals flagged the
+ * unobfuscated build, deadline Feb 2027). Keep rules for every native
+ * library live in proguard-rules.pro; res/raw/keep.xml keeps the images JS
+ * looks up by name. A compile proves nothing here: each release is checked
+ * on a device (expenses, refunds, money in, backup export + restore,
+ * Reports, Settings sheets, widgets, the 50-step stress). mapping.txt is
+ * archived with the symbols (scripts/archive-symbols.sh) and uploaded to Play.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
- * The preferred build flavor of JavaScriptCore (JSC)
- *
- * For example, to use the international variant, you can use:
- * `def jscFlavor = io.github.react-native-community:jsc-android-intl:2026004.+`
- *
- * The international variant includes ICU i18n library and necessary data
- * allowing to use e.g. `Date.toLocaleString` and `String.localeCompare` that
- * give correct results when using with locales other than en-US. Note that
- * this variant is about 6MiB larger per architecture than default.
+ * zero ships on Hermes only. The template's JavaScriptCore fallback pulled a
+ * floating `jsc-android:2026004.+` that no build used (audit 2026-11-08 §6.3);
+ * turning Hermes off is now a build error rather than an untested engine.
  */
-def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+
+/**
+ * The QA build (audit 2026-11-08 §6.3): the release build — R8, bundled JS —
+ * under its own application id, signed with the debug key and named
+ * "zero QA" (src/qa/res), so it installs beside the store build and never
+ * touches its data (its launcher shortcuts: src/qa/res/xml). iOS has the same
+ * split (ZERO_BUNDLE_ID, "zero QA").
+ * `./gradlew assembleQa`.
+ */
+def qaIdSuffix = ".qa"
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -97,8 +98,8 @@ android {
         applicationId "com.anotherwhy.zero"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 23
-        versionName "2.7.1"
+        versionCode 24
+        versionName "2.8.0"
     }
 
     // 16 KB page size support (required for Android 15+ / Play submissions):
@@ -130,14 +131,40 @@ android {
             }
         }
     }
+    sourceSets {
+        // The fixtures the JS, Kotlin and Swift sides all read (contracts/README.md).
+        test.resources.srcDirs += ["${rootDir}/../contracts"]
+    }
+    lint {
+        // Android Lint gates CI (audit 2026-11-08 §6.3): a new error fails the
+        // build. What it reported on 2026-11-09 is in lint-baseline.xml, to be
+        // worked down; never add to it to pass a build.
+        abortOnError true
+        checkReleaseBuilds true
+        baseline = file("lint-baseline.xml")
+    }
+    testOptions {
+        // Robolectric inflates the real widget layouts and reads the real strings.
+        unitTests.includeAndroidResources = true
+    }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
+        qa {
+            initWith release
+            applicationIdSuffix qaIdSuffix
+            versionNameSuffix "-qa"
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ["release"]
+        }
         release {
-            signingConfig signingConfigs.release
+            // Signed only when the upload keystore is here. Without it (CI) the build is an
+            // explicit unsigned release, app-release-unsigned.apk, used to check the merged
+            // manifest (scripts/check-no-read.mjs --apk); it can never be uploaded by mistake.
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : null
             minifyEnabled enableProguardInReleaseBuilds
-            shrinkResources false
+            shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
@@ -147,9 +174,17 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
-    if (hermesEnabled.toBoolean()) {
-        implementation("com.facebook.react:hermes-android")
-    } else {
-        implementation jscFlavor
+    if (!hermesEnabled.toBoolean()) {
+        throw new GradleException("zero ships on Hermes only: keep hermesEnabled=true in gradle.properties.")
     }
+    implementation("com.facebook.react:hermes-android")
+
+    // Local JVM tests for the widget's Kotlin (src/test): test classpath only,
+    // nothing ships. org.json is the real library because android.jar's copy
+    // is a stub that throws in local tests.
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
+    // The framework-backed parts (RemoteViews binding, the store, the provider's
+    // alarm, quick-add intents) on a simulated Android (audit 2026-11-08 §6, App. B).
+    testImplementation("org.robolectric:robolectric:4.17")
 }

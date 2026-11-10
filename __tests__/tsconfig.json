@@ -1,0 +1,11 @@
+{
+  // The test program: the app's settings plus the runner's globals (jest) and
+  // Node's (fs, path, __dirname: tests read fixtures and run scripts). The app
+  // program (../tsconfig.json) has neither, so app code cannot reach `jest`,
+  // `process` or `Buffer` by accident (audit 2026-11-08 §7.5).
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node"]
+  },
+  "include": ["**/*", "../src/**/*", "../src/i18n/i18next.d.ts", "../App.tsx", "../declarations.d.ts"]
+}

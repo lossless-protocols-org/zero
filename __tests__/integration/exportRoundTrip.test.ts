@@ -1,0 +1,148 @@
+/**
+ * L4 (v2.7.1): the JSON backup is written without pretty-printing (219 vs
+ * 123 B/row on a real file), and `getAllData` reads expenses and debts as raw
+ * rows instead of hydrating a model per row it only copies. Neither may change
+ * the content: a backup exported from an imported seed must re-import to the
+ * same data, and the export of that re-import must be identical. LokiJS
+ * harness as in importService.test.ts.
+ */
+import {Platform} from 'react-native';
+import RNFS from 'react-native-fs';
+import Query from '@nozbe/watermelondb/Query';
+import type {ExportData} from '../../src/data/backup/export/format';
+import {importAllData} from '../../src/data/services/importService';
+import {getAllData} from '../../src/data/services/getService';
+import {validateExportEnvelope} from '../../src/data/backup/export/validate';
+import {upgradeExportData} from '../../src/data/backup/export/upgrader';
+import {exportJson} from '../../src/data/backup/export/exportFiles';
+import {CURRENT_EXPORT_VERSION} from '../../src/data/backup/export/format';
+import {seedBackup} from '../harness/seed';
+import {getAllUsers} from '../harness/services';
+import {getAllCategoriesByUserId, reorderCategories} from '../../src/data/services/categoryService';
+
+const writeFile = jest.mocked(RNFS.writeFile);
+
+const loadSeed = (count: number): ExportData => {
+  const validation = validateExportEnvelope(seedBackup(count));
+  if (!validation.success || !validation.data) {
+    throw new Error(validation.error ?? 'seed did not validate');
+  }
+  return upgradeExportData(validation.data);
+};
+
+const exportViaScreen = async (): Promise<string> => {
+  writeFile.mockClear();
+  jest.replaceProperty(Platform, 'OS', 'android');
+  const outcome = await exportJson({
+    getAllData,
+    handleExportResult: async () => {},
+    requestStoragePermission: async () => true,
+    requestStorageViaDialog: async () => {},
+    shareTitle: 'Export',
+    noUserMessage: 'no user',
+    invalidRowMessage: (detail: string) => detail,
+  });
+  expect(outcome).toBe('saved');
+  const contents = writeFile.mock.calls[0]?.[1];
+  if (typeof contents !== 'string') {
+    throw new Error('nothing was written');
+  }
+  return contents;
+};
+
+describe('export round trip', () => {
+  jest.setTimeout(120_000);
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('exports compact JSON that re-imports to identical content, and reads expenses/debts as raw rows', async () => {
+    const seed = loadSeed(2000);
+    await importAllData(seed);
+
+    // Record which tables are read raw vs hydrated during one export.
+    const rawTables: string[] = [];
+    const hydratedTables: string[] = [];
+    const originalRaw = Query.prototype.unsafeFetchRaw;
+    const originalFetch = Query.prototype.fetch;
+    jest.spyOn(Query.prototype, 'unsafeFetchRaw').mockImplementation(function (this: Query<never>) {
+      rawTables.push(this.table);
+      return originalRaw.call(this);
+    });
+    jest.spyOn(Query.prototype, 'fetch').mockImplementation(function (this: Query<never>) {
+      hydratedTables.push(this.table);
+      return originalFetch.call(this);
+    });
+
+    const first = await exportViaScreen();
+    jest.restoreAllMocks();
+
+    // v5: the two new flow tables are read raw too; none of the four is hydrated.
+    expect(rawTables.sort()).toEqual(['debts', 'expenses', 'incomes', 'refunds']);
+    for (const table of ['expenses', 'debts', 'refunds', 'incomes']) {
+      expect(hydratedTables).not.toContain(table);
+    }
+
+    // Indent-free: no newlines, no indentation.
+    expect(first).not.toContain('\n');
+    // the export this test just wrote, already validated above
+    const envelope = JSON.parse(first) as {key: string; version: number; data: ExportData};
+    expect(envelope.version).toBe(CURRENT_EXPORT_VERSION);
+    const perRow =
+      first.length /
+      (seed.expenses.length +
+        seed.expenses.reduce((n, e) => n + (e.refunds?.length ?? 0), 0) +
+        seed.incomes.length +
+        seed.accounts.length +
+        seed.categories.length +
+        seed.debtors.length +
+        seed.debts.length +
+        seed.budgets.length +
+        2);
+    console.log(`[L4] export of ${seed.expenses.length} expenses: ${first.length} B, ${perRow.toFixed(0)} B/row`);
+    // 123 B/row at v4; v5 adds createdAt and updatedAt (two 13-digit epochs,
+    // ~51 B) to every entry. Still well under the indented 219 B/row L4 removed.
+    expect(perRow).toBeLessThan(180);
+
+    // Content round trip: import what was exported, export again, compare data byte for byte.
+    const validation = validateExportEnvelope(envelope);
+    if (!validation.success || !validation.data) {
+      throw new Error(validation.error ?? 'exported file did not validate');
+    }
+    await importAllData(upgradeExportData(validation.data));
+    const second = await exportViaScreen();
+    // both inputs are export files the test just wrote, so `data` is there
+    const strip = (json: string): string => JSON.stringify((JSON.parse(json) as {data: unknown}).data);
+    expect(strip(second)).toBe(strip(first));
+
+    // And the seed's own content survived the first import (modulo key order of the envelope).
+    const original = JSON.stringify(seed);
+    expect(strip(first)).toBe(original);
+  });
+
+  it('keeps a reordered category list through export and import (2.8 Phase 5 gate)', async () => {
+    await importAllData(loadSeed(50));
+    const [user] = await getAllUsers();
+    if (!user) {
+      throw new Error('the seed has a user');
+    }
+    const before = (await getAllCategoriesByUserId(user.id, 'expense')).map(c => c.id);
+    const reversed = [...before].reverse();
+    await reorderCategories(user.id, 'expense', reversed);
+    const names = async (): Promise<string[]> => {
+      const [u] = await getAllUsers();
+      return (await getAllCategoriesByUserId(u?.id ?? '', 'expense')).map(c => c.name);
+    };
+    const order = await names();
+
+    const exported = await exportViaScreen();
+    // the export this test just wrote
+    const validation = validateExportEnvelope(JSON.parse(exported) as unknown);
+    if (!validation.success || !validation.data) {
+      throw new Error(validation.error ?? 'exported file did not validate');
+    }
+    await importAllData(upgradeExportData(validation.data));
+    expect(await names()).toEqual(order);
+    expect(order.length).toBeGreaterThan(1);
+  });
+});

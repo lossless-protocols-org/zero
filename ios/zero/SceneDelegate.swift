@@ -9,8 +9,13 @@ import UIKit
 /// to launch them. The scene, not the app delegate, owns the window and starts
 /// React Native (`startReactNative(…connectionOptions:)`), and forwards URL /
 /// user-activity callbacks to `RCTLinkingManager` so `Linking` keeps working.
-/// zero has no inbound deep links today; the forwarding is there so that stays
-/// true for the right reason rather than by accident.
+/// Since 2.8 the widgets, Control Center controls and App Shortcuts open zero
+/// with `zero://` links (add, money/add, quick; see src/navigation/linking.ts).
+/// A cold start delivers the link through `connectionOptions` (read by
+/// `startReactNative`), a warm one through `openURLContexts` below. The Home
+/// Screen quick actions (long-press the icon, ZeroQuickActions) carry the same
+/// zero://quick links: a cold start hands the link to React Native as the
+/// launch URL, a warm one through `performActionFor` below.
 class SceneDelegate: RCTDefaultReactNativeFactoryDelegate, UIWindowSceneDelegate {
   var window: UIWindow?
   var reactNativeFactory: RCTReactNativeFactory?
@@ -37,11 +42,38 @@ class SceneDelegate: RCTDefaultReactNativeFactoryDelegate, UIWindowSceneDelegate
     reactNativeFactory?.devMenuConfiguration = devMenuConfiguration
     #endif
 
-    reactNativeFactory?.startReactNative(
-      withModuleName: "zero",
-      in: window,
-      connectionOptions: connectionOptions
-    )
+    if let item = connectionOptions.shortcutItem, let url = ZeroQuickActions.url(of: item) {
+      // What `connectionOptions` gives React Native for a link (its launch URL,
+      // read by Linking.getInitialURL); a quick action is not a URL context.
+      reactNativeFactory?.startReactNative(
+        withModuleName: "zero",
+        in: window,
+        launchOptions: [UIApplication.LaunchOptionsKey.url: url]
+      )
+    } else {
+      reactNativeFactory?.startReactNative(
+        withModuleName: "zero",
+        in: window,
+        connectionOptions: connectionOptions
+      )
+    }
+    // The menu as the stored snapshot has it (an update or a restore can leave it stale).
+    ZeroQuickActions.publish(SharedStore.snapshot())
+  }
+
+  func windowScene(
+    _ windowScene: UIWindowScene,
+    performActionFor shortcutItem: UIApplicationShortcutItem,
+    completionHandler: @escaping (Bool) -> Void
+  ) {
+    guard let url = ZeroQuickActions.url(of: shortcutItem) else {
+      completionHandler(false)
+      return
+    }
+    // Through openURLContexts above, like a widget link: in a scene app
+    // RCTLinkingManager's application(_:open:options:) returns false and
+    // forwards nothing (found on the simulator, 2026-11-09).
+    UIApplication.shared.open(url, options: [:], completionHandler: completionHandler)
   }
 
   func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

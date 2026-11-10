@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget text and controls. Sizes in sp so the widget follows
+     the font scale; the big figure auto-sizes inside a fixed height, so a
+     large font scale or a long amount shrinks it instead of clipping it. -->
+<resources>
+    <style name="ZeroWidget" />
+    <style name="ZeroWidget.Root">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:background">@drawable/widget_background</item>
+        <item name="android:clipToOutline">true</item>
+    </style>
+
+    <style name="ZeroWidget.Label">
+        <item name="android:textColor">@color/widget_on_surface_variant</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textAlignment">viewStart</item>
+    </style>
+
+    <style name="ZeroWidget.Caption" parent="ZeroWidget.Label">
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="ZeroWidget.Value" parent="ZeroWidget.Label">
+        <item name="android:textColor">@color/widget_on_surface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="ZeroWidget.Figure">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:textColor">@color/widget_on_surface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:gravity">center_vertical|start</item>
+        <item name="android:textAlignment">viewStart</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:autoSizeMinTextSize">14sp</item>
+        <item name="android:autoSizeStepGranularity">1sp</item>
+    </style>
+
+    <!-- A 48dp touch target (WL-4.2) around a 36dp round button. -->
+    <style name="ZeroWidget.IconTarget">
+        <item name="android:layout_width">@dimen/widget_touch</item>
+        <item name="android:layout_height">@dimen/widget_touch</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+    </style>
+
+    <style name="ZeroWidget.IconButton">
+        <item name="android:layout_width">36dp</item>
+        <item name="android:layout_height">36dp</item>
+        <item name="android:layout_gravity">center</item>
+        <item name="android:padding">7dp</item>
+        <item name="android:importantForAccessibility">no</item>
+        <item name="android:scaleType">fitCenter</item>
+    </style>
+
+    <!-- A category chip: 48 dp tall to touch (WL-4.2), a 36 dp pill to see. -->
+    <style name="ZeroWidget.Chip">
+        <!-- Natural width (as iOS): WidgetRenderer shows only the chips that fit whole. -->
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">@dimen/widget_touch</item>
+        <item name="android:background">@drawable/widget_chip</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:textColor">@color/widget_on_tonal</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:visibility">gone</item>
+    </style>
+</resources>

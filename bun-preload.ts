@@ -1,19 +1,14 @@
 /**
- * Preload for `bun test` (see bunfig.toml). Bun does not hoist jest.mock and
- * has no transform pipeline for react-native's Flow-typed sources, so native
- * modules must be mocked BEFORE any test file imports them.
- *
- * jest (`bun run test`) remains the canonical runner — it covers the full
- * suite including the App render smoke test, which bun cannot parse. The
- * pure suites (planner, upgrader, sanitize, numberUtils, expenseService)
- * run under both. `bun run test:unit` / `test:rn` split the two (M23).
+ * Preload for `bun test`, which runs only the SQLite suites (__tests__/sqlite;
+ * see bunfig.toml). Native modules they reach are mocked here, before any
+ * test file imports them. Every other suite runs under jest (`bun run test`).
  *
  * Lint-only on purpose: this file is outside tsconfig's `include`, because
  * typechecking `bun:test` would need `@types/bun` as a new dev dependency.
  */
 import {mock} from 'bun:test';
-import * as localizeMock from './src/testing/localizeMock';
-import * as mmkvMock from './src/testing/mmkvMock';
+import * as localizeMock from './__tests__/harness/mocks/localize';
+import * as mmkvMock from './__tests__/harness/mocks/mmkv';
 
 // React Native's own preset defines __DEV__ for jest; bun has no such global,
 // so app code guarded by `if (__DEV__)` throws a ReferenceError without this.

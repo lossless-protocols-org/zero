@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The QA build's copy of src/main/res/xml/shortcuts.xml (its own package id).
+     Static launcher shortcuts (long-press zero's icon), straight to the
+     quick-add sheet. The top two categories are added at run time
+     (quickadd/LauncherShortcuts). The launcher adds NEW_TASK and CLEAR_TASK itself.
+     targetPackage must be a literal: the launcher does not resolve a resource
+     here (an @string sent it to "@2131755039" and the start failed, seen on the
+     Moto 2026-11-09). The QA build has its own copy (src/qa/res/xml), and
+     __tests__/scripts/shortcuts.test.ts pins each to its build's id. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_add"
+        android:shortcutId="add_expense"
+        android:shortcutShortLabel="@string/widget_add_expense">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.anotherwhy.zero.quickadd.QuickAddActivity"
+            android:targetPackage="com.anotherwhy.zero.qa">
+            <extra android:name="kind" android:value="expense" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_income"
+        android:shortcutId="add_income"
+        android:shortcutShortLabel="@string/widget_add_income">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.anotherwhy.zero.quickadd.QuickAddActivity"
+            android:targetPackage="com.anotherwhy.zero.qa">
+            <extra android:name="kind" android:value="income" />
+        </intent>
+    </shortcut>
+</shortcuts>

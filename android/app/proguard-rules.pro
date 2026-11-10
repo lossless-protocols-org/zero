@@ -43,76 +43,35 @@
 -keep class com.facebook.jni.** { *; }
 
 # ==========================================
-# WatermelonDB
+# Native libraries (audited 2026-11-08 for R8 in 2.8; narrowed by the
+# principal audit the same day, §6.3)
+#
+# Only libraries that ship NO consumer rules are kept here. These carry their
+# own (merged from the AAR), so a keep here would only duplicate them:
+#   reanimated  -keep com.swmansion.reanimated.**, react.turbomodule.**, react.fabric.**
+#   worklets    -keep com.swmansion.worklets.**, react.turbomodule.**, react.fabric.**
+#   svg         -keep com.horcrux.svg.**
+#   screens     -keepnames its Fragments (what it restores by name)
+# zero's own code needs no keep: manifest components (widget provider,
+# quick-add activity, tile) are kept by AAPT's generated rules, the widget
+# TurboModule by the NativeModule rule above, and nothing is reached by
+# reflection. Stack traces read through the archived mapping.txt
+# (scripts/archive-symbols.sh, uploaded to Play with each release).
 # ==========================================
+# WatermelonDB: JSI installer and adapter are called from C++ / reflection.
 -keep class com.nozbe.watermelondb.** { *; }
-
-# ==========================================
-# React Native Reanimated
-# ==========================================
--keep class com.swmansion.reanimated.** { *; }
--keep class com.facebook.react.turbomodule.** { *; }
-
-# ==========================================
-# React Native Gesture Handler
-# ==========================================
+# Gesture handler, safe area: view managers and JNI hooks, no consumer rules.
 -keep class com.swmansion.gesturehandler.** { *; }
--keep class com.swmansion.gesturehandler.react.** { *; }
-
-# ==========================================
-# React Native MMKV
-# ==========================================
--keep class com.mrousavy.mmkv.** { *; }
-
-# ==========================================
-# React Native Quick SQLite
-# ==========================================
--keep class com.reactnativequicksqlite.** { *; }
-
-# ==========================================
-# React Native Screens
-# ==========================================
--keep class com.swmansion.rnscreens.** { *; }
-
-# ==========================================
-# React Native SVG
-# ==========================================
--keep public class com.horcrux.svg.** { *; }
-
-# ==========================================
-# Lucide Icons (React Native SVG based)
-# ==========================================
--keep class com.horcrux.svg.** { *; }
-
-# ==========================================
-# AsyncStorage
-# ==========================================
--keep class com.reactnativecommunity.asyncstorage.** { *; }
-
-# ==========================================
-# DateTimePicker
-# ==========================================
--keep class com.reactcommunity.rndatetimepicker.** { *; }
-
-# ==========================================
-# Document Picker
-# ==========================================
--keep class com.reactnativedocumentpicker.** { *; }
-
-# ==========================================
-# File System (RNFS)
-# ==========================================
--keep class com.rnfs.** { *; }
-
-# ==========================================
-# Safe Area Context
-# ==========================================
 -keep class com.th3rdwave.safeareacontext.** { *; }
-
-# ==========================================
-# Actions Sheet
-# ==========================================
--keep class com.reactnativeactionssheet.** { *; }
+# Nitro modules + MMKV (v4 is a Nitro module): HybridObjects are created
+# from C++ through JNI by class name.
+-keep class com.margelo.nitro.** { *; }
+# Other native modules without consumer rules.
+-keep class com.reactcommunity.rndatetimepicker.** { *; }
+-keep class com.reactnativedocumentpicker.** { *; }
+-keep class com.rnfs.** { *; }
+-keep class com.zoontek.rnlocalize.** { *; }
+-keep class org.linusu.** { *; }
 
 # ==========================================
 # Keep JavaScript interface methods
@@ -121,12 +80,7 @@
     @android.webkit.JavascriptInterface <methods>;
 }
 
-# ==========================================
-# Optimization settings
-# ==========================================
--optimizationpasses 5
 -dontusemixedcaseclassnames
--verbose
 
 # ==========================================
 # Remove logging in release
