@@ -1,7 +1,7 @@
 {
   "extends": "@react-native/typescript-config",
   "compilerOptions": {
-    "types": ["jest"],
+    "types": [],
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -19,6 +19,6 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
-  "include": ["src/**/*", "src/i18n/i18next.d.ts", "App.tsx", "index.js", "declarations.d.ts", "__tests__/**/*"],
+  "include": ["src/**/*", "src/i18n/i18next.d.ts", "App.tsx", "index.js", "declarations.d.ts"],
   "exclude": ["node_modules", "references"]
 }

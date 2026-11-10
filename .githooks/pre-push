@@ -1,0 +1,8 @@
+#!/bin/sh
+# Runs the gate CI runs (`bun run check`) before a push, so a red push never
+# reaches GitHub (audit 2026-11-08 §10: "no hooks"). Installed by `bun install`
+# through package.json "prepare" (git config core.hooksPath .githooks); no
+# hook manager dependency. Skip once, knowingly, with `git push --no-verify`.
+set -e
+echo "pre-push: bun run check"
+bun run check

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- shrinkResources (2.8): images bundled from JS (require('./x.png')) are
+     copied into res/drawable-* and looked up by NAME at run time, so the
+     shrinker cannot see them. Keep every one; the widget and launcher
+     resources are referenced from code and the manifest. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/assets_*,@drawable/node_modules_*" />

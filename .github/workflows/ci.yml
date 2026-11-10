@@ -1,0 +1,110 @@
+name: CI
+
+# The release gate (docs/RELEASE_QA.md §1) on every push and pull request to
+# main. Until 2.8 CI ran only typecheck and the no-read source check; lint,
+# jest, the coverage ratchet, the SQLite suites and the Kotlin tests were a
+# manual promise (audit 2026-11-08 §7.1).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  js:
+    name: JS gate (types, lint, format, jest + coverage, SQLite suites, no-read, contrast)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          # Read from package.json `packageManager` so CI runs the bun that wrote bun.lock.
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # typecheck · lint · format:check · jest --coverage --ci (incl. layers, dead exports,
+      # widget strings, the no-read gate's own tests) · test:sqlite · check:no-read · contrast
+      - name: Gate
+        run: bun run check
+
+  android-unit:
+    name: Android unit tests and Lint (widget reader, rendering, store, alarm, quick-add intents)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # The React Native Gradle plugin and autolinking read node_modules.
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Kotlin unit tests (JVM + Robolectric)
+        run: bun run test:android
+
+      # New Lint errors fail; what existed on 2026-11-09 is in app/lint-baseline.xml (audit §6.3).
+      - name: Android Lint
+        working-directory: android
+        run: ./gradlew :app:lintDebug -q
+
+  ios-shared:
+    name: Swift shared code (widget reader, money format, queue, Siri matching)
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Swift package's tests read contracts/, the fixtures the JS and Kotlin tests read.
+      - name: Swift tests
+        run: sh scripts/test-ios.sh
+
+  android-apk-privacy:
+    name: Release APK holds only allowed permissions
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # R8 on, as shipped; unsigned here (no keystore secret in CI), which does not change
+      # the merged manifest. One ABI keeps the native build short.
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+
+      # The merged manifest Play sees, including what transitive Gradle libraries add,
+      # which the source check cannot see.
+      - name: No-read gate on the APK
+        run: node scripts/check-no-read.mjs --apk android/app/build/outputs/apk/release/app-release-unsigned.apk

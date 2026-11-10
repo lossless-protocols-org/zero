@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher shortcut icon (long-press zero's icon). Fixed colours: shortcut icons are not themed. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp"
+    android:viewportWidth="48" android:viewportHeight="48">
+    <path android:pathData="M24,24m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0" android:fillColor="#FF5E7A31" />
+    <path android:pathData="M17,24h14M24,17v14" android:strokeColor="#FFFFFFFF" android:strokeWidth="3" android:strokeLineCap="round" />
+</vector>

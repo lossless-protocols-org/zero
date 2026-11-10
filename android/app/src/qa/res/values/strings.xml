@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The QA build's name on the launcher, beside the store build's "zero" (build.gradle, qa). -->
+<resources>
+    <string name="app_name">zero QA</string>
+</resources>

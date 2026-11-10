@@ -5,7 +5,9 @@
  *
  * Usage: bun run version:set 2.7.1 [--dry-run]
  *
- * - Sets the version string in package.json, build.gradle, and project.pbxproj
+ * - Sets the version string in package.json, src/platform/getVersion.ts
+ *   (what the app reads; importing package.json bundled the whole file),
+ *   build.gradle, and project.pbxproj
  * - Increments the build number (versionCode / CURRENT_PROJECT_VERSION) once
  *
  * Refuses (M25, v2.7.1): a version that is not `x.y` / `x.y.z`, one that is
@@ -34,7 +36,9 @@ const compareVersions = (a, b) => {
 };
 
 /** The edits for one bump, or an `error`. Pure: reads and writes nothing. */
-const planBump = ({version, pkgVersion, gradle, pbx}) => {
+const APP_VERSION_RE = /const APP_VERSION = '[^']*';/;
+
+const planBump = ({version, pkgVersion, gradle, pbx, appVersionSource}) => {
   if (!VERSION_RE.test(version || '')) {
     return {error: `"${version}" is not a version (expected x.y or x.y.z)`};
   }
@@ -45,6 +49,9 @@ const planBump = ({version, pkgVersion, gradle, pbx}) => {
   const buildMatch = pbx.match(/CURRENT_PROJECT_VERSION\s*=\s*(\d+)/);
   if (!codeMatch || !buildMatch || !/versionName\s+"[^"]*"/.test(gradle) || !/MARKETING_VERSION\s*=/.test(pbx)) {
     return {error: 'versionCode, versionName, CURRENT_PROJECT_VERSION or MARKETING_VERSION not found'};
+  }
+  if (!APP_VERSION_RE.test(appVersionSource)) {
+    return {error: "src/platform/getVersion.ts has no `const APP_VERSION = '…';`"};
   }
   // Every iOS target gets the same new build number; refuse if they disagree now.
   const builds = new Set([...pbx.matchAll(/CURRENT_PROJECT_VERSION\s*=\s*(\d+);/g)].map(m => m[1]));
@@ -64,6 +71,7 @@ const planBump = ({version, pkgVersion, gradle, pbx}) => {
     pbx: pbx
       .replace(/MARKETING_VERSION\s*=\s*[^;]+;/g, `MARKETING_VERSION = ${version};`)
       .replace(/CURRENT_PROJECT_VERSION\s*=\s*\d+;/g, `CURRENT_PROJECT_VERSION = ${oldBuild + 1};`),
+    appVersionSource: appVersionSource.replace(APP_VERSION_RE, `const APP_VERSION = '${version}';`),
   };
 };
 
@@ -84,19 +92,21 @@ const main = () => {
   const pkgPath = path.join(root, 'package.json');
   const gradlePath = path.join(root, 'android/app/build.gradle');
   const pbxPath = path.join(root, 'ios/zero.xcodeproj/project.pbxproj');
+  const appVersionPath = path.join(root, 'src/platform/getVersion.ts');
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
   const plan = planBump({
     version,
     pkgVersion: pkg.version,
     gradle: fs.readFileSync(gradlePath, 'utf8'),
     pbx: fs.readFileSync(pbxPath, 'utf8'),
+    appVersionSource: fs.readFileSync(appVersionPath, 'utf8'),
   });
   if (plan.error) {
     console.error(`Refusing: ${plan.error}. Usage: bun run version:set <x.y.z> [--dry-run]`);
     process.exit(1);
   }
 
-  console.log(`package.json: ${pkg.version} → ${version}`);
+  console.log(`package.json and getVersion.ts: ${pkg.version} → ${version}`);
   console.log(`Android: versionName "${version}", versionCode ${plan.oldCode} → ${plan.newCode}`);
   console.log(`iOS: MARKETING_VERSION ${version}, CURRENT_PROJECT_VERSION ${plan.oldBuild} → ${plan.newBuild}`);
   if (dryRun) {
@@ -107,6 +117,7 @@ const main = () => {
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
   fs.writeFileSync(gradlePath, plan.gradle, 'utf8');
   fs.writeFileSync(pbxPath, plan.pbx, 'utf8');
+  fs.writeFileSync(appVersionPath, plan.appVersionSource, 'utf8');
   console.log('\nDone!');
 };
 

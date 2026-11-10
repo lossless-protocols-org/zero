@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * WCAG contrast of the colour pairs the app actually draws (M31, v2.7.1),
- * read from the theme tokens in src/context/ThemeContext.tsx, for both
+ * read from the theme tokens in src/ui/context/ThemeContext.tsx, for both
  * themes. Text needs 4.5:1, UI parts (icons, borders, focus) 3:1.
  *
  * Usage: bun run contrast   (node scripts/contrast-check.mjs)
@@ -13,7 +13,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const source = fs.readFileSync(path.join(root, 'src/context/ThemeContext.tsx'), 'utf8');
+const source = fs.readFileSync(path.join(root, 'src/ui/context/ThemeContext.tsx'), 'utf8');
 
 const readTheme = name => {
   const block = new RegExp(`const ${name}: ThemeColors = \\{([\\s\\S]*?)\\};`).exec(source);

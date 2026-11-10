@@ -1,0 +1,46 @@
+{
+  "key": "zeroAAAAAAAAAAAAAA-1",
+  "version": 1,
+  "data": {
+    "users": [
+      {
+        "username": "Ben",
+        "email": ""
+      }
+    ],
+    "categories": [
+      {
+        "name": "Food",
+        "categoryStatus": true,
+        "icon": "pizza",
+        "color": "#FFD700"
+      },
+      {
+        "name": "Fuel",
+        "categoryStatus": false,
+        "icon": "car",
+        "color": "#800080"
+      }
+    ],
+    "expenses": [
+      {
+        "title": "Petrol",
+        "amount": 40,
+        "description": "",
+        "category": {
+          "name": "Fuel"
+        },
+        "date": "2026-04-01T10:00:00"
+      }
+    ],
+    "currencies": [
+      {
+        "code": "USD",
+        "symbol": "$",
+        "name": "US Dollar"
+      }
+    ],
+    "debtors": [],
+    "debts": []
+  }
+}

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- About 2×1: the month's figure and the add button. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    style="@style/ZeroWidget.Root"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="4dp"
+    android:paddingBottom="4dp">
+
+    <LinearLayout
+        android:id="@+id/figures"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/month_label"
+            style="@style/ZeroWidget.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/spent_month"
+            style="@style/ZeroWidget.Figure"
+            android:layout_height="28dp"
+            android:autoSizeMaxTextSize="22sp"
+            android:autoSizeMinTextSize="12sp" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/add_expense"
+        style="@style/ZeroWidget.IconTarget"
+        android:contentDescription="@string/widget_add_expense">
+
+        <ImageView
+            style="@style/ZeroWidget.IconButton"
+            android:background="@drawable/widget_button_primary"
+            android:src="@drawable/ic_widget_add" />
+    </FrameLayout>
+</LinearLayout>

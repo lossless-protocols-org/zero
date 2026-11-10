@@ -20,5 +20,19 @@ jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 
 // Shared runner-agnostic mocks (also registered by bun-preload.ts for `bun test`)
-jest.mock('react-native-localize', () => require('./src/testing/localizeMock'));
-jest.mock('react-native-mmkv', () => require('./src/testing/mmkvMock'));
+jest.mock('react-native-localize', () => require('./__tests__/harness/mocks/localize'));
+jest.mock('react-native-mmkv', () => require('./__tests__/harness/mocks/mmkv'));
+
+// Every suite gets an in-memory LokiJS WatermelonDB in place of the SQLite
+// one: the real schema, migrations, models and service queries, nothing
+// native (__tests__/harness/lokiDatabase.ts). Lazy: a suite that never
+// imports the database never builds one; each suite file gets its own. A
+// suite that tests the real module opts out with
+// `jest.unmock('…/src/data/database/database')`; one that needs a broken
+// database mocks it itself (its own jest.mock wins over this one).
+jest.mock('./src/data/database/database', () => require('./__tests__/harness/lokiDatabase').lokiDatabaseModule());
+
+// SafeAreaProvider renders nothing until the native side reports the window's
+// insets, which never happens under jest; the library's own mock gives it a
+// frame and zero insets, so whole screens (App) render.
+jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);

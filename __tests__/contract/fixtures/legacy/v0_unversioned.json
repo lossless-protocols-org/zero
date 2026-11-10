@@ -1,0 +1,83 @@
+{
+  "key": "zeroAAAAAAAAAAAAAAA0",
+  "data": {
+    "users": [
+      {
+        "username": "Asha",
+        "email": "null"
+      }
+    ],
+    "categories": [
+      {
+        "name": "Food",
+        "icon": "utensils-crossed",
+        "color": "#B0E57C"
+      },
+      {
+        "name": "Travel",
+        "icon": "null",
+        "color": "null"
+      },
+      {
+        "name": "Hello",
+        "icon": "cooking-pot",
+        "color": "null"
+      }
+    ],
+    "expenses": [
+      {
+        "title": "Lunch",
+        "amount": 258,
+        "description": "",
+        "category": {
+          "name": "Food"
+        },
+        "date": "2026-03-20T20:24:00"
+      },
+      {
+        "title": "Taxi",
+        "amount": 2500.5,
+        "description": "airport",
+        "category": {
+          "name": "Travel"
+        },
+        "date": "2026-03-21T08:00:00"
+      },
+      {
+        "title": "Orphan",
+        "amount": 7,
+        "description": "",
+        "category": {
+          "name": "Unknown"
+        },
+        "date": "2026-03-22T09:00:00"
+      }
+    ],
+    "currencies": [
+      {
+        "code": "INR",
+        "symbol": "₹",
+        "name": "Indian Rupee"
+      }
+    ],
+    "debtors": [
+      {
+        "title": "Card",
+        "icon": "credit-card",
+        "type": "Credit Card",
+        "color": "null"
+      }
+    ],
+    "debts": [
+      {
+        "amount": 500,
+        "description": "dinner",
+        "debtor": {
+          "title": "Card"
+        },
+        "date": "2026-03-20T21:00:00",
+        "type": "borrow"
+      }
+    ]
+  }
+}

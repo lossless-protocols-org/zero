@@ -39,11 +39,24 @@ If zero crashes, it offers once, on the next launch, to share the error with us;
 
 ### Expense Tracking
 
-Add, edit, and delete transactions with customizable categories.
+- Add, edit, and delete transactions with customizable categories
+- Calculator in amount fields (Settings, off by default): type `120+45×2`, see the result as you type
+- The category of an expense you have entered before is chosen for you, from your own history, on the device
+- Sort a month by date, category, title or amount
+
+### Money In and Refunds
+
+- Record money in (salary, a client, interest) and see what you received and what you kept each month
+- "Got money back" on an expense: a refund counts in the month the money came back
+
+### Widgets and Quick Add
+
+- Home-screen widgets on Android and iOS: this month's spending, today, one tap to add
+- Add an expense without opening the app: a small sheet over the home screen from the widget, a Quick Settings tile or a launcher shortcut (Android); Siri, Shortcuts or the Action Button (iOS)
 
 ### Category Management
 
-Create your own categories with custom icons and colors.
+Create your own categories with custom icons and colors, and drag them into the order you want.
 
 ### Insights & Reports
 
@@ -57,7 +70,7 @@ A monthly budget with an adaptive daily allowance: what is left, divided over th
 
 ### Debt Tracking
 
-Track money you owe or are owed. Manage debtors and individual debts.
+Track money you owe or are owed, in the Money tab. Debts are what you hold and owe, not spending or income, so they never change a month's totals.
 
 ### Customization
 
@@ -77,13 +90,23 @@ Track money you owe or are owed. Manage debtors and individual debts.
 - 100% offline — no internet permission in the release build
 - All data stored locally on device (SQLite)
 - Zero data collection, zero crash reporters, zero analytics
+- zero never reads your SMS, notifications, email, bank data, contacts or clipboard. `scripts/check-no-read.mjs` fails the build if any manifest, dependency, Info.plist or entitlement asks for one of them, and the release gate runs it on the built APK
+
+## How zero is built
+
+- **Flows and positions are different things.** Spending, refunds and money in are money moving during a month; debts are what you hold and owe. A month's totals only ever count the first.
+- **One table per fact.** Expenses, refunds, money in and debts live in their own tables; a row's table says what it is.
+- **Derive, never store.** Spent, received and kept are computed when you look, never kept in a running total that could drift.
+- **Amounts are positive; the table gives the direction.** Sums run in integers, so ₹0.10 + ₹0.20 is ₹0.30.
+- **Adding an expense stays fast.** The add-expense flow keeps the same taps in every version.
+- **Your data, your device.** Backups are plain JSON files you keep; nothing leaves the phone unless you share it.
 
 ## Tech Stack
 
 | Layer      | Technology                                   |
 | ---------- | -------------------------------------------- |
-| Framework  | React Native 0.86 (New Architecture, Hermes) |
-| Language   | TypeScript 5.9 (strict)                      |
+| Framework  | React Native 0.88 (New Architecture, Hermes) |
+| Language   | TypeScript 6.0 (strict)                      |
 | Database   | WatermelonDB (SQLite + JSI)                  |
 | State      | Redux Toolkit                                |
 | Validation | Zod 4                                        |
@@ -104,32 +127,40 @@ We migrated from Realm to WatermelonDB because:
 
 ## Project Structure
 
+Lowest layer first. A module imports only from its own layer or a lower one,
+and no feature imports another feature. dependency-cruiser enforces it on every
+test run (`.dependency-cruiser.cjs` holds the rules; `bun run check:layers`), and
+knip finds anything unused (`bun run check:exports`). Native code, the widgets
+and the generated assets are mapped in [docs/NATIVE.md](docs/NATIVE.md); tests
+live in one tree, [`__tests__/`](__tests__/README.md).
+
 ```
 src/
-├── components/        # Reusable UI components (atomic design)
-│   ├── atoms/         # Basic components (Button, Input, Text, ErrorBoundary)
-│   └── molecules/     # Composite components
-├── screens/           # App screens
-│   └── ScreenName/
-│       ├── index.tsx          # UI component
-│       └── useScreenName.ts   # Business logic hook
-├── watermelondb/      # Database layer
-│   ├── models/        # WatermelonDB model classes
-│   ├── services/      # CRUD operations
-│   ├── schema.ts      # Database schema
-│   ├── migrations.ts  # Schema migrations
-│   └── database.ts    # DB initialization (lazy Proxy)
-├── backend/           # Startup & data logic
-│   ├── export/        # Export format, upgrader, validation
-│   └── migrations/    # Sequential data migrations
-├── constants/         # Outbound links, icon tables
-├── redux/             # Redux Toolkit slices & store
-├── navigation/        # React Navigation config
-├── context/           # React Context providers (Theme, Dialog)
-├── hooks/             # Global hooks
-├── styles/            # Global styles (utility-first)
-├── utils/             # Helper functions
-└── sheets/            # Bottom sheet components
+├── domain/            # Pure rules and types: money units, day keys, period, budget and debt maths
+├── constants/         # Outbound links
+├── platform/          # The device: MMKV storage and preferences, locale and formatting, error log
+├── i18n/              # Strings and validation messages
+├── data/              # The data layer
+│   ├── database/      # WatermelonDB schema, migrations, models, v5 backfill, seeded defaults
+│   ├── services/      # Every read and write, each enforcing its own invariants
+│   ├── dataMigrations/# Sequential data migrations run at start
+│   ├── backup/        # Export format, upgrader, validation, import planner, file IO
+│   └── startup.ts     # Opens the database and runs pending migrations
+├── native/            # TurboModule specs (codegen); only features/widgets/bridge.ts uses them
+├── store/             # Redux Toolkit: slices, session start (bootstrapSession), middleware
+├── ui/                # Shared view code: hooks and contexts → atoms → molecules → sheets
+├── features/          # One product area each: lib → hooks → components → sheets → screens
+│   ├── spending/      # Home, the day and category lists, add/edit expense, refunds
+│   ├── money/         # The Money tab: money in and debts
+│   ├── categories/    # The Categories tab, add/edit, icon and colour pickers
+│   ├── reports/       # Reports: donut, heatmap, money-in strip
+│   ├── settings/      # Settings, Diagnostics, preference pickers
+│   ├── onboarding/    # Splash, welcome, name, categories, currency, restore
+│   └── widgets/       # Home-screen widget snapshot, the Siri/widget queue, the quick-add sheet
+└── navigation/        # The app shell: stacks, deep links, the sheet registry
+
+__tests__/             # Every test, by kind: unit/ and component/ mirror src/ (see its README)
+contracts/             # Fixtures the JS, Kotlin and Swift sides all read
 ```
 
 ## Building from source
@@ -150,8 +181,9 @@ cd ios && pod install && cd ..
 
 bun run android   # or bun run ios
 bun run typecheck # tsc --strict
-bun run test      # jest
-bun test          # bun runner
+bun run test      # jest (every suite but the SQLite ones)
+bun run test:sqlite # bun: WatermelonDB's SQL on real SQLite
+bun run check     # the whole JS gate, as CI runs it
 ```
 
 ## Contributing

@@ -1,0 +1,1883 @@
+[
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 0,
+    "text": "₹0"
+  },
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1,
+    "text": "₹1"
+  },
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 7,
+    "text": "₹7"
+  },
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 99.5,
+    "text": "₹99.50"
+  },
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 120,
+    "text": "₹120"
+  },
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234,
+    "text": "₹1,234"
+  },
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 12345.67,
+    "text": "₹12,345.67"
+  },
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 45029,
+    "text": "₹45,029"
+  },
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 100000,
+    "text": "₹1,00,000"
+  },
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234567.25,
+    "text": "₹12,34,567.25"
+  },
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "spec": {
+      "prefix": "₹",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3,
+        2
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 98765432,
+    "text": "₹9,87,65,432"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 0,
+    "text": "$0"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1,
+    "text": "$1"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 7,
+    "text": "$7"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 99.5,
+    "text": "$99.50"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 120,
+    "text": "$120"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234,
+    "text": "$1,234"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 12345.67,
+    "text": "$12,345.67"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 45029,
+    "text": "$45,029"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 100000,
+    "text": "$100,000"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234567.25,
+    "text": "$1,234,567.25"
+  },
+  {
+    "currency": "USD",
+    "locale": "en-US",
+    "spec": {
+      "prefix": "$",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 98765432,
+    "text": "$98,765,432"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 0,
+    "text": "0 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1,
+    "text": "1 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 7,
+    "text": "7 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 99.5,
+    "text": "99,50 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 120,
+    "text": "120 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234,
+    "text": "1.234 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 12345.67,
+    "text": "12.345,67 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 45029,
+    "text": "45.029 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 100000,
+    "text": "100.000 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234567.25,
+    "text": "1.234.567,25 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "de-DE",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 98765432,
+    "text": "98.765.432 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 0,
+    "text": "0 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1,
+    "text": "1 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 7,
+    "text": "7 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 99.5,
+    "text": "99,50 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 120,
+    "text": "120 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234,
+    "text": "1 234 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 12345.67,
+    "text": "12 345,67 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 45029,
+    "text": "45 029 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 100000,
+    "text": "100 000 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234567.25,
+    "text": "1 234 567,25 €"
+  },
+  {
+    "currency": "EUR",
+    "locale": "fr-FR",
+    "spec": {
+      "prefix": "",
+      "suffix": " €",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 98765432,
+    "text": "98 765 432 €"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 0,
+    "text": "£0"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1,
+    "text": "£1"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 7,
+    "text": "£7"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 99.5,
+    "text": "£99.50"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 120,
+    "text": "£120"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234,
+    "text": "£1,234"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 12345.67,
+    "text": "£12,345.67"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 45029,
+    "text": "£45,029"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 100000,
+    "text": "£100,000"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234567.25,
+    "text": "£1,234,567.25"
+  },
+  {
+    "currency": "GBP",
+    "locale": "en-GB",
+    "spec": {
+      "prefix": "£",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 98765432,
+    "text": "£98,765,432"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 0,
+    "text": "￥0"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 1,
+    "text": "￥1"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 7,
+    "text": "￥7"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 99.5,
+    "text": "￥100"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 120,
+    "text": "￥120"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 1234,
+    "text": "￥1,234"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 12345.67,
+    "text": "￥12,346"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 45029,
+    "text": "￥45,029"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 100000,
+    "text": "￥100,000"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 1234567.25,
+    "text": "￥1,234,567"
+  },
+  {
+    "currency": "JPY",
+    "locale": "ja-JP",
+    "spec": {
+      "prefix": "￥",
+      "suffix": "",
+      "group": ",",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 0,
+      "digits": "0123456789"
+    },
+    "amount": 98765432,
+    "text": "￥98,765,432"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 0,
+    "text": "‏٠٫٠٠٠ د.ك.‏"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 1,
+    "text": "‏١٫٠٠٠ د.ك.‏"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 7,
+    "text": "‏٧٫٠٠٠ د.ك.‏"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 99.5,
+    "text": "‏٩٩٫٥٠٠ د.ك.‏"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 120,
+    "text": "‏١٢٠٫٠٠٠ د.ك.‏"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 1234,
+    "text": "‏١٬٢٣٤٫٠٠٠ د.ك.‏"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 12345.67,
+    "text": "‏١٢٬٣٤٥٫٦٧٠ د.ك.‏"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 45029,
+    "text": "‏٤٥٬٠٢٩٫٠٠٠ د.ك.‏"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 100000,
+    "text": "‏١٠٠٬٠٠٠٫٠٠٠ د.ك.‏"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 1234567.25,
+    "text": "‏١٬٢٣٤٬٥٦٧٫٢٥٠ د.ك.‏"
+  },
+  {
+    "currency": "KWD",
+    "locale": "ar-KW",
+    "spec": {
+      "prefix": "‏",
+      "suffix": " د.ك.‏",
+      "group": "٬",
+      "decimal": "٫",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 3,
+      "digits": "٠١٢٣٤٥٦٧٨٩"
+    },
+    "amount": 98765432,
+    "text": "‏٩٨٬٧٦٥٬٤٣٢٫٠٠٠ د.ك.‏"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 0,
+    "text": "0 kr"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1,
+    "text": "1 kr"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 7,
+    "text": "7 kr"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 99.5,
+    "text": "99,50 kr"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 120,
+    "text": "120 kr"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234,
+    "text": "1 234 kr"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 12345.67,
+    "text": "12 345,67 kr"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 45029,
+    "text": "45 029 kr"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 100000,
+    "text": "100 000 kr"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234567.25,
+    "text": "1 234 567,25 kr"
+  },
+  {
+    "currency": "SEK",
+    "locale": "sv-SE",
+    "spec": {
+      "prefix": "",
+      "suffix": " kr",
+      "group": " ",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 98765432,
+    "text": "98 765 432 kr"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 0,
+    "text": "R$ 0"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1,
+    "text": "R$ 1"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 7,
+    "text": "R$ 7"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 99.5,
+    "text": "R$ 99,50"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 120,
+    "text": "R$ 120"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234,
+    "text": "R$ 1.234"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 12345.67,
+    "text": "R$ 12.345,67"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 45029,
+    "text": "R$ 45.029"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 100000,
+    "text": "R$ 100.000"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234567.25,
+    "text": "R$ 1.234.567,25"
+  },
+  {
+    "currency": "BRL",
+    "locale": "pt-BR",
+    "spec": {
+      "prefix": "R$ ",
+      "suffix": "",
+      "group": ".",
+      "decimal": ",",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 98765432,
+    "text": "R$ 98.765.432"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 0,
+    "text": "CHF 0"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1,
+    "text": "CHF 1"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 7,
+    "text": "CHF 7"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 99.5,
+    "text": "CHF 99.50"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 120,
+    "text": "CHF 120"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234,
+    "text": "CHF 1'234"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 12345.67,
+    "text": "CHF 12'345.67"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 45029,
+    "text": "CHF 45'029"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 100000,
+    "text": "CHF 100'000"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 1234567.25,
+    "text": "CHF 1'234'567.25"
+  },
+  {
+    "currency": "CHF",
+    "locale": "de-CH",
+    "spec": {
+      "prefix": "CHF ",
+      "suffix": "",
+      "group": "'",
+      "decimal": ".",
+      "grouping": [
+        3
+      ],
+      "maxDecimals": 2,
+      "digits": "0123456789"
+    },
+    "amount": 98765432,
+    "text": "CHF 98'765'432"
+  }
+]

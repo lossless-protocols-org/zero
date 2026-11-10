@@ -1,12 +1,12 @@
 import React from 'react';
-import SplashScreen from '../screens/SplashScreen';
-import PersonalizeScreen from '../screens/PersonalizeScreen';
+import {SplashScreen} from '../features/onboarding/screens/SplashScreen';
+import {PersonalizeScreen} from '../features/onboarding/screens/PersonalizeScreen';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import type {OnboardingStackParamList} from './types';
-import PickCategoriesScreen from '../screens/PickCategoriesScreen';
-import ChooseCurrencyScreen from '../screens/ChooseCurrencyScreen';
-import WelcomeScreen from '../screens/WelcomeScreen';
-import ExistingUserScreen from '../screens/ExistingUserScreen';
+import {PickCategoriesScreen} from '../features/onboarding/screens/PickCategoriesScreen';
+import {ChooseCurrencyScreen} from '../features/onboarding/screens/ChooseCurrencyScreen';
+import {WelcomeScreen} from '../features/onboarding/screens/WelcomeScreen';
+import {ExistingUserScreen} from '../features/onboarding/screens/ExistingUserScreen';
 
 const screenOptions = {
   headerShown: false,
@@ -14,7 +14,7 @@ const screenOptions = {
 
 const Stack = createNativeStackNavigator<OnboardingStackParamList>();
 
-const OnboardingStack = () => {
+export const OnboardingStack = () => {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen name="SplashScreen" component={SplashScreen} />
@@ -26,5 +26,3 @@ const OnboardingStack = () => {
     </Stack.Navigator>
   );
 };
-
-export default OnboardingStack;

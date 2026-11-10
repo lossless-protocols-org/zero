@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared header (medium, large, picker preview): logo, the month, Money in, "+".
+     The label's text is the picker's; a live widget sets the month in code. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/widget_touch"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <ImageView
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_widget_logo" />
+
+    <TextView
+        android:id="@+id/month_label"
+        style="@style/ZeroWidget.Label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_weight="1"
+        android:text="@string/widget_name" />
+
+    <FrameLayout
+        android:id="@+id/add_income"
+        style="@style/ZeroWidget.IconTarget"
+        android:contentDescription="@string/widget_add_income">
+
+        <ImageView
+            style="@style/ZeroWidget.IconButton"
+            android:background="@drawable/widget_button_tonal"
+            android:src="@drawable/ic_widget_income" />
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/add_expense"
+        style="@style/ZeroWidget.IconTarget"
+        android:contentDescription="@string/widget_add_expense">
+
+        <ImageView
+            style="@style/ZeroWidget.IconButton"
+            android:background="@drawable/widget_button_primary"
+            android:src="@drawable/ic_widget_add" />
+    </FrameLayout>
+</LinearLayout>

@@ -1,0 +1,29 @@
+{
+  // Unused files, exports, types and dependencies (audit 2026-11-08 §7.7;
+  // replaces the word-matching scripts/find-dead-exports.mjs, which could not
+  // see default exports, re-exports or same-named identifiers). Two passes run
+  // in __tests__/arch/deadExports.test.ts: the default one (tests count as
+  // users) and --production (only the app counts, so an export kept alive by
+  // a test alone must say so with `@internal`).
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    // The app (index.js is found by the react-native plugin), then what
+    // tools load by path rather than by import.
+    "App.tsx!",
+    "src/native/specs/*.ts!", // read by React Native codegen
+    "scripts/*.{mjs,js}", // run by package.json scripts and CI
+    "scripts/metro/*.js", // swapped in by metro.config.js's resolver, by path
+    // Loaded by jest.setup.js / bun-preload.ts inside module-mock factories.
+    "__tests__/harness/mocks/*.ts",
+    "__tests__/harness/lokiDatabase.ts",
+  ],
+  "project": ["src/**/*.{ts,tsx}!", "__tests__/**/*.{ts,tsx}", "scripts/**/*.{mjs,js}"],
+  // A CLI installed on the machine (and in the E2E workflow), not a package: __tests__/e2e/README.md.
+  "ignoreBinaries": ["maestro"],
+  "ignoreDependencies": [
+    // Native: WatermelonDB's iOS pod compiles against it; nothing imports it from JS.
+    "@nozbe/simdjson",
+    // React Native template devDependency, kept for upgrade-helper parity.
+    "@babel/preset-env",
+  ],
+}

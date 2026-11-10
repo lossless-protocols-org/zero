@@ -41,6 +41,57 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
+        <!-- Long-press the icon: Add expense, Money in (+ the top categories, set at run time). -->
+        <meta-data
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
       </activity>
+
+      <!-- Quick add (2.8): a sheet over the home screen, in its own task and
+           out of Recents, so saving never leaves the user inside the app.
+           Not exported: only zero's widget, tile and shortcuts open it. -->
+      <activity
+        android:name=".quickadd.QuickAddActivity"
+        android:label="@string/widget_add_expense"
+        android:theme="@style/Theme.ZeroQuickAdd"
+        android:exported="false"
+        android:taskAffinity="${applicationId}.quickadd"
+        android:excludeFromRecents="true"
+        android:noHistory="true"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+        android:windowSoftInputMode="adjustResize|stateAlwaysVisible" />
+
+      <!-- "Add expense" tile in the Quick Settings shade. Only the system can bind it. -->
+      <service
+        android:name=".quickadd.QuickAddTileService"
+        android:exported="true"
+        android:icon="@drawable/ic_tile_add"
+        android:label="@string/widget_add_expense"
+        android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+        <intent-filter>
+            <action android:name="android.service.quicksettings.action.QS_TILE" />
+        </intent-filter>
+        <meta-data
+            android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+            android:value="false" />
+      </service>
+
+      <!-- "This month" home-screen widget (2.8). Not exported: only the
+           system talks to it (widget updates, the clock and locale changes
+           below) and its own midnight alarm. -->
+      <receiver
+        android:name=".widget.ZeroWidgetProvider"
+        android:label="@string/widget_name"
+        android:exported="false">
+        <intent-filter>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            <action android:name="android.intent.action.TIME_SET" />
+            <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            <action android:name="android.intent.action.LOCALE_CHANGED" />
+        </intent-filter>
+        <meta-data
+            android:name="android.appwidget.provider"
+            android:resource="@xml/zero_widget_info" />
+      </receiver>
     </application>
 </manifest>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  zero's "This month" widget (2.8 Phase 3). Sizes follow the Android grid
+  (width 73n-16 dp, height 118m-16 dp in portrait):
+  - default 4×2 (targetCell* on Android 12+, min* below);
+  - resizes down to 2×1 and up to about 5×3; past that the layout has nothing
+    more to show, so it is capped rather than padded with blank space (WL-4.1).
+  No configuration activity (WS-4), no periodic update: the app writes a new
+  snapshot after every change and the provider rolls the day over itself.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/zero_widget_loading"
+    android:maxResizeHeight="340dp"
+    android:maxResizeWidth="420dp"
+    android:minHeight="110dp"
+    android:minResizeHeight="40dp"
+    android:minResizeWidth="110dp"
+    android:minWidth="250dp"
+    android:previewImage="@drawable/zero_widget_preview_image"
+    android:previewLayout="@layout/zero_widget_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="2"
+    android:targetCellWidth="4"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

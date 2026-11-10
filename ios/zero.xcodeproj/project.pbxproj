@@ -7,35 +7,105 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		03BB470A0025CF42532C9016 /* ZeroWidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71248191A6E153A7E9C0CB84 /* ZeroWidgetStore.swift */; };
+		03E0B1DACDBAB33A3E7CC7DB /* ZeroPendingEntries.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2B60F82D8F6F3339A01F1C9A /* ZeroPendingEntries.mm */; };
 		0C80B921A6F3F58F76C31292 /* libPods-zero.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-zero.a */; };
+		0E759AF06C25A8788C6AB441 /* ZeroIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE4399E71A84E16DDED83DE9 /* ZeroIntents.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		2A7E1FE68EC6647AE0DB4968 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		31FE8A3C6EE5CECFDECDD190 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 6F7B367D962EFF84D3DFAFAC /* Localizable.xcstrings */; };
+		33C8E2D032064DB261C899DF /* ThisMonthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95D946FC05A0C647E93C3D86 /* ThisMonthProvider.swift */; };
+		347EACA538CB450DA05C47AD /* ZeroCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FA1FFF4B2793581B32C5D90 /* ZeroCards.swift */; };
+		3C4F68EFA4083A7E7540DD98 /* MoneyFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8C1CD66871D1DEA58F6685 /* MoneyFormat.swift */; };
+		3CC220E47A42A424CB83DDB4 /* ZeroIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE4399E71A84E16DDED83DE9 /* ZeroIntents.swift */; };
+		45E67107445AA93A07296D07 /* ThisMonthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8616B43A890E4310C1BA8AAD /* ThisMonthView.swift */; };
+		530C2F5B9BC94315A2BE3599 /* ZeroWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95DEDBF0BEF21BE8986D4571 /* ZeroWidgetBundle.swift */; };
 		5B95E453EB13482C88171C65 /* GoogleSansCode-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 582DD8B07BCC49B4943072B9 /* GoogleSansCode-SemiBold.ttf */; };
+		72047418DD4709D5B82667A5 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDBFBE135DC34C1C546B22FD /* SharedStore.swift */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
+		784C0F9B1DB80F5AD15D633E /* ZeroShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDFDCDE7331FE67D813A5129 /* ZeroShortcuts.swift */; };
 		7A5C3E1D2E2B4F60009C1A77 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5C3E1C2E2B4F60009C1A77 /* SceneDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		83D26905997BC44422EC6887 /* ZeroLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24DF8DAD2E4D121692EE506C /* ZeroLinks.swift */; };
+		8A4F93891F5BD107709E66A1 /* ZeroCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FA1FFF4B2793581B32C5D90 /* ZeroCards.swift */; };
+		933AEE105FA2D13EE133FCCA /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD7696D543CFBB0770F744CB /* WidgetSnapshot.swift */; };
+		A19F2FBA9B80479278F78A4F /* KeypadWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFC8A05137A2DFA0ED53E4D /* KeypadWidget.swift */; };
+		A949FE5BC10E1DA5370FDEB3 /* MoneyFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8C1CD66871D1DEA58F6685 /* MoneyFormat.swift */; };
+		AB2A3B49C433DED799520A85 /* ZeroWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D14A111B8161636267697BFA /* ZeroWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		ADD1BB64CF3C7A9E3CCB760B /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD7696D543CFBB0770F744CB /* WidgetSnapshot.swift */; };
+		B0E1590C41D56D578166DD5B /* ZeroWidgetBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = D113C47FB22B2EF1FEAD00BA /* ZeroWidgetBridge.mm */; };
 		C6B98BB9691843E38588A033 /* GoogleSansCode-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 055EC42D32BE414CB775CD44 /* GoogleSansCode-Bold.ttf */; };
 		D289286C0D9441AFB727D58D /* GoogleSansCode-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FF6F3E21F35A46F583B14070 /* GoogleSansCode-Medium.ttf */; };
 		DB5C338CF7074BD288A99E09 /* GoogleSansCode-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CB4AAE210D2C4A40BD9DF3EC /* GoogleSansCode-Regular.ttf */; };
+		DD2A8BDF57FA93E112C63E81 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDBFBE135DC34C1C546B22FD /* SharedStore.swift */; };
+		EB60C781D9D83AD600DBD3F3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B103D1A808006EDAA660A178 /* Foundation.framework */; };
+		ED39FB7726254F73CC4ACEC3 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 6F7B367D962EFF84D3DFAFAC /* Localizable.xcstrings */; };
+		F220A315184F0821E6AB1BB6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 71B875C9110080D9B75EC6FE /* PrivacyInfo.xcprivacy */; };
 		FAF163B8A64F45C7BF187F2E /* GoogleSansCode-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DE909C78D4984135BD71E9B7 /* GoogleSansCode-Light.ttf */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		EDA822E9968C8D8DA9DA5080 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42E828962D4BA0A092CA6B83;
+			remoteInfo = ZeroWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A436DD8628AE0046BE9E3F53 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AB2A3B49C433DED799520A85 /* ZeroWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		055EC42D32BE414CB775CD44 /* GoogleSansCode-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "GoogleSansCode-Bold.ttf"; path = "../assets/fonts/GoogleSansCode-Bold.ttf"; sourceTree = "<group>"; };
+		0FA1FFF4B2793581B32C5D90 /* ZeroCards.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZeroCards.swift; sourceTree = "<group>"; };
+		0FFC8A05137A2DFA0ED53E4D /* KeypadWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeypadWidget.swift; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* zero.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = zero.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = zero/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = zero/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = zero/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		24DF8DAD2E4D121692EE506C /* ZeroLinks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZeroLinks.swift; sourceTree = "<group>"; };
+		2B60F82D8F6F3339A01F1C9A /* ZeroPendingEntries.mm */ = {isa = PBXFileReference; includeInIndex = 1; path = ZeroPendingEntries.mm; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-zero.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zero.debug.xcconfig"; path = "Target Support Files/Pods-zero/Pods-zero.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-zero.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-zero.release.xcconfig"; path = "Target Support Files/Pods-zero/Pods-zero.release.xcconfig"; sourceTree = "<group>"; };
 		582DD8B07BCC49B4943072B9 /* GoogleSansCode-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "GoogleSansCode-SemiBold.ttf"; path = "../assets/fonts/GoogleSansCode-SemiBold.ttf"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-zero.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-zero.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6375A19922884417A39EFA37 /* ZeroWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ZeroWidget.entitlements; sourceTree = "<group>"; };
+		6E8C1CD66871D1DEA58F6685 /* MoneyFormat.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MoneyFormat.swift; sourceTree = "<group>"; };
+		6F7B367D962EFF84D3DFAFAC /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		71248191A6E153A7E9C0CB84 /* ZeroWidgetStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZeroWidgetStore.swift; sourceTree = "<group>"; };
+		71B875C9110080D9B75EC6FE /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = zero/AppDelegate.swift; sourceTree = "<group>"; };
 		7A5C3E1C2E2B4F60009C1A77 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = zero/SceneDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = zero/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		8616B43A890E4310C1BA8AAD /* ThisMonthView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThisMonthView.swift; sourceTree = "<group>"; };
+		8723B2698040AD0C3A5AC30C /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		93045351432C93CDD6F47A40 /* ZeroWidgetStoreObjC.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = ZeroWidgetStoreObjC.h; sourceTree = "<group>"; };
+		95D946FC05A0C647E93C3D86 /* ThisMonthProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThisMonthProvider.swift; sourceTree = "<group>"; };
+		95DEDBF0BEF21BE8986D4571 /* ZeroWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZeroWidgetBundle.swift; sourceTree = "<group>"; };
+		B103D1A808006EDAA660A178 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		CB4AAE210D2C4A40BD9DF3EC /* GoogleSansCode-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "GoogleSansCode-Regular.ttf"; path = "../assets/fonts/GoogleSansCode-Regular.ttf"; sourceTree = "<group>"; };
+		CDBFBE135DC34C1C546B22FD /* SharedStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
+		D113C47FB22B2EF1FEAD00BA /* ZeroWidgetBridge.mm */ = {isa = PBXFileReference; includeInIndex = 1; path = ZeroWidgetBridge.mm; sourceTree = "<group>"; };
+		D14A111B8161636267697BFA /* ZeroWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ZeroWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE909C78D4984135BD71E9B7 /* GoogleSansCode-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "GoogleSansCode-Light.ttf"; path = "../assets/fonts/GoogleSansCode-Light.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		F614F2F284941F87D296FA02 /* zero.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = zero/zero.entitlements; sourceTree = "<group>"; };
+		FD7696D543CFBB0770F744CB /* WidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		FDFDCDE7331FE67D813A5129 /* ZeroShortcuts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZeroShortcuts.swift; sourceTree = "<group>"; };
+		FE4399E71A84E16DDED83DE9 /* ZeroIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZeroIntents.swift; sourceTree = "<group>"; };
 		FF6F3E21F35A46F583B14070 /* GoogleSansCode-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "GoogleSansCode-Medium.ttf"; path = "../assets/fonts/GoogleSansCode-Medium.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -48,9 +118,40 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F602A53F6846E83E4B1B09F2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EB60C781D9D83AD600DBD3F3 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0D19A33D66D295CC3592CC91 /* ZeroShared */ = {
+			isa = PBXGroup;
+			children = (
+				6E8C1CD66871D1DEA58F6685 /* MoneyFormat.swift */,
+				FD7696D543CFBB0770F744CB /* WidgetSnapshot.swift */,
+				CDBFBE135DC34C1C546B22FD /* SharedStore.swift */,
+				6F7B367D962EFF84D3DFAFAC /* Localizable.xcstrings */,
+				FE4399E71A84E16DDED83DE9 /* ZeroIntents.swift */,
+				0FA1FFF4B2793581B32C5D90 /* ZeroCards.swift */,
+			);
+			name = ZeroShared;
+			path = ZeroShared;
+			sourceTree = "<group>";
+		};
+		1296F0E12C06AA0F0E3F86F1 /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				FDFDCDE7331FE67D813A5129 /* ZeroShortcuts.swift */,
+			);
+			name = Intents;
+			path = zero/Intents;
+			sourceTree = "<group>";
+		};
 		13B07FAE1A68108700A75B9A /* zero */ = {
 			isa = PBXGroup;
 			children = (
@@ -60,6 +161,9 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				F614F2F284941F87D296FA02 /* zero.entitlements */,
+				C1CCD9A80AC9C428B5F3C9A9 /* Widget */,
+				1296F0E12C06AA0F0E3F86F1 /* Intents */,
 			);
 			name = zero;
 			sourceTree = "<group>";
@@ -69,8 +173,17 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				5DCACB8F33CDC322A6C60F78 /* libPods-zero.a */,
+				3A446A6A7CF3F8B53CE6AED8 /* iOS */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		3A446A6A7CF3F8B53CE6AED8 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				B103D1A808006EDAA660A178 /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -89,6 +202,8 @@
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
 				A29AF21DD95B4C48B040514F /* Resources */,
+				0D19A33D66D295CC3592CC91 /* ZeroShared */,
+				D6920E393154068245400C15 /* ZeroWidget */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -99,6 +214,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* zero.app */,
+				D14A111B8161636267697BFA /* ZeroWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -124,6 +240,34 @@
 			path = Pods;
 			sourceTree = "<group>";
 		};
+		C1CCD9A80AC9C428B5F3C9A9 /* Widget */ = {
+			isa = PBXGroup;
+			children = (
+				71248191A6E153A7E9C0CB84 /* ZeroWidgetStore.swift */,
+				D113C47FB22B2EF1FEAD00BA /* ZeroWidgetBridge.mm */,
+				2B60F82D8F6F3339A01F1C9A /* ZeroPendingEntries.mm */,
+				93045351432C93CDD6F47A40 /* ZeroWidgetStoreObjC.h */,
+			);
+			name = Widget;
+			path = zero/Widget;
+			sourceTree = "<group>";
+		};
+		D6920E393154068245400C15 /* ZeroWidget */ = {
+			isa = PBXGroup;
+			children = (
+				95DEDBF0BEF21BE8986D4571 /* ZeroWidgetBundle.swift */,
+				95D946FC05A0C647E93C3D86 /* ThisMonthProvider.swift */,
+				8616B43A890E4310C1BA8AAD /* ThisMonthView.swift */,
+				24DF8DAD2E4D121692EE506C /* ZeroLinks.swift */,
+				8723B2698040AD0C3A5AC30C /* Info.plist */,
+				6375A19922884417A39EFA37 /* ZeroWidget.entitlements */,
+				0FFC8A05137A2DFA0ED53E4D /* KeypadWidget.swift */,
+				71B875C9110080D9B75EC6FE /* PrivacyInfo.xcprivacy */,
+			);
+			name = ZeroWidget;
+			path = ZeroWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -134,6 +278,7 @@
 				C38B50BA6285516D6DCD4F65 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
+				A436DD8628AE0046BE9E3F53 /* Embed Foundation Extensions */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
@@ -142,11 +287,29 @@
 			buildRules = (
 			);
 			dependencies = (
+				4E7DA555E13603B99D4CB0AD /* PBXTargetDependency */,
 			);
 			name = zero;
 			productName = zero;
 			productReference = 13B07F961A680F5B00A75B9A /* zero.app */;
 			productType = "com.apple.product-type.application";
+		};
+		42E828962D4BA0A092CA6B83 /* ZeroWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 551603D0216AA27A2AC98A21 /* Build configuration list for PBXNativeTarget "ZeroWidget" */;
+			buildPhases = (
+				BC5011F760909C302C22D534 /* Sources */,
+				F602A53F6846E83E4B1B09F2 /* Frameworks */,
+				010FA73123CF319E21997EC8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ZeroWidget;
+			productName = ZeroWidget;
+			productReference = D14A111B8161636267697BFA /* ZeroWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -176,11 +339,21 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* zero */,
+				42E828962D4BA0A092CA6B83 /* ZeroWidget */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		010FA73123CF319E21997EC8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ED39FB7726254F73CC4ACEC3 /* Localizable.xcstrings in Resources */,
+				F220A315184F0821E6AB1BB6 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		13B07F8E1A680F5B00A75B9A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -193,6 +366,7 @@
 				5B95E453EB13482C88171C65 /* GoogleSansCode-SemiBold.ttf in Resources */,
 				D289286C0D9441AFB727D58D /* GoogleSansCode-Medium.ttf in Resources */,
 				C6B98BB9691843E38588A033 /* GoogleSansCode-Bold.ttf in Resources */,
+				31FE8A3C6EE5CECFDECDD190 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -281,10 +455,45 @@
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
 				7A5C3E1D2E2B4F60009C1A77 /* SceneDelegate.swift in Sources */,
+				03BB470A0025CF42532C9016 /* ZeroWidgetStore.swift in Sources */,
+				B0E1590C41D56D578166DD5B /* ZeroWidgetBridge.mm in Sources */,
+				A949FE5BC10E1DA5370FDEB3 /* MoneyFormat.swift in Sources */,
+				ADD1BB64CF3C7A9E3CCB760B /* WidgetSnapshot.swift in Sources */,
+				DD2A8BDF57FA93E112C63E81 /* SharedStore.swift in Sources */,
+				784C0F9B1DB80F5AD15D633E /* ZeroShortcuts.swift in Sources */,
+				0E759AF06C25A8788C6AB441 /* ZeroIntents.swift in Sources */,
+				347EACA538CB450DA05C47AD /* ZeroCards.swift in Sources */,
+				03E0B1DACDBAB33A3E7CC7DB /* ZeroPendingEntries.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BC5011F760909C302C22D534 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				530C2F5B9BC94315A2BE3599 /* ZeroWidgetBundle.swift in Sources */,
+				33C8E2D032064DB261C899DF /* ThisMonthProvider.swift in Sources */,
+				45E67107445AA93A07296D07 /* ThisMonthView.swift in Sources */,
+				83D26905997BC44422EC6887 /* ZeroLinks.swift in Sources */,
+				3C4F68EFA4083A7E7540DD98 /* MoneyFormat.swift in Sources */,
+				933AEE105FA2D13EE133FCCA /* WidgetSnapshot.swift in Sources */,
+				72047418DD4709D5B82667A5 /* SharedStore.swift in Sources */,
+				3CC220E47A42A424CB83DDB4 /* ZeroIntents.swift in Sources */,
+				8A4F93891F5BD107709E66A1 /* ZeroCards.swift in Sources */,
+				A19F2FBA9B80479278F78A4F /* KeypadWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4E7DA555E13603B99D4CB0AD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ZeroWidget;
+			target = 42E828962D4BA0A092CA6B83 /* ZeroWidget */;
+			targetProxy = EDA822E9968C8D8DA9DA5080 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
@@ -293,24 +502,24 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 23;
+				CODE_SIGN_ENTITLEMENTS = zero/zero.entitlements;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = 6LUZGX8TBM;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = zero/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = zero;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7.1;
+				MARKETING_VERSION = 2.8.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.anotherwhy.zero;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ZERO_BUNDLE_ID)";
 				PRODUCT_NAME = zero;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -326,23 +535,23 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 23;
+				CODE_SIGN_ENTITLEMENTS = zero/zero.entitlements;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = 6LUZGX8TBM;
 				INFOPLIST_FILE = zero/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = zero;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7.1;
+				MARKETING_VERSION = 2.8.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.anotherwhy.zero;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ZERO_BUNDLE_ID)";
 				PRODUCT_NAME = zero;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
@@ -350,6 +559,65 @@
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
+		};
+		1A33F0A7F9C637042E0AF075 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ZeroWidget/ZeroWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 24;
+				DEVELOPMENT_TEAM = 6LUZGX8TBM;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ZeroWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.8.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ZERO_BUNDLE_ID).widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		4F1FF200F4CA7CBD86872081 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ZeroWidget/ZeroWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 24;
+				DEVELOPMENT_TEAM = 6LUZGX8TBM;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ZeroWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.8.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ZERO_BUNDLE_ID).widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 		83CBBA201A601CBA00E9B192 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -382,7 +650,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
-				DEVELOPMENT_TEAM = B9VY3PQ2DF;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -438,6 +705,8 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				USE_HERMES = true;
+				ZERO_BUNDLE_ID = com.anotherwhy.zero;
+				ZERO_DISPLAY_NAME = zero;
 			};
 			name = Debug;
 		};
@@ -472,7 +741,6 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
-				DEVELOPMENT_TEAM = B9VY3PQ2DF;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -521,6 +789,8 @@
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
+				ZERO_BUNDLE_ID = com.anotherwhy.zero;
+				ZERO_DISPLAY_NAME = zero;
 			};
 			name = Release;
 		};
@@ -532,6 +802,15 @@
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
 				13B07F951A680F5B00A75B9A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		551603D0216AA27A2AC98A21 /* Build configuration list for PBXNativeTarget "ZeroWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A33F0A7F9C637042E0AF075 /* Release */,
+				4F1FF200F4CA7CBD86872081 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

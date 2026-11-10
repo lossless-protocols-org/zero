@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared budget block (small-tall, medium, large, picker preview). Gone until
+     WidgetRenderer shows it; the defaults (62 %, "2,655 left") are the picker
+     preview's made-up figures. A custom ProgressBar style is ignored inside
+     RemoteViews, so the horizontal style is named on each bar. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/budget_group"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:visibility="gone">
+
+    <ProgressBar
+        android:id="@+id/budget_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:indeterminate="false"
+        android:indeterminateOnly="false"
+        android:max="1000"
+        android:maxHeight="6dp"
+        android:minHeight="6dp"
+        android:progressDrawable="@drawable/widget_progress"
+        android:progress="620" />
+
+    <ProgressBar
+        android:id="@+id/budget_progress_over"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:indeterminate="false"
+        android:indeterminateOnly="false"
+        android:max="1000"
+        android:maxHeight="6dp"
+        android:minHeight="6dp"
+        android:progressDrawable="@drawable/widget_progress_over"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/budget_text"
+        style="@style/ZeroWidget.Caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="@string/widget_preview_left" />
+
+    <TextView
+        android:id="@+id/budget_text_over"
+        style="@style/ZeroWidget.Caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/widget_warning"
+        android:visibility="gone" />
+</LinearLayout>

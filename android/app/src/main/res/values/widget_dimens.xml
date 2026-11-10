@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget shape and spacing, Android 11 and lower. Android 12+ takes the
+     launcher's own values (values-v31), so the widget matches its neighbours. -->
+<resources>
+    <dimen name="widget_radius">16dp</dimen>
+    <dimen name="widget_padding">16dp</dimen>
+    <dimen name="widget_touch">48dp</dimen>
+</resources>

@@ -1,19 +1,26 @@
 #!/usr/bin/env node
 /**
- * Writes a zero backup (export envelope v4) with N expenses spread over the
- * last 5 years, 16 categories, 5 debtors with debts, one currency and two
- * budgets — the "10k seed" every §2.4a measurement refers to.
+ * Writes a zero backup (export envelope v5) with N expenses spread over the
+ * last 5 years, 16 expense and 2 income categories, 5 debtors with debts, one
+ * currency, two budgets, the default account, about one refund per 30
+ * expenses and two incomes a month — the "10k seed" every §2.4a measurement
+ * refers to. Refunds and incomes are drawn AFTER everything else, so the
+ * expenses, debts and budgets are the same as in the v4 seed for a given N.
  *
  *   node scripts/seed-backup.mjs 10000                 → references/seeds/zero_seed_10000.json
  *   node scripts/seed-backup.mjs 10000 --compact        → no indentation (what L4 would ship)
  *   node scripts/seed-backup.mjs 200 --out /tmp/x.json  → explicit path
+ *   node scripts/seed-backup.mjs 200 --anchor 2026-11-01 → the five years end on that day
  *
- * Deterministic for a given N (seeded PRNG), so two runs produce the same
- * file and timings are comparable. Restore it through onboarding →
+ * Deterministic for a given N and anchor (seeded PRNG), so two runs produce
+ * the same file and timings are comparable. The anchor defaults to today, so
+ * a seed restored on a device has this month's rows; tests pass a fixed one
+ * (__tests__/harness/seed.ts), so a suite sees the same data on every day and
+ * every machine (audit 2026-11-08 §7.5). Restore it through onboarding →
  * "I have a backup" → pick the file (adb push it to /sdcard/Download first).
  *
- * The shape mirrors src/backend/export/validate.ts exactly; the key follows
- * src/backend/export/key.ts (prefix "zero" + 16 URL-safe chars = 20).
+ * The shape mirrors src/data/backup/export/validate.ts exactly; the key follows
+ * src/data/backup/export/key.ts (prefix "zero" + 16 URL-safe chars = 20).
  */
 import {writeFileSync, mkdirSync, statSync} from 'node:fs';
 import {dirname, resolve} from 'node:path';
@@ -21,12 +28,18 @@ import {dirname, resolve} from 'node:path';
 const args = process.argv.slice(2);
 const count = Number.parseInt(args[0] ?? '', 10);
 if (!Number.isInteger(count) || count < 1) {
-  console.error('Usage: node scripts/seed-backup.mjs <expenses> [--compact] [--out <path>]');
+  console.error('Usage: node scripts/seed-backup.mjs <expenses> [--compact] [--out <path>] [--anchor YYYY-MM-DD]');
   process.exit(1);
 }
 const compact = args.includes('--compact');
 const outFlag = args.indexOf('--out');
 const outPath = resolve(outFlag !== -1 ? args[outFlag + 1] : `references/seeds/zero_seed_${count}.json`);
+const anchorFlag = args.indexOf('--anchor');
+const anchorArg = anchorFlag !== -1 ? args[anchorFlag + 1] : undefined;
+if (anchorArg !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(anchorArg)) {
+  console.error(`--anchor takes a day as YYYY-MM-DD, got ${anchorArg}`);
+  process.exit(1);
+}
 
 // mulberry32 — small, deterministic, good enough for test data.
 /* eslint-disable no-bitwise -- mulberry32 is defined on 32-bit integer operations */
@@ -50,8 +63,8 @@ const isoLocal = d =>
   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 const yearMonth = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
 
-// Anchor to local midnight so two runs on the same day produce byte-identical output.
-const today = new Date();
+// Anchor to local midnight: two runs with the same anchor produce byte-identical output.
+const today = anchorArg ? new Date(`${anchorArg}T00:00:00`) : new Date();
 const now = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
 const start = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate(), 0, 0, 0);
 const spanMs = now.getTime() - start.getTime();
@@ -74,7 +87,30 @@ const categories = [
   ['Coffee', 'coffee', '#C06040'],
   ['Subscriptions', 'tv', '#3D9090'],
   ['Pantry', 'receipt', '#8A7D72'],
-].map(([name, icon, color]) => ({name, categoryStatus: true, icon, color}));
+].map(([name, icon, color], index) => ({
+  name,
+  categoryStatus: true,
+  icon,
+  color,
+  kind: 'expense',
+  sortOrder: (index + 1) * 10,
+}));
+// Free has one income category (src/domain/freeTier.ts): the seed is a Free
+// user, so salary and freelance work both go into it, told apart by the note.
+const incomeCategories = [['Income', 'coins', '#3D9960']].map(([name, icon, color], index) => ({
+  name,
+  categoryStatus: true,
+  icon,
+  color,
+  kind: 'income',
+  sortOrder: (index + 1) * 10,
+}));
+
+/** What the app derives for a row without timestamps: its local date read as UTC (src/domain/isoEpoch.ts). */
+const epochOf = iso => {
+  const [y, mo, d, h = 0, mi = 0, se = 0] = iso.split(/[-T:]/).map(Number);
+  return Date.UTC(y, mo - 1, d, h, mi, se);
+};
 
 // Weighted so a few categories dominate, like real data.
 const weights = [18, 10, 6, 3, 8, 2, 4, 2, 2, 3, 9, 14, 5, 7, 3, 4];
@@ -162,17 +198,69 @@ const budgets = [
   {amount: 5000, month: yearMonth(now), budgetType: 'category', category: {name: 'Food'}},
 ];
 
+// v5: refunds on about one expense in 30 (partial, within 20 days, never
+// after today), and two incomes a month (salary on the 7th, a freelance job).
+const isoDay = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const refundsByIndex = new Map();
+for (let r = 0; r < Math.floor(count / 30); r++) {
+  const index = Math.floor(rand() * expenses.length);
+  const expense = expenses[index];
+  if (refundsByIndex.has(index) || expense.amount < 2) continue;
+  const parsed = new Date(expense.date);
+  const back = new Date(Math.min(parsed.getTime() + between(0, 20) * 86_400_000, now.getTime()));
+  refundsByIndex.set(index, [
+    {amount: between(1, expense.amount - 1), date: isoLocal(back), note: rand() < 0.5 ? 'Returned' : ''},
+  ]);
+}
+const incomes = [];
+for (let month = new Date(start.getFullYear(), start.getMonth() + 1, 1); month < now;) {
+  const salaryDay = new Date(month.getFullYear(), month.getMonth(), 7);
+  if (salaryDay < now) {
+    incomes.push({amount: 50000, date: isoDay(salaryDay), category: {name: 'Income'}, note: 'Salary'});
+  }
+  const jobDay = new Date(month.getFullYear(), month.getMonth(), between(1, 28));
+  if (jobDay < now) {
+    incomes.push({amount: between(2, 20) * 500, date: isoDay(jobDay), category: {name: 'Income'}, note: 'Freelance'});
+  }
+  month = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+}
+
+// Key order is src/data/backup/export/validate.ts's schema order, so the export of
+// an imported seed is byte-identical to the seed (exportRoundTrip.test.ts).
+const stamped = row => ({createdAt: epochOf(row.date), updatedAt: epochOf(row.date)});
 const envelope = {
   key,
-  version: 4,
+  version: 5,
   data: {
     users: [{username: 'Seed', email: ''}],
-    categories,
-    expenses,
+    categories: [...categories, ...incomeCategories],
+    expenses: expenses.map((expense, index) => {
+      const refunds = refundsByIndex.get(index);
+      return {
+        ...expense,
+        ...stamped(expense),
+        ...(refunds ? {refunds: refunds.map(refund => ({...refund, ...stamped(refund)}))} : {}),
+      };
+    }),
     currencies: [{code: 'INR', symbol: '₹', name: 'Indian Rupee'}],
     debtors,
-    debts,
+    debts: debts.map(debt => ({...debt, ...stamped(debt)})),
     budgets,
+    accounts: [
+      {
+        name: 'Cash',
+        type: 'cash',
+        currency: 'INR',
+        openingBalance: 0,
+        openingDate: null,
+        isDefault: true,
+        accountStatus: true,
+        sortOrder: 0,
+        icon: 'wallet',
+        color: '#6E8B3D',
+      },
+    ],
+    incomes: incomes.map(income => ({...income, ...stamped(income)})),
   },
 };
 
@@ -180,8 +268,17 @@ mkdirSync(dirname(outPath), {recursive: true});
 const json = JSON.stringify(envelope, null, compact ? 0 : 2);
 writeFileSync(outPath, json);
 const bytes = statSync(outPath).size;
-const rows = expenses.length + categories.length + debtors.length + debts.length + budgets.length + 2;
+const rows =
+  expenses.length +
+  refundsByIndex.size +
+  incomes.length +
+  categories.length +
+  incomeCategories.length +
+  debtors.length +
+  debts.length +
+  budgets.length +
+  3;
 console.log(`${outPath}`);
 console.log(
-  `${bytes} bytes · ${expenses.length} expenses · ${rows} rows · ${(bytes / rows).toFixed(0)} B/row · ${compact ? 'compact' : 'indent 2'}`,
+  `${bytes} bytes · ${expenses.length} expenses · ${refundsByIndex.size} refunds · ${incomes.length} incomes · ${rows} rows · ${(bytes / rows).toFixed(0)} B/row · ${compact ? 'compact' : 'indent 2'}`,
 );

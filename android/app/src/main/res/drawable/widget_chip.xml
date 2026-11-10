@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chip pill: 36 dp drawn inside the 48 dp touch target. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetTop="6dp"
+    android:insetBottom="6dp">
+    <shape android:shape="rectangle">
+        <solid android:color="@color/widget_tonal" />
+        <corners android:radius="100dp" />
+    </shape>
+</inset>

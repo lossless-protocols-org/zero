@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- zero's mark (a disc with a 0), in the widget's palette so it follows the
+     wallpaper on Android 12+. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M12,12m-11,0a11,11 0,1 1,22 0a11,11 0,1 1,-22 0"
+        android:fillColor="@color/widget_primary" />
+    <path android:pathData="M12,12m-3.6,0a3.6,5.2 0,1 1,7.2 0a3.6,5.2 0,1 1,-7.2 0"
+        android:strokeColor="@color/widget_on_primary" android:strokeWidth="2.2"
+        android:fillColor="#00000000" />
+</vector>

@@ -1,0 +1,107 @@
+{
+  "key": "zeroAAAAAAAAAAAAAAA4",
+  "version": 4,
+  "data": {
+    "users": [
+      {
+        "username": "Eli",
+        "email": ""
+      }
+    ],
+    "categories": [
+      {
+        "name": "Food",
+        "categoryStatus": true,
+        "icon": "utensils-crossed",
+        "color": "#6E8E55"
+      },
+      {
+        "name": "Rent",
+        "categoryStatus": true,
+        "icon": "house",
+        "color": "#2E8B8B"
+      },
+      {
+        "name": "Old",
+        "categoryStatus": false,
+        "icon": "box",
+        "color": "#758595"
+      }
+    ],
+    "expenses": [
+      {
+        "title": "Chai",
+        "amount": 20,
+        "description": "",
+        "category": {
+          "name": "Food"
+        },
+        "date": "2026-10-05T08:30:00"
+      },
+      {
+        "title": "Rent",
+        "amount": 18000,
+        "description": "Oct",
+        "category": {
+          "name": "Rent"
+        },
+        "date": "2026-10-01T09:00:00"
+      },
+      {
+        "title": "Old thing",
+        "amount": 0.1,
+        "description": "",
+        "category": {
+          "name": "Old"
+        },
+        "date": "2026-10-02T09:00:00"
+      },
+      {
+        "title": "Old thing 2",
+        "amount": 0.2,
+        "description": "",
+        "category": {
+          "name": "Old"
+        },
+        "date": "2026-10-02T09:01:00"
+      }
+    ],
+    "currencies": [
+      {
+        "code": "INR",
+        "symbol": "₹",
+        "name": "Indian Rupee"
+      }
+    ],
+    "debtors": [],
+    "debts": [],
+    "budgets": [
+      {
+        "amount": 30000,
+        "month": "recurring:2026-08",
+        "budgetType": "monthly"
+      },
+      {
+        "amount": 100,
+        "month": "recurring",
+        "budgetType": "monthly"
+      },
+      {
+        "amount": 5000,
+        "month": "2026-10",
+        "budgetType": "category",
+        "category": {
+          "name": "Food"
+        }
+      },
+      {
+        "amount": 900,
+        "month": "2026-10",
+        "budgetType": "category",
+        "category": {
+          "name": "Missing"
+        }
+      }
+    ]
+  }
+}
