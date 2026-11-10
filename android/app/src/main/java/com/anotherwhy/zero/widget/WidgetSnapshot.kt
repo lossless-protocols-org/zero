@@ -156,7 +156,9 @@ internal data class WidgetSnapshot(
     /** The month's stand-alone name ("November"), capitalised as the app shows it. */
     fun monthName(c: Calendar, languageTag: String): String {
       val locale = Locale.forLanguageTag(languageTag)
-      val name = SimpleDateFormat("LLLL", locale).format(c.time)
+      // Format in the calendar's own zone: the formatter's default is the device zone, which names the
+      // wrong month for a moment near midnight in another zone (CI runs in UTC, the tests in Asia/Kolkata).
+      val name = SimpleDateFormat("LLLL", locale).apply { timeZone = c.timeZone }.format(c.time)
       return name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
     }
   }
