@@ -197,7 +197,10 @@ zero is developed in-house at Lossless and stays deliberately small, so pull req
 
 ## License
 
-This project is licensed under the [BSD 2-Clause License](LICENSE).
+zero is free software, licensed under the [GNU General Public License, version 3 or later](LICENSE). You may use, study, change and share it; if you distribute a changed version, you must publish its source under the same licence.
+
+- The names "zero" and "Lossless", the icon, the logo and the store artwork are not covered by that licence. A changed version needs its own name and artwork. See [NOTICE](NOTICE).
+- Version 2.8.0 and earlier were published under the [BSD 2-Clause License](LICENSES/BSD-2-Clause.txt), which still applies to those versions.
 
 ---
 
