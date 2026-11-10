@@ -58,6 +58,11 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # The runner image does not carry the NDK zero pins (android/build.gradle ndkVersion); Gradle installs
+      # it on first use, which needs the SDK licences accepted.
+      - name: Accept Android SDK licences
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+
       - name: Kotlin unit tests (JVM + Robolectric)
         run: bun run test:android
 
@@ -68,10 +73,14 @@ jobs:
 
   ios-shared:
     name: Swift shared code (widget reader, money format, queue, Siri matching)
-    runs-on: macos-15
+    # ZeroShared uses iOS 26 APIs (SnippetIntent); Xcode 16 on macos-15 cannot build it.
+    runs-on: macos-26
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      - name: Newest Xcode on the image
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)" && xcodebuild -version
 
       # The Swift package's tests read contracts/, the fixtures the JS and Kotlin tests read.
       - name: Swift tests
@@ -97,6 +106,11 @@ jobs:
           java-version: '17'
 
       - uses: gradle/actions/setup-gradle@v4
+
+      # The runner image does not carry the NDK zero pins (android/build.gradle ndkVersion); Gradle installs
+      # it on first use, which needs the SDK licences accepted.
+      - name: Accept Android SDK licences
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
 
       # R8 on, as shipped; unsigned here (no keystore secret in CI), which does not change
       # the merged manifest. One ABI keeps the native build short.
