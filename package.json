@@ -2,6 +2,7 @@
   "name": "zero",
   "version": "2.8.0",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "author": "anotherwhy technologies",
   "homepage": "https://anotherwhy.com",
   "repository": {
