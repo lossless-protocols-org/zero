@@ -3,11 +3,11 @@
   "version": "2.8.0",
   "private": true,
   "license": "GPL-3.0-or-later",
-  "author": "anotherwhy technologies",
-  "homepage": "https://anotherwhy.com",
+  "author": "Lossless Protocols",
+  "homepage": "https://lossless.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/indranilbhuin/zero"
+    "url": "https://github.com/lossless-protocols-org/zero"
   },
   "scripts": {
     "android": "react-native run-android",
