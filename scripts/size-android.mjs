@@ -5,7 +5,8 @@
  * Run after `bun run android:release:apk` and/or `bun run android:release`.
  *
  * For what is inside the bundle, use source-map-explorer on the map Gradle
- * writes next to it (android/app/build/generated/sourcemaps/react/release/).
+ * writes next to it (android/app/build/generated/sourcemaps/react/playRelease/).
+ * The store build is the `play` flavour (android/app/build.gradle).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,8 +15,8 @@ import {fileURLToPath} from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputs = path.join(root, 'android/app/build/outputs');
-const apk = path.join(outputs, 'apk/release/app-release.apk');
-const aab = path.join(outputs, 'bundle/release/app-release.aab');
+const apk = path.join(outputs, 'apk/play/release/app-play-release.apk');
+const aab = path.join(outputs, 'bundle/playRelease/app-play-release.aab');
 
 const sizeOf = file => (fs.existsSync(file) ? fs.statSync(file).size : null);
 

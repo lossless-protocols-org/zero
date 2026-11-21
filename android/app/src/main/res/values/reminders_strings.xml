@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The notification channel for recurring-entry reminders (3.0), as Android settings list it. -->
+    <string name="reminders_channel">Reminders</string>
+</resources>

@@ -1,5 +1,5 @@
 import {useThemeColors} from '../../../../ui/hooks/useThemeColors';
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Linking} from 'react-native';
 import {requestStoragePermission} from '../../../../platform/storagePermission';
@@ -9,6 +9,7 @@ import {pick, types, isErrorWithCode, errorCodes} from '@react-native-documents/
 import RNFS from 'react-native-fs';
 import {getAllUsers} from '../../../../data/services/userService';
 import {importAllData} from '../../../../data/services/importService';
+import {rerunProducers} from '../../../../pro/producers';
 import {bootstrapSession} from '../../../../store/bootstrapSession';
 import {isOnboardedPreference} from '../../../../platform/onboarding';
 import {useAppDispatch} from '../../../../store/hooks';
@@ -19,6 +20,7 @@ import {appendErrorLog, logRejection} from '../../../../platform/errorLog';
 import {validateExportEnvelope} from '../../../../data/backup/export/validate';
 import {MAX_IMPORT_BYTES, loadBackupFile} from '../../../../data/backup/import/loadBackupFile';
 import {wipeUserStorage} from '../../../../platform/storageInventory';
+import {decryptBackup} from '../../../../data/backup/vault';
 import {resetSession} from '../../../../store/rootReducer';
 
 type ImportedData = ExportData;
@@ -44,9 +46,11 @@ interface SyncStats {
   budgets: number;
   incomes: number;
   autoCreated: number;
-  /** Extra income categories folded into one (Free has one), and the one kept. */
-  mergedIncome: number;
-  incomeCategoryKept: string | null;
+  /** What the restore had to change to keep every row: said, never done silently. */
+  autoCreatedAccounts: number;
+  rejectedTransfers: number;
+  rejectedRefunds: number;
+  reassignedToDefaultAccount: number;
 }
 
 const allStatuses = (status: EntityStatus): SyncStatus => ({
@@ -82,7 +86,25 @@ type UploadMessageKey =
   | 'existingUser.syncingData'
   | 'existingUser.writingData'
   | 'existingUser.allDataSynced'
-  | 'existingUser.syncError';
+  | 'existingUser.syncError'
+  | 'existingUser.enterPassphrase'
+  | 'existingUser.unlocking'
+  | 'existingUser.wrongPassphrase';
+
+/** What each refusal of an encrypted file says (3.0, P10). */
+const DECRYPT_FAILURE_MESSAGE_KEY = {
+  wrongPassphrase: 'existingUser.wrongPassphrase',
+  notBackup: 'existingUser.invalidExport',
+  newerFormat: 'existingUser.newerVersion',
+  damaged: 'existingUser.fileUnreadable',
+  unavailable: 'existingUser.fileUnreadable',
+} as const;
+
+/** An encrypted backup that was picked and waits for its passphrase. */
+interface LockedBackup {
+  base64: string;
+  name: string | null;
+}
 
 interface UploadMessage {
   key: UploadMessageKey;
@@ -97,8 +119,10 @@ const EMPTY_STATS: SyncStats = {
   budgets: 0,
   incomes: 0,
   autoCreated: 0,
-  mergedIncome: 0,
-  incomeCategoryKept: null,
+  autoCreatedAccounts: 0,
+  rejectedTransfers: 0,
+  rejectedRefunds: 0,
+  reassignedToDefaultAccount: 0,
 };
 
 export const useExistingUser = () => {
@@ -114,6 +138,10 @@ export const useExistingUser = () => {
   const [syncFailed, setSyncFailed] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(allStatuses('pending'));
   const [syncStats, setSyncStats] = useState<SyncStats>(EMPTY_STATS);
+  const [locked, setLocked] = useState<LockedBackup | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
+  // Read before anything is awaited: a second tap in the same frame must not open (and restore) twice.
+  const unlockingNow = useRef(false);
 
   // The restored user's session, as the app shell starts any session; each
   // screen then loads its own month and lists on focus.
@@ -156,8 +184,9 @@ export const useExistingUser = () => {
       }
 
       const {0: res} = result;
-      const loaded = await loadBackupFile({uri: res.uri, name: res.name, size: res.size, error: res.error}, path =>
-        RNFS.readFile(path, 'utf8'),
+      const loaded = await loadBackupFile(
+        {uri: res.uri, name: res.name, size: res.size, error: res.error},
+        (path, encoding) => RNFS.readFile(path, encoding),
       );
       if (!loaded.ok) {
         if (loaded.reason === 'unreadable') {
@@ -178,8 +207,71 @@ export const useExistingUser = () => {
         });
         return;
       }
+      if (loaded.kind === 'encrypted') {
+        // 3.0 (P10): an automatic backup. Nothing is touched until it opens with the passphrase.
+        setLocked({base64: loaded.base64, name: res.name});
+        setUploadMessage({key: 'existingUser.enterPassphrase'});
+        return;
+      }
+      await restore(loaded.json, res.name);
+    } catch (error) {
+      failed(error);
+    }
+  };
 
-      const validation = validateExportEnvelope(loaded.json);
+  /** Logs why a restore failed and says so; the data is untouched (the import is one transaction). */
+  const failed = (error: unknown) => {
+    // The on-screen message already says it failed; the log keeps the cause
+    // so Diagnostics can show it (nothing else records import failures).
+    appendErrorLog(error, false);
+    setIsSyncing(false);
+    setSyncStatus(allStatuses('error'));
+    setSyncFailed(true);
+    setUploadMessage({key: 'existingUser.syncError'});
+  };
+
+  /** Opens the picked encrypted backup with `passphrase`, then restores it like a JSON backup. */
+  const unlock = async (passphrase: string) => {
+    if (!locked || unlockingNow.current) {
+      return;
+    }
+    unlockingNow.current = true;
+    setUnlocking(true);
+    setUploadMessage({key: 'existingUser.unlocking'});
+    try {
+      const opened = await decryptBackup(locked.base64, passphrase);
+      if (!opened.ok) {
+        setUploadMessage({key: DECRYPT_FAILURE_MESSAGE_KEY[opened.reason]});
+        return;
+      }
+      let json: unknown;
+      try {
+        json = JSON.parse(opened.text);
+      } catch {
+        setUploadMessage({key: 'existingUser.invalidJson'});
+        return;
+      }
+      const {name} = locked;
+      setLocked(null);
+      await restore(json, name);
+    } catch (error) {
+      failed(error);
+    } finally {
+      unlockingNow.current = false;
+      setUnlocking(false);
+    }
+  };
+
+  /** Puts the picked encrypted file down without opening it. */
+  const cancelUnlock = () => {
+    setLocked(null);
+    setUploadMessage({key: 'existingUser.uploadFile'});
+  };
+
+  /** Validates a parsed backup and, with consent, replaces the data with it. */
+  const restore = async (json: unknown, name: string | null) => {
+    try {
+      const validation = validateExportEnvelope(json);
       if (!validation.success || !validation.data) {
         // The validator's text names the field ("expenses[3].amount must be a
         // number") in English: Diagnostics keeps it, the screen says it in the
@@ -213,11 +305,13 @@ export const useExistingUser = () => {
           message: t('existingUser.replaceDataWarning'),
         });
         if (!confirmed) {
+          // Nothing was touched; the line under the button must not still say "Opening the backup…".
+          setUploadMessage({key: 'existingUser.uploadFile'});
           return;
         }
       }
 
-      setFileName(res.name ?? 'data.json');
+      setFileName(name ?? 'data.json');
       setUploadMessage({key: 'existingUser.syncingData'});
       setIsSyncing(true);
 
@@ -255,6 +349,9 @@ export const useExistingUser = () => {
         // rebuild it so the month picker reflects the restored data.
         refreshYearsCache(userId),
         refreshStores(),
+        // 3.0 (P9): the restored rules replace the old ones; what is made and reminded follows now,
+        // so no reminder of a rule that is gone stays pending until the next open.
+        rerunProducers(),
       ]);
       for (const outcome of refreshes) {
         if (outcome.status === 'rejected') {
@@ -270,26 +367,23 @@ export const useExistingUser = () => {
         budgets: stats.budgets,
         incomes: stats.incomes,
         autoCreated: stats.autoCreatedCategories + stats.autoCreatedDebtors,
-        mergedIncome: stats.mergedIncomeCategories,
-        incomeCategoryKept: stats.incomeCategoryKept,
+        autoCreatedAccounts: stats.autoCreatedAccounts,
+        rejectedTransfers: stats.rejectedTransfers,
+        rejectedRefunds: stats.rejectedRefunds,
+        reassignedToDefaultAccount: stats.reassignedToDefaultAccount,
       });
       setIsSyncing(false);
       setIsSyncComplete(true);
       setUploadMessage({key: 'existingUser.allDataSynced'});
     } catch (error) {
-      // The on-screen message already says it failed; the log keeps the cause
-      // so Diagnostics can show it (nothing else records import failures).
-      appendErrorLog(error, false);
-      setIsSyncing(false);
-      setSyncStatus(allStatuses('error'));
-      setSyncFailed(true);
-      setUploadMessage({key: 'existingUser.syncError'});
+      failed(error);
     }
   };
 
   const reUpload = async () => {
     // No pre-wipe: importData validates the new file and swaps data
     // atomically, so a cancelled picker or bad file can't lose anything.
+    setLocked(null);
     setFileName(null);
     setIsSyncComplete(false);
     setSyncFailed(false);
@@ -313,5 +407,10 @@ export const useExistingUser = () => {
     syncError: syncFailed ? t('existingUser.syncFailed') : null,
     syncStatus,
     syncStats,
+    /** An encrypted backup was picked: the screen asks for its passphrase. */
+    needsPassphrase: locked !== null,
+    unlocking,
+    unlock,
+    cancelUnlock,
   };
 };

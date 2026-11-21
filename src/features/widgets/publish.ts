@@ -7,7 +7,11 @@ import {getExpenseRowsSince} from '../../data/services/expenseService';
 import {getMonthAndDaySummary, observeSummaryInputs} from '../../data/services/periodSummaryService';
 import {resolveBudget} from '../../domain/budgetMath';
 import {formatDate} from '../../domain/dates';
-import {getMonthNames} from '../../platform/dateFormat';
+import {formatMonthLabel, getMonthNames} from '../../platform/dateFormat';
+import {DEFAULT_MONTH_START_DAY, monthIndexOfKey, periodFor, periodKeyOf, shiftPeriodKey} from '../../domain/period';
+import {capsOf} from '../../pro/features';
+import {getAppliedPro} from '../../pro/proGate';
+import {effectiveMonthStartDay, subscribeMonthStartDay} from '../../pro/monthStart';
 import {formatAmountWithSymbol, formatCurrency} from '../../platform/numberFormat';
 import {moneyFormatSpec, type MoneyFormatSpec} from '../../platform/moneyFormatSpec';
 import {getFormatLocale} from '../../platform/locale';
@@ -26,6 +30,7 @@ import {
 import {afterInteractions} from '../../platform/afterInteractions';
 import {onTimeToInteractive} from '../../platform/startupMarker';
 import {displayCategoryName} from '../../i18n/displayNames';
+import {primaryIncomeCategory} from '../../domain/incomeCategories';
 
 /**
  * Keeps the home-screen widget in step with the data (2.8). The only module
@@ -59,16 +64,20 @@ const computeSnapshot = async (now: Date): Promise<WidgetSnapshot> => {
   if (!user) {
     return setupSnapshot(locale, now.getTime());
   }
-  const monthKey = formatDate(now, 'YYYY-MM');
+  // The month it is now, as the user's month start day cuts it (P11; the 1st without Pro). Worked
+  // out from the user row read here, so the widget never depends on a screen having loaded it.
+  const monthStartDay = effectiveMonthStartDay(user.monthStartDay, capsOf(getAppliedPro()));
+  const monthKey = periodKeyOf(now, monthStartDay);
+  const period = periodFor(monthKey, monthStartDay);
   const todayKey = formatDate(now, 'YYYY-MM-DD');
   // "Add again" looks back over this month and the one before; the quick chips over 90 days.
   // One raw read from the earlier of the two covers both (audit 2026-11-08 §8.1: it used to be
   // a 90-day scan plus two month reads that each joined every category).
-  const againStart = `${formatDate(new Date(now.getFullYear(), now.getMonth() - 1, 1), 'YYYY-MM')}-01`;
+  const againStart = periodFor(shiftPeriodKey(monthKey, -1), monthStartDay).start;
   const quickStart = quickWindowStart(now);
   const since = againStart < quickStart ? againStart : quickStart;
   const [summary, budgets, currency, expenseCategories, incomeCategories, rows] = await Promise.all([
-    getMonthAndDaySummary(user.id, monthKey, todayKey),
+    getMonthAndDaySummary(user.id, period, todayKey),
     getBudgetsByMonth(user.id, monthKey),
     getCurrencyByUserId(user.id),
     getAllCategoriesByUserId(user.id, 'expense'),
@@ -81,7 +90,7 @@ const computeSnapshot = async (now: Date): Promise<WidgetSnapshot> => {
     rows.filter(row => row.date >= quickStart).map(row => row.categoryId),
   );
   // This month and the one before, nothing later.
-  const recent = rows.filter(row => row.date >= againStart && row.date.slice(0, 7) <= monthKey);
+  const recent = rows.filter(row => row.date >= againStart && row.date < period.next);
   const active = new Set(quick.map(category => category.id));
   const overall = resolveBudget(
     budgets.filter(b => b.budgetType === 'monthly'),
@@ -97,14 +106,20 @@ const computeSnapshot = async (now: Date): Promise<WidgetSnapshot> => {
     {
       monthKey,
       todayKey,
-      monthLabel: getMonthNames()[now.getMonth()] ?? monthKey,
+      monthStartDay,
+      // The month's name, or its days when it does not start on the 1st ("7 Nov – 6 Dec").
+      monthLabel:
+        monthStartDay === DEFAULT_MONTH_START_DAY
+          ? (getMonthNames()[monthIndexOfKey(monthKey)] ?? monthKey)
+          : formatMonthLabel(period),
       locale,
       spentMonth: month.spent,
       spentToday: today.spent,
       received: month.received,
       budget: overall?.amount ?? null,
       quick: quick.map(category => ({id: category.id, name: name(category)})),
-      incomeCategoryId: incomeCategories.find(c => c.categoryStatus !== false)?.id ?? null,
+      // The one money lands in (domain/incomeCategories), as the app's own forms choose it.
+      incomeCategoryId: primaryIncomeCategory(incomeCategories)?.id ?? null,
       again: pickAgain(recent, active),
       last: pickLast(recent, active),
       money: moneyRules(currency?.code || 'USD'),
@@ -159,7 +174,8 @@ const FIRST_PUBLISH_FALLBACK_MS = 3000;
  * Starts keeping the widget current; returns the stop function. Publishes
  * once the app is interactive (the language, currency or day may have changed
  * while it was closed), then on every change to a watched table, on return to
- * the foreground, on a language change and on the amounts setting.
+ * the foreground, on a language change, on the amounts setting and when the
+ * day months start on changes.
  *
  * The first publish waits for Home's first rows and then for idle: with JSI
  * SQLite every query runs synchronously on the JS thread, and the snapshot's
@@ -212,6 +228,8 @@ export const startWidgetPublisher = (): (() => void) => {
   const onLanguage = (): void => schedule();
   i18n.on('languageChanged', onLanguage);
   const unsubscribeAmounts = widgetAmountsPreference.subscribe(schedule);
+  // P11: another month start day (or Pro turning on or off) makes "this month" other days.
+  const unsubscribeMonthStart = subscribeMonthStartDay(schedule);
 
   let idle: {cancel: () => void} | null = null;
   let fallback: ReturnType<typeof setTimeout> | null = null;
@@ -247,5 +265,6 @@ export const startWidgetPublisher = (): (() => void) => {
     appState.remove();
     i18n.off('languageChanged', onLanguage);
     unsubscribeAmounts();
+    unsubscribeMonthStart();
   };
 };

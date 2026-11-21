@@ -3,7 +3,7 @@ import {useFreshWhileFocused} from '../../../../ui/hooks/useFreshWhileFocused';
 import {useAppDispatch, useAppSelector} from '../../../../store/hooks';
 import {fetchBudgetsByMonth, selectCurrentBudget} from '../../../../store/slices/budgetDataSlice';
 import {getAppVersion} from '../../../../platform/getVersion';
-import {formatDisplayDate} from '../../../../platform/dateFormat';
+import {formatMonthLabel} from '../../../../platform/dateFormat';
 import {useThemeColors} from '../../../../ui/hooks/useThemeColors';
 import {useUserName} from '../../../../ui/hooks/useUserName';
 import {useMonthNavigation} from '../../../../ui/hooks/useMonthNavigation';
@@ -11,6 +11,7 @@ import {useBudgetActions} from '../../../../ui/hooks/useBudgetActions';
 import {useSettingsPreferences} from '../../hooks/useSettingsPreferences';
 import {useSettingsLinks} from '../../hooks/useSettingsLinks';
 import {useDataActions} from '../../hooks/useDataActions';
+import {useMonthPeriod} from '../../../../ui/hooks/useMonthStartDay';
 
 /**
  * The Settings screen's state, grouped by section: preferences, the budget
@@ -26,7 +27,7 @@ export const useSettings = () => {
   const {yearMonth} = useMonthNavigation();
   const currentBudget = useAppSelector(state => selectCurrentBudget(state, yearMonth));
   // In the locale's own order ("Nov 2026", "2026年11月"), not name-then-year assembled here.
-  const monthLabel = formatDisplayDate(`${yearMonth}-01`, 'monthYear');
+  const monthLabel = formatMonthLabel(useMonthPeriod(yearMonth), 'monthYear');
   const {handleBudgetSave, handleBudgetRemove} = useBudgetActions(yearMonth, monthLabel);
 
   // Exports read the database at tap time (B8), so nothing is preloaded for them (L2).

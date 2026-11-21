@@ -17,6 +17,13 @@ import {markTimeToInteractive} from '../../../../src/platform/startupMarker';
 import {getQuickCategories} from '../../../../src/data/services/categoryService';
 import {widgetAmountsPreference} from '../../../../src/platform/widgetPreferences';
 import {formatAmountWithSymbol} from '../../../../src/platform/numberFormat';
+import {periodFor} from '../../../../src/domain/period';
+import {setMonthStartDay} from '../../../../src/data/services/userService';
+import {setEntitlement} from '../../../harness/mocks/entitlement';
+
+jest.mock('../../../../src/pro/entitlementStore', () =>
+  require('../../../harness/mocks/entitlement').entitlementStoreMock(),
+);
 
 const mockWriteSnapshot = jest.fn<void, [string]>();
 jest.mock('../../../../src/native/specs/NativeWidgetBridge', () => ({
@@ -68,6 +75,7 @@ describe('quick-add categories', () => {
 });
 
 describe('with a user', () => {
+  afterEach(() => setEntitlement());
   const seed = async () => {
     const userId = await services.createUser('Ravi', '');
     await services.createCurrency('INR', '₹', 'Indian Rupee', userId);
@@ -102,12 +110,48 @@ describe('with a user', () => {
     expect(s.quick.map(c => c.name)).toEqual(['Food']);
   });
 
+  // 3.0 (P11): the user's month starts on their salary day, with Pro.
+  it('with a month start day and Pro, "this month" runs from that day, and the widget is told the day', async () => {
+    const userId = await seed();
+    await setMonthStartDay(userId, 7);
+    setEntitlement({state: 'lifetime'});
+    await publishWidgetSnapshot(NOW);
+    const s = lastSnapshot();
+    // 6 November is the last day of the month that began on 7 October.
+    expect(s).toMatchObject({
+      monthKey: '2026-10',
+      todayKey: '2026-11-06',
+      monthStartDay: 7,
+      // In the test locale's own order (en-US); en-IN reads "7 Oct – 6 Nov".
+      monthLabel: 'Oct 7 – Nov 6',
+      spentMonth: inr(5499), // 999 on 31 Oct now counts; so do 2 and 6 November
+      spentToday: inr(1500),
+      // November's budget is the month that starts tomorrow: none applies to this one.
+      budget: null,
+    });
+    expect(s.incomeLine).toContain(inr(40_000));
+  });
+
+  it('the same day stored without Pro changes nothing: calendar months, and the widget is told the 1st', async () => {
+    const userId = await seed();
+    await setMonthStartDay(userId, 7);
+    await publishWidgetSnapshot(NOW);
+    expect(lastSnapshot()).toMatchObject({
+      monthKey: '2026-11',
+      monthStartDay: 1,
+      monthLabel: 'November',
+      spentMonth: inr(4500),
+    });
+  });
+
   it('reads the month and today in one pass, equal to reading them apart', async () => {
     const userId = await seed();
-    const both = await summaries.getMonthAndDaySummary(userId, '2026-11', '2026-11-06');
-    expect(both.month).toEqual(await summaries.getMonthSummary(userId, '2026-11'));
+    const both = await summaries.getMonthAndDaySummary(userId, periodFor('2026-11'), '2026-11-06');
+    expect(both.month).toEqual(await summaries.getMonthSummary(userId, periodFor('2026-11')));
     expect(both.day).toEqual(await summaries.getDaySummary(userId, '2026-11-06'));
-    await expect(summaries.getMonthAndDaySummary(userId, '2026-11', '2026-10-31')).rejects.toThrow('not in month');
+    await expect(summaries.getMonthAndDaySummary(userId, periodFor('2026-11'), '2026-10-31')).rejects.toThrow(
+      'is not in the period',
+    );
   });
 
   it('offers "add again" from this month and last, entered twice, in active categories only', async () => {

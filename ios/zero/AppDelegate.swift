@@ -10,6 +10,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
-    true
+    // Apple asks for the StoreKit transaction listener "as soon as your app launches": a
+    // purchase approved or made elsewhere, or left unfinished, is delivered once, right now.
+    // React Native starts later (SceneDelegate) and asks the store itself when it does.
+    ZeroBillingStore.start()
+    return true
   }
 }

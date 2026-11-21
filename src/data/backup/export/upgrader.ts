@@ -5,12 +5,19 @@ import {sortOrderAt} from '../../../domain/categoryOrder';
 
 /**
  * A file's data before upgrading: files older than v4 have no budgets, older
- * than v5 no accounts or incomes (validation defaults all three to []).
+ * than v5 no accounts or incomes, older than v6 no transfers or checkpoints
+ * (validation defaults all five to []).
  */
-type RawExportData = Omit<ExportData, 'budgets' | 'accounts' | 'incomes'> & {
+type RawExportData = Omit<
+  ExportData,
+  'budgets' | 'accounts' | 'incomes' | 'transfers' | 'checkpoints' | 'recurring'
+> & {
   budgets?: ExportData['budgets'];
   accounts?: ExportData['accounts'];
   incomes?: ExportData['incomes'];
+  transfers?: ExportData['transfers'];
+  checkpoints?: ExportData['checkpoints'];
+  recurring?: ExportData['recurring'];
 };
 
 interface RawExport {
@@ -56,11 +63,21 @@ export const upgradeExportData = (raw: RawExport): ExportData => {
     version = 5;
   }
 
+  // v5 → v6 (3.0) added transfers and checkpoints (defaulted to none below) and an optional
+  // account on debts, which an older debt lacks because it touched none. No row changes.
+  if (version < 6) {
+    version = 6;
+  }
+
   const upgraded: ExportData = {
     ...data,
     budgets: data.budgets ?? [],
     accounts: data.accounts ?? [],
     incomes: data.incomes ?? [],
+    transfers: data.transfers ?? [],
+    checkpoints: data.checkpoints ?? [],
+    // v6 (P9): rules; older files have none.
+    recurring: data.recurring ?? [],
   };
 
   if (__DEV__ && version < CURRENT_EXPORT_VERSION) {

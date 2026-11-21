@@ -18,9 +18,14 @@ import {MonthYearPickerSheet} from '../../../src/ui/sheets/MonthYearPickerSheet'
 import {ThemePickerSheet} from '../../../src/features/settings/sheets/ThemePickerSheet';
 import {WeekStartPickerSheet} from '../../../src/features/settings/sheets/WeekStartPickerSheet';
 import {LanguagePickerSheet} from '../../../src/features/settings/sheets/LanguagePickerSheet';
+import {MonthStartPickerSheet} from '../../../src/features/settings/sheets/MonthStartPickerSheet';
 import {BudgetSheet} from '../../../src/ui/sheets/BudgetSheet';
 import {RowActionsSheet} from '../../../src/ui/sheets/RowActionsSheet';
 import {ListSortSheet} from '../../../src/features/spending/sheets/ListSortSheet';
+import {UpgradeSheet} from '../../../src/features/pro/sheets/UpgradeSheet';
+import {ProEndedSheet} from '../../../src/features/pro/sheets/ProEndedSheet';
+import {AccountPickerSheet} from '../../../src/ui/sheets/AccountPickerSheet';
+import {AddChoiceSheet} from '../../../src/ui/sheets/AddChoiceSheet';
 import '../../../src/navigation/sheets'; // registers, through the mock below (jest hoists it above the imports)
 
 jest.mock('react-native-actions-sheet', () => ({
@@ -44,10 +49,15 @@ const EXPECTED: Record<string, unknown> = {
   'month-year-picker-sheet': MonthYearPickerSheet,
   'theme-picker-sheet': ThemePickerSheet,
   'week-start-picker-sheet': WeekStartPickerSheet,
+  'month-start-picker-sheet': MonthStartPickerSheet,
   'language-picker-sheet': LanguagePickerSheet,
   'budget-sheet': BudgetSheet,
   'row-actions-sheet': RowActionsSheet,
   'list-sort-sheet': ListSortSheet,
+  'upgrade-sheet': UpgradeSheet,
+  'pro-ended-sheet': ProEndedSheet,
+  'add-choice-sheet': AddChoiceSheet,
+  'account-picker-sheet': AccountPickerSheet,
 };
 
 it('loads the sheet machinery at startup, which release builds need before the first sheet opens', () => {

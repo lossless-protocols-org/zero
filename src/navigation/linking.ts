@@ -1,6 +1,7 @@
 import type {LinkingOptions} from '@react-navigation/native';
 import type {HomeStackParamList} from './types';
 import {isYearMonth} from '../domain/dates';
+import {proAwareGetStateFromPath} from './proLinks';
 
 /**
  * zero:// links (2.8): the home-screen widget's actions. Ids and kinds
@@ -16,7 +17,8 @@ import {isYearMonth} from '../domain/dates';
  *                     fill it in ("Add again" from the Home Screen quick actions). Only a
  *                     plain amount ("20", "12.5") and a short title get through: any app can
  *                     send a link, and the sheet still waits for Save
- * Anything else opens the app where it was.
+ * Anything else opens the app where it was. So does a link to a Pro screen when Pro is not on:
+ * the screen is not mounted then (law L8), and `proAwareGetStateFromPath` drops the link.
  */
 /** A plain positive amount as typed ("20", "12.5"), else nothing. */
 const parseQuickAmount = (value: string): string | undefined =>
@@ -33,6 +35,7 @@ const parseQuickTitle = (value: string): string | undefined => {
 
 export const deepLinking: LinkingOptions<HomeStackParamList> = {
   prefixes: ['zero://'],
+  getStateFromPath: proAwareGetStateFromPath(),
   config: {
     initialRouteName: 'TabStack',
     screens: {

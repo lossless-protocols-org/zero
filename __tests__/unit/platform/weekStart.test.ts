@@ -69,3 +69,16 @@ describe('leadingBlanks — the calendar grid alignment', () => {
     }
   });
 });
+
+describe('a week that starts on Saturday (world review W6)', () => {
+  it('puts Saturday first and keeps the other six in order', () => {
+    expect(rotateWeekdays(SUNDAY_FIRST, 'saturday')).toEqual(['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+    expect(weekStartOffset('saturday')).toBe(6);
+  });
+
+  it('aligns the month grid: a month starting on Saturday has no blanks, on Sunday one, on Friday six', () => {
+    expect(leadingBlanks(6, 'saturday')).toBe(0);
+    expect(leadingBlanks(0, 'saturday')).toBe(1);
+    expect(leadingBlanks(5, 'saturday')).toBe(6);
+  });
+});

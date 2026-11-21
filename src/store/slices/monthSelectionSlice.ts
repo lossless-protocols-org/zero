@@ -1,5 +1,8 @@
 import {createSlice} from '@reduxjs/toolkit';
 import type {RootState} from '../rootReducer';
+import {monthIndexOfKey, yearOfKey} from '../../domain/period';
+import {monthKeyNow} from '../../pro/monthStart';
+import {monthStartChanged} from '../monthStartChanged';
 
 interface MonthSelection {
   monthIndex: number;
@@ -15,10 +18,19 @@ interface MonthSelectionState extends MonthSelection {
   followsToday: boolean;
 }
 
-const monthOf = (now: Date): MonthSelection => ({monthIndex: now.getMonth(), year: now.getFullYear()});
+/**
+ * The month `now` is in, as the user's month start day cuts it (P11): on the
+ * 3rd, with months starting on the 7th, that is still last month's.
+ */
+const monthOf = (now: Date): MonthSelection => {
+  const key = monthKeyNow(now);
+  return {monthIndex: monthIndexOfKey(key), year: yearOfKey(key)};
+};
 
-const isMonthOf = (selection: MonthSelection, now: Date): boolean =>
-  selection.monthIndex === now.getMonth() && selection.year === now.getFullYear();
+const isMonthOf = (selection: MonthSelection, now: Date): boolean => {
+  const current = monthOf(now);
+  return selection.monthIndex === current.monthIndex && selection.year === current.year;
+};
 
 /**
  * A function, not a value: Redux Toolkit calls it whenever the state is
@@ -47,6 +59,14 @@ const monthSelectionSlice = createSlice({
       },
       prepare: (now: Date = new Date()) => ({payload: monthOf(now)}),
     },
+  },
+  extraReducers: builder => {
+    // P11: the months are cut on another day now, so "the month on screen" means other days.
+    // Back to the month today is in, following it, as on a fresh start.
+    builder.addCase(monthStartChanged, (_state, action) => ({
+      ...monthOf(new Date(action.payload.now)),
+      followsToday: true,
+    }));
   },
 });
 

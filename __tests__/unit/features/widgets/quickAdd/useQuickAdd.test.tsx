@@ -21,6 +21,7 @@ import * as services from '../../../../harness/services';
 import {renderHookInApp} from '../../../../harness/render';
 import {setMockTranslations} from '../../../../harness/mocks/reactI18next';
 import {getErrorLog, clearErrorLog} from '../../../../../src/platform/errorLog';
+import {periodFor} from '../../../../../src/domain/period';
 
 jest.mock('react-i18next', () => require('../../../../harness/mocks/reactI18next'));
 
@@ -90,7 +91,7 @@ it('refuses a title longer than an expense title can be, and saves nothing', asy
   await act(() => sheet.current.setText('x'.repeat(26)));
   expect(sheet.current.isValid).toBe(false);
   await act(() => sheet.current.save());
-  expect(await services.getAllExpensesByMonth(userId, '2026-11')).toEqual([]);
+  expect(await services.getAllExpensesByMonth(userId, periodFor('2026-11'))).toEqual([]);
   expect(leave).not.toHaveBeenCalled();
 });
 
@@ -101,7 +102,7 @@ it('saves money in for today, with the note, in an income category', async () =>
   await act(() => sheet.current.setAmount('40000'));
   await act(() => sheet.current.setText('Salary'));
   await act(() => sheet.current.save());
-  const incomes = await getIncomesByMonth(userId, '2026-11');
+  const incomes = await getIncomesByMonth(userId, periodFor('2026-11'));
   expect(incomes.map(i => [i.amount, i.date, i.note])).toEqual([[40_000, '2026-11-15', 'Salary']]);
   expect(leave).toHaveBeenCalledTimes(1);
 });

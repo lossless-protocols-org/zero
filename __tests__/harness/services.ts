@@ -27,3 +27,4 @@ export {createDebtor, getDebtorByDebtorId} from '../../src/data/services/debtorS
 export {createDebt, getDebtById} from '../../src/data/services/debtService';
 export {countAllRecords, deleteAllData} from '../../src/data/services/deleteService';
 export {upsertBudget} from '../../src/data/services/budgetService';
+export {createIncome} from '../../src/data/services/incomeService';

@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useReducer} from 'react';
+import {useCallback, useEffect, useMemo, useReducer, useRef} from 'react';
 import {AppState} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {useAppDispatch, useAppSelector} from '../../store/hooks';
@@ -11,6 +11,10 @@ import {
 } from '../../store/slices/monthSelectionSlice';
 import {getMonthNames} from '../../platform/dateFormat';
 import {toYearMonth} from '../../domain/dates';
+import {monthIndexOfKey, yearOfKey} from '../../domain/period';
+import {monthKeyNow} from '../../pro/monthStart';
+import {monthStartChanged} from '../../store/monthStartChanged';
+import {useMonthStartDay} from './useMonthStartDay';
 
 /**
  * The selected month plus ‹ › stepping. Home and Reports share one selection
@@ -61,9 +65,23 @@ export const useMonthNavigation = ({shared = true}: {shared?: boolean} = {}) => 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const months = useMemo(() => getMonthNames(), [i18n.language]);
 
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonthIndex = today.getMonth();
+  // The month today is in, as the user's month start day cuts it (P11): on the 3rd, with months
+  // starting on the 7th, "this month" is still the one that began last month. Subscribed, so a
+  // new day (or Pro turning on or off) redraws with the new "current".
+  const monthStartDay = useMonthStartDay();
+  // The shared selection goes back to today's month when the day changes (the slice handles
+  // monthStartChanged); a selection of this hook's own must do the same, or the Money tab is
+  // left on a key that now names days that have not come (review 2026-11-12).
+  const appliedDay = useRef(monthStartDay);
+  useEffect(() => {
+    if (appliedDay.current !== monthStartDay) {
+      appliedDay.current = monthStartDay;
+      dispatchOwn(monthStartChanged());
+    }
+  }, [monthStartDay]);
+  const currentKey = monthKeyNow();
+  const currentYear = yearOfKey(currentKey);
+  const currentMonthIndex = monthIndexOfKey(currentKey);
 
   // The name is only a label; keys and maths use the index.
   const selectedMonthName = months[selectedMonthIndex] ?? '';
@@ -87,8 +105,8 @@ export const useMonthNavigation = ({shared = true}: {shared?: boolean} = {}) => 
         monthIndex = 0;
         year += 1;
       }
-      const now = new Date();
-      if (year > now.getFullYear() || (year === now.getFullYear() && monthIndex > now.getMonth())) {
+      // Read now, not at render: "this month" moves at midnight on the start day.
+      if (toYearMonth(year, monthIndex) > monthKeyNow()) {
         return;
       }
       select(monthIndex, year);

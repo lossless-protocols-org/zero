@@ -7,21 +7,21 @@ import {CustomBottomSheet} from '../../../ui/atoms/CustomBottomSheet';
 import {PrimaryText} from '../../../ui/atoms/PrimaryText';
 import {PrimaryButton} from '../../../ui/atoms/PrimaryButton';
 import {getWeekdayNames} from '../../../platform/dateFormat';
-import type {WeekStartDay} from '../../../platform/weekStart';
+import {WEEK_START_NAME_INDEX, type WeekStartDay} from '../../../platform/weekStart';
 import {gs} from '../../../ui/globalStyles';
 
-const OPTIONS: WeekStartDay[] = ['sunday', 'monday'];
+const OPTIONS: WeekStartDay[] = ['saturday', 'sunday', 'monday'];
 
 /** Localized full weekday name for an option, straight from dayjs. */
 const optionLabel = (option: WeekStartDay): string => {
   const names = getWeekdayNames(); // Sunday-first
-  return names[option === 'sunday' ? 0 : 1] ?? option;
+  return names[WEEK_START_NAME_INDEX[option]] ?? option;
 };
 
 export const WeekStartPickerSheet: React.FC<SheetProps<'week-start-picker-sheet'>> = React.memo(props => {
   const {t} = useTranslation();
   const colors = useThemeColors();
-  const [selected, setSelected] = useState<WeekStartDay>(props.payload?.current === 'monday' ? 'monday' : 'sunday');
+  const [selected, setSelected] = useState<WeekStartDay>(props.payload?.current ?? 'sunday');
 
   const handleConfirm = useCallback(() => {
     props.payload?.onSelect?.(selected);

@@ -7,6 +7,7 @@ import {database} from '../../../../src/data/database/database';
 import {categoryRefsOf} from '../../../../src/data/services/categoryRefs';
 import * as services from '../../../harness/services';
 import {updateCategoryById} from '../../../../src/data/services/categoryService';
+import {periodFor} from '../../../../src/domain/period';
 
 beforeEach(async () => {
   await database.write(async () => {
@@ -61,7 +62,7 @@ it('sees a wipe through deleteAllData', async () => {
 it('a month read names its rows from the map, and a rename shows on the next read', async () => {
   const food = await services.createCategory('Food', 'u1', null, null, 'expense');
   await services.createExpense('u1', 'Lunch', 120, '', food, '2026-11-03T13:00:00');
-  expect((await services.getAllExpensesByMonth('u1', '2026-11'))[0]?.category?.name).toBe('Food');
+  expect((await services.getAllExpensesByMonth('u1', periodFor('2026-11')))[0]?.category?.name).toBe('Food');
   await updateCategoryById(food, 'Eating out');
-  expect((await services.getAllExpensesByMonth('u1', '2026-11'))[0]?.category?.name).toBe('Eating out');
+  expect((await services.getAllExpensesByMonth('u1', periodFor('2026-11')))[0]?.category?.name).toBe('Eating out');
 });

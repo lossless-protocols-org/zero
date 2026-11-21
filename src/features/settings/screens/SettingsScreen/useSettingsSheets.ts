@@ -66,11 +66,6 @@ export const useSettingsSheets = ({preferences, budget}: Pick<Settings, 'prefere
     );
   };
 
-  /** The one Pro surface 2.8 has: says what stays free and what 3.0 brings. No price, no button. */
-  const openProInfo = () => {
-    logRejection(showAlert({type: 'info', message: t('settings.zeroProBody')}));
-  };
-
   const openWeekStartPicker = () => {
     void SheetManager.show('week-start-picker-sheet', {
       payload: {current: weekStart.day, onSelect: weekStart.select},
@@ -103,7 +98,6 @@ export const useSettingsSheets = ({preferences, budget}: Pick<Settings, 'prefere
     openBudgetSheet,
     openCurrencySheet,
     openNoiseFloor,
-    openProInfo,
     openWeekStartPicker,
     openThemePicker,
     // The same rename flow as the Home header's avatar (useUserName).

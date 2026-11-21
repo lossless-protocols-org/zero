@@ -10,8 +10,8 @@
  * Tickets: M20.
  */
 
-import {getMonthNames, setDayjsLocale} from '../../../src/platform/dateFormat';
-import {daysInMonth, toYearMonth, firstWeekdayOfMonth} from '../../../src/domain/dates';
+import {getMonthNames, setDayjsLocale, formatMonthLabel} from '../../../src/platform/dateFormat';
+import {daysInMonth, toYearMonth} from '../../../src/domain/dates';
 
 describe('month names after a locale change', () => {
   afterEach(() => {
@@ -43,9 +43,43 @@ describe('month by index: no localised name round trip', () => {
     expect(daysInMonth(2026, 11)).toBe(31);
   });
 
-  it('builds the YYYY-MM key and the first weekday from the index', () => {
+  it('builds the YYYY-MM key from the index', () => {
     expect(toYearMonth(2026, 0)).toBe('2026-01');
     expect(toYearMonth(2026, 11)).toBe('2026-12');
-    expect(firstWeekdayOfMonth(2026, 9)).toBe(4); // 1 October 2026 is a Thursday
+  });
+});
+
+describe('a month as the user sees it (P11)', () => {
+  const label = (start: string, next: string, thisYear = 2026) =>
+    formatMonthLabel({start, next}, 'monthYearLong', thisYear);
+
+  it('is named when it starts on the 1st', () => {
+    expect(formatMonthLabel({start: '2026-11-01', next: '2026-12-01'}, 'monthYearLong', 2026, 'en-IN')).toBe(
+      'November 2026',
+    );
+    expect(formatMonthLabel({start: '2026-11-01', next: '2026-12-01'}, 'monthYear', 2026, 'en-IN')).toBe('Nov 2026');
+  });
+
+  it('is shown by its first and last day otherwise, in the locale’s order', () => {
+    expect(formatMonthLabel({start: '2026-11-07', next: '2026-12-07'}, 'monthYearLong', 2026, 'en-IN')).toBe(
+      '7 Nov – 6 Dec',
+    );
+    expect(formatMonthLabel({start: '2026-11-07', next: '2026-12-07'}, 'monthYearLong', 2026, 'en-US')).toBe(
+      'Nov 7 – Dec 6',
+    );
+    // February's length shows in the month after it.
+    expect(formatMonthLabel({start: '2026-02-28', next: '2026-03-28'}, 'monthYear', 2026, 'en-IN')).toBe(
+      '28 Feb – 27 Mar',
+    );
+  });
+
+  it('names the year when it is not this one, and both years across a year end', () => {
+    expect(formatMonthLabel({start: '2025-03-07', next: '2025-04-07'}, 'monthYearLong', 2026, 'en-IN')).toBe(
+      '7 Mar – 6 Apr 2025',
+    );
+    expect(formatMonthLabel({start: '2025-12-15', next: '2026-01-15'}, 'monthYearLong', 2026, 'en-IN')).toBe(
+      '15 Dec 2025 – 14 Jan 2026',
+    );
+    expect(label('2026-11-07', '2026-12-07')).toContain('–');
   });
 });

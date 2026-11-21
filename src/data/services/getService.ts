@@ -5,13 +5,17 @@ import {Currency} from '../database/models/Currency';
 import {Debtor} from '../database/models/Debtor';
 import {Budget} from '../database/models/Budget';
 import {Account} from '../database/models/Account';
+import {RecurringRule} from '../database/models/RecurringRule';
+import {toCadence, toRuleTarget} from '../../domain/recurrence';
 import {toCategoryKind} from './categoryKind';
+import {toCheckpointKind} from '../../domain/accounts';
 import {sanitizeString, DEFAULTS} from '../../domain/sanitize';
 import {normalizeDebtType} from '../../domain/debtType';
 import {compareDateKeys} from '../../domain/dates';
 import type {ExportDraft} from '../backup/export/format';
 import {appendErrorLog} from '../../platform/errorLog';
 import {UNKNOWN_NAME} from '../../i18n/displayNames';
+import {DEFAULT_MONTH_START_DAY, toMonthStartDay} from '../../domain/period';
 
 export type {ExportDraft} from '../backup/export/format';
 
@@ -24,6 +28,7 @@ export type {ExportDraft} from '../backup/export/format';
  */
 interface RawExpenseRow {
   id: string;
+  recurring_id: string | null;
   title: string;
   amount: number;
   description: string | null;
@@ -39,11 +44,33 @@ interface RawDebtRow {
   debtor_id: string;
   date: string;
   type: string;
+  account_id: string | null;
+  created_at: number;
+  updated_at: number;
+}
+interface RawTransferRow {
+  recurring_id: string | null;
+  from_account_id: string;
+  to_account_id: string;
+  amount: number;
+  date: string;
+  note: string | null;
+  created_at: number;
+  updated_at: number;
+}
+interface RawCheckpointRow {
+  account_id: string;
+  balance: number;
+  date: string;
+  gap: number;
+  kind: string;
+  note: string | null;
   created_at: number;
   updated_at: number;
 }
 interface RawRefundRow {
   expense_id: string;
+  account_id: string;
   amount: number;
   date: string;
   note: string | null;
@@ -51,6 +78,7 @@ interface RawRefundRow {
   updated_at: number;
 }
 interface RawIncomeRow {
+  recurring_id: string | null;
   category_id: string;
   account_id: string;
   amount: number;
@@ -82,19 +110,37 @@ export const getAllData = async (): Promise<ExportDraft | null> => {
     const debtRows: Promise<RawDebtRow[]> = database.get('debts').query().unsafeFetchRaw();
     const refundRows: Promise<RawRefundRow[]> = database.get('refunds').query().unsafeFetchRaw();
     const incomeRows: Promise<RawIncomeRow[]> = database.get('incomes').query().unsafeFetchRaw();
-    const [users, categories, expenses, currencies, debtors, debts, budgets, accounts, refunds, incomes] =
-      await Promise.all([
-        database.get<User>('users').query().fetch(),
-        database.get<Category>('categories').query().fetch(),
-        expenseRows,
-        database.get<Currency>('currencies').query().fetch(),
-        database.get<Debtor>('debtors').query().fetch(),
-        debtRows,
-        database.get<Budget>('budgets').query().fetch(),
-        database.get<Account>('accounts').query().fetch(),
-        refundRows,
-        incomeRows,
-      ]);
+    const transferRows: Promise<RawTransferRow[]> = database.get('transfers').query().unsafeFetchRaw();
+    const checkpointRows: Promise<RawCheckpointRow[]> = database.get('checkpoints').query().unsafeFetchRaw();
+    const [
+      users,
+      categories,
+      expenses,
+      currencies,
+      debtors,
+      debts,
+      budgets,
+      accounts,
+      refunds,
+      incomes,
+      transfers,
+      checkpoints,
+      rules,
+    ] = await Promise.all([
+      database.get<User>('users').query().fetch(),
+      database.get<Category>('categories').query().fetch(),
+      expenseRows,
+      database.get<Currency>('currencies').query().fetch(),
+      database.get<Debtor>('debtors').query().fetch(),
+      debtRows,
+      database.get<Budget>('budgets').query().fetch(),
+      database.get<Account>('accounts').query().fetch(),
+      refundRows,
+      incomeRows,
+      transferRows,
+      checkpointRows,
+      database.get<RecurringRule>('recurring_rules').query().fetch(),
+    ]);
 
     // Raw rows skip the model layer's column mapping, so a renamed column
     // would surface as `undefined` fields and a file full of "Unknown"
@@ -105,14 +151,32 @@ export const getAllData = async (): Promise<ExportDraft | null> => {
       'expenses',
     );
     assertColumns(debts[0], ['amount', 'description', 'debtor_id', 'date', 'type', 'created_at'], 'debts');
-    assertColumns(refunds[0], ['expense_id', 'amount', 'date', 'note', 'created_at'], 'refunds');
+    assertColumns(refunds[0], ['expense_id', 'account_id', 'amount', 'date', 'note', 'created_at'], 'refunds');
     assertColumns(incomes[0], ['category_id', 'account_id', 'amount', 'date', 'note', 'created_at'], 'incomes');
+    assertColumns(debts[0], ['account_id'], 'debts');
+    assertColumns(expenses[0], ['recurring_id'], 'expenses');
+    assertColumns(incomes[0], ['recurring_id'], 'incomes');
+    assertColumns(transfers[0], ['recurring_id'], 'transfers');
+    assertColumns(
+      transfers[0],
+      ['from_account_id', 'to_account_id', 'amount', 'date', 'note', 'created_at'],
+      'transfers',
+    );
+    assertColumns(
+      checkpoints[0],
+      ['account_id', 'balance', 'date', 'gap', 'kind', 'note', 'created_at'],
+      'checkpoints',
+    );
 
     // Accounts are referenced by name; entries on the default account omit it.
     const accountNameById = new Map(accounts.map(a => [a.id, a.name]));
     const defaultAccountIds = new Set(accounts.filter(a => a.isDefault).map(a => a.id));
     const accountRef = (accountId: string): string | undefined =>
       defaultAccountIds.has(accountId) ? undefined : accountNameById.get(accountId);
+    // v6 references name every account, the default included: a transfer's end or a checkpoint's
+    // account is never implied, and a debt's omitted account means none. An id whose account is
+    // gone is named Unknown, which the restore makes into an account rather than lose the row.
+    const accountName = (accountId: string): string => accountNameById.get(accountId) ?? UNKNOWN_NAME;
 
     // Refunds travel nested in their expense (export v5), oldest first.
     const refundsByExpense = new Map<string, RawRefundRow[]>();
@@ -127,6 +191,40 @@ export const getAllData = async (): Promise<ExportDraft | null> => {
       categoryMap.set(c.id, c.name);
     });
 
+    // P9: rules travel in a fixed order with handles r1, r2…, so a backup of a restore is the same
+    // file (ids are made anew by every restore). A made row names its rule's handle while the rule
+    // exists; a dangling id is left out rather than point at nothing.
+    const ruleBodies = rules
+      .map(rule => {
+        const target = toRuleTarget(rule.target);
+        return {
+          id: rule.id,
+          body: {
+            target,
+            title: rule.title,
+            // A transfer has none; a category gone since is named Unknown, which the restore makes.
+            category: target === 'transfer' ? undefined : {name: categoryMap.get(rule.categoryId) ?? UNKNOWN_NAME},
+            account: accountName(rule.accountId),
+            toAccount: rule.toAccountId === null ? undefined : accountName(rule.toAccountId),
+            amount: rule.amount,
+            cadence: toCadence(rule.cadence),
+            interval: rule.interval,
+            startDate: rule.startDate,
+            endDate: rule.endDate,
+            nextIndex: rule.nextIndex,
+            remindDaysBefore: rule.remindDaysBefore,
+            active: rule.ruleStatus,
+            createdAt: rule.createdAt.getTime(),
+            updatedAt: rule.updatedAt.getTime(),
+          },
+        };
+      })
+      .map(rule => ({...rule, key: JSON.stringify(rule.body)}))
+      .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    const refById = new Map(ruleBodies.map((rule, i) => [rule.id, `r${i + 1}`]));
+    const ruleRef = (recurringId: string | null): string | undefined =>
+      recurringId === null ? undefined : refById.get(recurringId);
+
     const debtorMap = new Map<string, string>();
     debtors.forEach(d => {
       debtorMap.set(d.id, d.title);
@@ -136,6 +234,10 @@ export const getAllData = async (): Promise<ExportDraft | null> => {
       users: users.map(u => ({
         username: u.username,
         email: u.email,
+        // v6 (P11): named only when the user chose a day; omitted means the 1st.
+        ...(toMonthStartDay(u.monthStartDay) === DEFAULT_MONTH_START_DAY
+          ? {}
+          : {monthStartDay: toMonthStartDay(u.monthStartDay)}),
       })),
       // Key order everywhere below is validate.ts's schema order, so an
       // export → import → export round trip is byte-identical.
@@ -167,7 +269,10 @@ export const getAllData = async (): Promise<ExportDraft | null> => {
                   note: r.note ?? '',
                   createdAt: r.created_at,
                   updatedAt: r.updated_at,
+                  // v6: a refund to another account than its expense's (3.0) names it; otherwise omitted.
+                  account: r.account_id === e.account_id ? undefined : accountName(r.account_id),
                 })),
+          recurring: ruleRef(e.recurring_id),
         };
       }),
       currencies: currencies.map(c => ({
@@ -190,6 +295,7 @@ export const getAllData = async (): Promise<ExportDraft | null> => {
         type: normalizeDebtType(d.type),
         createdAt: d.created_at,
         updatedAt: d.updated_at,
+        account: d.account_id ? accountName(d.account_id) : undefined,
       })),
       // Per-category budgets carry their category NAME (ids are minted fresh on
       // import). One whose category no longer exists has nothing to attach to
@@ -215,6 +321,8 @@ export const getAllData = async (): Promise<ExportDraft | null> => {
         sortOrder: a.sortOrder,
         icon: a.icon,
         color: a.color,
+        // Written only when the user gave one, so a file without kinds is byte for byte what it was.
+        ...(a.kind ? {kind: a.kind} : {}),
       })),
       incomes: incomes.map(i => ({
         amount: i.amount,
@@ -224,7 +332,29 @@ export const getAllData = async (): Promise<ExportDraft | null> => {
         account: accountRef(i.account_id),
         createdAt: i.created_at,
         updatedAt: i.updated_at,
+        recurring: ruleRef(i.recurring_id),
       })),
+      transfers: transfers.map(t => ({
+        fromAccount: accountName(t.from_account_id),
+        toAccount: accountName(t.to_account_id),
+        amount: t.amount,
+        date: t.date,
+        note: t.note ?? '',
+        createdAt: t.created_at,
+        updatedAt: t.updated_at,
+        recurring: ruleRef(t.recurring_id),
+      })),
+      checkpoints: checkpoints.map(c => ({
+        account: accountName(c.account_id),
+        balance: c.balance,
+        date: c.date,
+        gap: c.gap,
+        kind: toCheckpointKind(c.kind),
+        note: c.note ?? '',
+        createdAt: c.created_at,
+        updatedAt: c.updated_at,
+      })),
+      recurring: ruleBodies.map(rule => ({ref: refById.get(rule.id) ?? '', ...rule.body})),
     };
   } catch (error) {
     // Callers show the export-failed dialog; keep the cause in Diagnostics.

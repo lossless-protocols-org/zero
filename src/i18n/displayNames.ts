@@ -58,3 +58,16 @@ export const displayUserName = (name: string | null | undefined, t: TFunction): 
 
 export const displayDebtDescription = (description: string, t: TFunction): string =>
   description === SETTLEMENT_DESCRIPTION ? t('debts.settlementDescription') : description;
+
+/**
+ * The default account is stored as 'Cash' (data/database/defaultAccount.ts;
+ * i18n sits below data, so the name is repeated here) and shown translated.
+ * A restored account the file lacked is named Unknown. Any other name is the
+ * user's own.
+ */
+export const displayAccountName = (name: string, t: TFunction): string => {
+  if (name === 'Cash') {
+    return t('accounts.cash');
+  }
+  return name === UNKNOWN_NAME ? t('common.unknown') : name;
+};

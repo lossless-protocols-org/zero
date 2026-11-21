@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one folder the report provider can hand out: the app cache's reports/ (3.0, P12),
+     which holds the PDF the user is sharing and nothing else. -->
+<paths>
+    <cache-path name="reports" path="reports/" />
+</paths>

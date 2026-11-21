@@ -72,14 +72,7 @@ export const RefundRow: React.FC<RefundRowProps> = React.memo(
           edgeToEdge={edgeToEdge}>
           <View
             onLayout={measure}
-            style={[
-              gs.rounded12,
-              gs.rowBetweenCenter,
-              gs.px14,
-              gs.py10,
-              edgeToEdge && gs.mx16,
-              {backgroundColor: colors.containerColor},
-            ]}>
+            style={[gs.rounded12, gs.rowBetweenCenter, gs.px14, gs.py10, {backgroundColor: colors.containerColor}]}>
             <View style={[gs.rowCenter, gs.flex1]}>
               <View style={[gs.size36, gs.center, gs.rounded10, gs.mr10, {backgroundColor: colors.iconContainer}]}>
                 <Icon name="undo-2" size={18} color={refund.category?.color || colors.accentGreen} />

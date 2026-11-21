@@ -33,6 +33,9 @@ const backup = (): ExportData => ({
   budgets: [],
   accounts: [],
   incomes: [],
+  transfers: [],
+  checkpoints: [],
+  recurring: [],
 });
 
 const titles = (rows: ReadonlyArray<{title: string}>): string[] => rows.map(r => r.title).sort();
@@ -102,15 +105,13 @@ describe('expense refetch scope', () => {
     const septemberGate = new Promise<void>(resolve => {
       releaseSeptember = resolve;
     });
-    const querySpy = jest
-      .spyOn(expenseService, 'getAllExpensesByMonth')
-      .mockImplementation(async (userId, yearMonth) => {
-        const rows = await real(userId, yearMonth);
-        if (yearMonth === '2026-09') {
-          await septemberGate;
-        }
-        return rows;
-      });
+    const querySpy = jest.spyOn(expenseService, 'getAllExpensesByMonth').mockImplementation(async (userId, period) => {
+      const rows = await real(userId, period);
+      if (period.start === '2026-09-01') {
+        await septemberGate;
+      }
+      return rows;
+    });
     const september = store.dispatch(expenseSlice.fetchExpensesByMonth('2026-09'));
     await store.dispatch(expenseSlice.fetchExpensesByMonth('2026-11'));
     releaseSeptember();

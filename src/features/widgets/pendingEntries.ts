@@ -10,6 +10,7 @@ import {i18n} from '../../i18n';
 import {isIsoDay, toDayKey} from '../../domain/dates';
 import {appendErrorLog} from '../../platform/errorLog';
 import {readPendingEntries, removePendingEntries} from './bridge';
+import {monthKeyOf} from '../../pro/monthStart';
 
 /**
  * Entries made outside the app (2.8, iOS: Siri, Shortcuts, the Action Button,
@@ -156,7 +157,8 @@ const drain = async (): Promise<string[]> => {
           ensureYearInCache(user.id, Number.parseInt(entry.date.slice(0, 4), 10));
         }
         settle(entry.id);
-        months.add(entry.date.slice(0, 7));
+        // The month the entry belongs to, as the user's month start day cuts it (P11).
+        months.add(monthKeyOf(entry.date));
       } catch (error) {
         appendErrorLog(error, false); // a save that failed (disk, lock): stays queued, tried again next time
       }

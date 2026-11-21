@@ -3,10 +3,11 @@ import type {Clause} from '@nozbe/watermelondb/QueryDescription';
 import {database} from '../database/database';
 import {Income} from '../database/models/Income';
 import {assertUserId} from './assertUserId';
-import {resolveDefaultAccount} from './accountService';
+import {assertEntryAccount, isUsersActiveAccount, resolveDefaultAccount} from './accountService';
 import {isUsersCategoryOfKind} from './categoryKind';
-import {monthDateClauses} from './expenseDateRange';
-import {compareDateKeys, isIsoDay} from '../../domain/dates';
+import {periodClauses} from './expenseDateRange';
+import type {Period} from '../../domain/period';
+import {compareDateKeys, isCalendarDay, isIsoDay} from '../../domain/dates';
 import {toMoneyUnits} from '../../domain/money';
 import type {IncomeData, IsoDay} from '../../domain/types';
 
@@ -40,6 +41,8 @@ interface RawIncomeRow {
   note: string | null;
   created_at: number;
   updated_at: number;
+  /** v6 (P9). */
+  recurring_id?: string | null;
 }
 
 const toIncomeData = (row: RawIncomeRow): IncomeData | null =>
@@ -54,6 +57,7 @@ const toIncomeData = (row: RawIncomeRow): IncomeData | null =>
         note: row.note ?? '',
         createdAt: row.created_at,
         updatedAt: row.updated_at,
+        recurringId: row.recurring_id ?? null,
       }
     : null;
 
@@ -82,7 +86,14 @@ const assertIncomeFields = async (
 
 export const createIncome = async (
   userId: string,
-  input: {categoryId: string; amount: number; date: IsoDay; note: string},
+  input: {
+    categoryId: string;
+    amount: number;
+    date: IsoDay;
+    note: string;
+    /** The account it came into (3.0); without one, the user's default. Must be active. */
+    accountId?: string;
+  },
   /** A fixed id, as createExpense's: a replayed outside-the-app entry is saved once. */
   options: {id?: string} = {},
 ): Promise<string> => {
@@ -94,7 +105,11 @@ export const createIncome = async (
       return;
     }
     await assertIncomeFields(userId, input);
-    const {accountId, prepared} = await resolveDefaultAccount(userId);
+    if (input.accountId !== undefined) {
+      await assertEntryAccount(userId, input.accountId);
+    }
+    const {accountId, prepared} =
+      input.accountId === undefined ? await resolveDefaultAccount(userId) : {accountId: input.accountId, prepared: []};
     const income = database.get<Income>('incomes').prepareCreate(i => {
       i.userId = userId;
       i.categoryId = input.categoryId;
@@ -114,10 +129,13 @@ export const createIncome = async (
 
 export const updateIncome = async (
   incomeId: string,
-  patch: {categoryId?: string; amount?: number; date?: IsoDay; note?: string},
+  patch: {categoryId?: string; amount?: number; date?: IsoDay; note?: string; accountId?: string},
 ): Promise<void> => {
   await database.write(async () => {
     const income = await database.get<Income>('incomes').find(incomeId);
+    if (patch.accountId !== undefined) {
+      await assertEntryAccount(income.userId, patch.accountId, income.accountId);
+    }
     await assertIncomeFields(income.userId, {
       amount: patch.amount ?? income.amount,
       date: patch.date ?? income.date,
@@ -136,6 +154,9 @@ export const updateIncome = async (
       if (patch.note !== undefined) {
         i.note = patch.note;
       }
+      if (patch.accountId !== undefined) {
+        i.accountId = patch.accountId;
+      }
     });
   });
 };
@@ -151,8 +172,8 @@ export const deleteIncome = async (incomeId: string): Promise<void> => {
  * The month's incomes, newest day first, then newest entry first. An index
  * range on (user_id, date), like the expense month read.
  */
-export const getIncomesByMonth = async (userId: string, yearMonth: string): Promise<IncomeData[]> => {
-  const rows = await fetchIncomeRows(Q.where('user_id', userId), ...monthDateClauses(yearMonth));
+export const getIncomesByMonth = async (userId: string, period: Period): Promise<IncomeData[]> => {
+  const rows = await fetchIncomeRows(Q.where('user_id', userId), ...periodClauses(period));
   return rows
     .map(toIncomeData)
     .filter((income): income is IncomeData => income !== null)
@@ -160,34 +181,51 @@ export const getIncomesByMonth = async (userId: string, yearMonth: string): Prom
 };
 
 /**
- * "Same as last month": copies the incomes of `fromMonth` onto the 1st of
- * `toMonth`, keeping category, amount, account and note. Refuses (returns 0)
- * when `toMonth` already has incomes, so a double tap cannot double a salary.
+ * "Same as last month": copies the incomes of period `from` onto the first
+ * day of period `to`, keeping category, amount and note. Refuses (returns 0)
+ * when `to` already has incomes, so a double tap cannot double a salary.
+ *
+ * The account (3.0): with `keepAccounts` (the screen has Pro) each copy stays
+ * on its source's account while that account is active; otherwise, and
+ * always without it, a copy is a new entry and takes the default account,
+ * like every new entry a free user makes. Never an archived account.
  */
-export const copyIncomesFromMonth = async (userId: string, fromMonth: string, toMonth: string): Promise<number> => {
+export const copyIncomesFromMonth = async (
+  userId: string,
+  from: Period,
+  to: Period,
+  {keepAccounts = false}: {keepAccounts?: boolean} = {},
+): Promise<number> => {
   assertUserId(userId, 'income');
-  const firstOfMonth = `${toMonth}-01`;
-  if (!isIsoDay(firstOfMonth)) {
+  const firstOfMonth = to.start;
+  if (!isCalendarDay(firstOfMonth)) {
     throw new IncomeRuleError('notADay');
   }
   let copied = 0;
   await database.write(async () => {
-    const existing = await fetchIncomeRows(Q.where('user_id', userId), ...monthDateClauses(toMonth));
+    const existing = await fetchIncomeRows(Q.where('user_id', userId), ...periodClauses(to));
     if (existing.length > 0) {
       return;
     }
-    const source = await fetchIncomeRows(Q.where('user_id', userId), ...monthDateClauses(fromMonth));
+    const source = await fetchIncomeRows(Q.where('user_id', userId), ...periodClauses(from));
+    const {accountId: defaultAccount, prepared} = await resolveDefaultAccount(userId);
+    const active = new Set<string>();
+    for (const accountId of keepAccounts ? new Set(source.map(row => row.account_id)) : []) {
+      if (await isUsersActiveAccount(userId, accountId)) {
+        active.add(accountId);
+      }
+    }
     const copies = source.map(row =>
       database.get<Income>('incomes').prepareCreate(i => {
         i.userId = userId;
         i.categoryId = row.category_id;
-        i.accountId = row.account_id;
+        i.accountId = active.has(row.account_id) ? row.account_id : defaultAccount;
         i.amount = row.amount;
         i.date = firstOfMonth;
         i.note = row.note ?? '';
       }),
     );
-    await database.batch(copies);
+    await database.batch([...prepared, ...copies]);
     copied = copies.length;
   });
   return copied;

@@ -1,5 +1,10 @@
 import {z} from 'zod';
 import {normalizeDebtType} from '../../../domain/debtType';
+import {MAX_AMOUNT, MAX_TEXT} from '../../../domain/limits';
+import {toMoneyUnits} from '../../../domain/money';
+import {isCalendarDay} from '../../../domain/dates';
+import {MAX_MONTH_START_DAY} from '../../../domain/period';
+import {CADENCES, MAX_INTERVAL, RULE_TARGETS} from '../../../domain/recurrence';
 
 /**
  * Bounds on what a backup may contain (L7, v2.7.1). The UI can never produce
@@ -11,8 +16,7 @@ import {normalizeDebtType} from '../../../domain/debtType';
  * refusing multi-kilobyte blobs; the amount bound is above the UI's
  * 10^(9+decimals) major-unit limit.
  */
-const MAX_AMOUNT = 1e13;
-const MAX_FIELD = 200;
+const MAX_FIELD = MAX_TEXT;
 // zod 4's z.number() already rejects NaN and ±Infinity.
 const amount = z
   .number({error: 'must be a number'})
@@ -32,10 +36,22 @@ const budgetMonth = field.regex(/^\d{4}-(0[1-9]|1[0-2])$|^recurring(:\d{4}-(0[1-
 
 /** A calendar day only, 'YYYY-MM-DD': income has no time of day. */
 const isoDay = field.regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, {error: 'must be a YYYY-MM-DD day'});
+/**
+ * v6 (3.0) dates: also on the calendar (not 2026-02-31). Balances are worked out
+ * from these days; no older file has them, so nothing that restored before is refused.
+ */
+const calendarDay = isoDay.refine((value): boolean => isCalendarDay(value), {error: 'must be a day on the calendar'});
 
 const userSchema = z.object({
   username: field,
   email: field,
+  // v6 (P11). The day the user's month starts on; omitted means the 1st.
+  monthStartDay: z
+    .number({error: 'must be a number'})
+    .int()
+    .min(1, {error: 'must be 1 to 28'})
+    .max(MAX_MONTH_START_DAY, {error: 'must be 1 to 28'})
+    .optional(),
 });
 
 const categorySchema = z.object({
@@ -60,6 +76,8 @@ const accountSchema = z.object({
   sortOrder: z.number({error: 'must be a number'}).int().nonnegative(),
   icon: field,
   color: field,
+  // v6 (held and owed): the user's own label. Left out when there is none.
+  kind: field.optional(),
 });
 
 /** v5: money that came back, nested in its expense (it cannot exist without one). */
@@ -69,6 +87,8 @@ const refundSchema = z.object({
   note: field,
   createdAt: timestamp.optional(),
   updatedAt: timestamp.optional(),
+  // v6. The account the money came back to, named only when it is not the expense's own.
+  account: field.optional(),
 });
 
 const expenseSchema = z.object({
@@ -82,6 +102,8 @@ const expenseSchema = z.object({
   createdAt: timestamp.optional(),
   updatedAt: timestamp.optional(),
   refunds: z.array(refundSchema).optional(),
+  // v6 (P9). The `ref` of the recurring rule that made it; omitted when entered by hand.
+  recurring: field.optional(),
 });
 
 /** v5: money that came in. `category` names a category of kind 'income'. */
@@ -93,6 +115,8 @@ const incomeSchema = z.object({
   account: field.optional(),
   createdAt: timestamp.optional(),
   updatedAt: timestamp.optional(),
+  // v6 (P9): the rule that made it, as for expenses.
+  recurring: field.optional(),
 });
 
 const currencySchema = z.object({
@@ -118,7 +142,70 @@ const debtSchema = z.object({
   type: field.transform(normalizeDebtType),
   createdAt: timestamp.optional(),
   updatedAt: timestamp.optional(),
+  // v6. Omitted when the debt touched no account (every debt before 3.0).
+  account: field.optional(),
 });
+
+/** A balance or a gap: may be negative (a card), within the amount bound either way. */
+const signedAmount = z.number({error: 'must be a number'}).min(-MAX_AMOUNT).max(MAX_AMOUNT);
+
+/** v6: money moved between two accounts, each named. As the transfer service: at least one money unit. */
+const transferSchema = z.object({
+  fromAccount: field,
+  toAccount: field,
+  amount: positiveAmount.refine(value => toMoneyUnits(value) > 0, {error: 'must be more than 0'}),
+  date: calendarDay,
+  note: field,
+  createdAt: timestamp.optional(),
+  updatedAt: timestamp.optional(),
+  // P9: the rule that made it (an SIP), as for expenses.
+  recurring: field.optional(),
+});
+
+/** v6: an account's balance on a day, as the user read it. */
+const checkpointSchema = z.object({
+  account: field,
+  balance: signedAmount,
+  date: calendarDay,
+  gap: signedAmount,
+  kind: z.enum(['revaluation', 'adjustment'], {error: "must be 'revaluation' or 'adjustment'"}),
+  note: field,
+  createdAt: timestamp.optional(),
+  updatedAt: timestamp.optional(),
+});
+
+/**
+ * v6 (P9): something that repeats. `ref` is the rule's handle inside this file:
+ * the entries it made name it (`recurring`). Accounts and the category by name,
+ * like every other row; the next occurrence by its index from `startDate`.
+ */
+/** The highest occurrence index a rule in a file may be at. */
+const MAX_RULE_INDEX = 100_000;
+
+const recurringRuleSchema = z
+  .object({
+    ref: field,
+    target: z.enum(RULE_TARGETS, {error: "must be 'expense', 'income' or 'transfer'"}),
+    title: field,
+    category: z.object({name: field}).optional(),
+    account: field,
+    toAccount: field.optional(),
+    amount: positiveAmount.refine(value => toMoneyUnits(value) > 0, {error: 'must be more than 0'}).nullable(),
+    cadence: z.enum(CADENCES, {error: 'must be a cadence'}),
+    interval: z.number({error: 'must be a number'}).int().min(1).max(MAX_INTERVAL),
+    startDate: calendarDay,
+    endDate: calendarDay.nullable(),
+    // Past this, a typo or a hand-edited file (a daily rule 270 years on): its next day could not be worked out.
+    nextIndex: z.number({error: 'must be a number'}).int().nonnegative().max(MAX_RULE_INDEX),
+    remindDaysBefore: z.number({error: 'must be a number'}).int().min(0).max(30).nullable(),
+    active: z.boolean(),
+    createdAt: timestamp.optional(),
+    updatedAt: timestamp.optional(),
+  })
+  .refine(rule => rule.endDate === null || rule.endDate >= rule.startDate, {
+    error: 'must not end before it starts',
+    path: ['endDate'],
+  });
 
 const budgetSchema = z.object({
   amount,
@@ -140,6 +227,11 @@ const exportDataSchema = z.object({
   // v5. Older files have neither; the planner always creates the default account.
   accounts: z.array(accountSchema).default([]),
   incomes: z.array(incomeSchema).default([]),
+  // v6. Older files have neither.
+  transfers: z.array(transferSchema).default([]),
+  checkpoints: z.array(checkpointSchema).default([]),
+  // v6 (P9). Older files have none.
+  recurring: z.array(recurringRuleSchema).default([]),
 });
 
 const exportEnvelopeSchema = z.object({

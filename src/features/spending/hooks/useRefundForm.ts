@@ -18,6 +18,8 @@ import {appendErrorLog} from '../../../platform/errorLog';
 import {useDialog} from '../../../ui/context/DialogContext';
 import {useFormatAmount} from '../../../ui/hooks/useFormatAmount';
 import type {RefundData} from '../../../domain/types';
+import {getExpenseAccountId} from '../../../data/services/expenseService';
+import {useEntryAccount} from '../../../ui/hooks/useEntryAccount';
 
 /**
  * State and save for "Got money back" on one expense (R12). `refundId` edits
@@ -63,6 +65,23 @@ export const useRefundForm = (expense: ExpenseWithCategory, refundId?: string) =
   }, [expense.id, refundId]);
 
   const editing = refunds?.find(r => r.id === refundId);
+  // Pro's account row: a refund starts on its expense's account (the service's own default) and
+  // keeps its own when edited; another account is sent only when the user picks one.
+  const [expenseAccountId, setExpenseAccountId] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    getExpenseAccountId(expense.id)
+      .then(id => {
+        if (live) {
+          setExpenseAccountId(id);
+        }
+      })
+      .catch((error: unknown) => appendErrorLog(error, false));
+    return () => {
+      live = false;
+    };
+  }, [expense.id]);
+  const account = useEntryAccount(editing?.accountId ?? expenseAccountId);
   const others = useMemo(() => (refunds ?? []).filter(r => r.id !== refundId), [refunds, refundId]);
   const remainder = refundableRemainder(expense.amount, netSpent(others, []));
 
@@ -105,9 +124,9 @@ export const useRefundForm = (expense: ExpenseWithCategory, refundId?: string) =
     setSaving(true);
     try {
       if (editing) {
-        await updateRefund(editing.id, {amount: value, date, note: note.trim()});
+        await updateRefund(editing.id, {amount: value, date, note: note.trim(), accountId: account.chosen});
       } else {
-        await createRefund(expense.id, {amount: value, date, note: note.trim()});
+        await createRefund(expense.id, {amount: value, date, note: note.trim(), accountId: account.chosen});
       }
     } catch (error) {
       if (!(error instanceof RefundRuleError)) {
@@ -119,7 +138,7 @@ export const useRefundForm = (expense: ExpenseWithCategory, refundId?: string) =
     }
     setSaving(false);
     goBack();
-  }, [isValid, saving, editing, value, date, note, expense.id, showAlert, messageFor]);
+  }, [isValid, saving, editing, value, date, note, account.chosen, expense.id, showAlert, messageFor]);
 
   const remove = useCallback(async () => {
     if (!editing) {
@@ -143,6 +162,7 @@ export const useRefundForm = (expense: ExpenseWithCategory, refundId?: string) =
   }, [editing, showDialog, showAlert, t, formatAmount]);
 
   return {
+    account,
     loaded: refunds !== null,
     editing: Boolean(editing),
     remainder,

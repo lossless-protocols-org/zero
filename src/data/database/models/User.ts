@@ -1,5 +1,5 @@
 import {Model, Query} from '@nozbe/watermelondb';
-import {text, children, date, readonly} from '@nozbe/watermelondb/decorators';
+import {text, children, date, field, readonly} from '@nozbe/watermelondb/decorators';
 import type {Category} from './Category';
 import type {Expense} from './Expense';
 import type {Debtor} from './Debtor';
@@ -23,6 +23,8 @@ export class User extends Model {
   @text('email') email!: string;
   @readonly @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
+  /** v6 (P11): the day of the month the user's month starts on, 1 to 28; null is the 1st. */
+  @field('month_start_day') monthStartDay!: number | null;
 
   @children('categories') categories!: Query<Category>;
   @children('expenses') expenses!: Query<Expense>;

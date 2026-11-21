@@ -5,6 +5,8 @@ import {getIncomesByMonth} from '../../data/services/incomeService';
 import {selectUserId} from './userIdSlice';
 import {sumAmounts} from '../../domain/money';
 import type {IncomeData} from '../../domain/types';
+import {currentPeriodFor} from '../../pro/monthStart';
+import {monthStartChanged} from '../monthStartChanged';
 
 /**
  * Money in by month (schema v5), read by Home's money-in line, Reports and
@@ -22,7 +24,7 @@ export const fetchIncomesByMonth = createAsyncThunk<IncomeData[], string, {state
   'income/fetchByMonth',
   async (yearMonth, {getState, rejectWithValue}) => {
     try {
-      return await getIncomesByMonth(selectUserId(getState()), yearMonth);
+      return await getIncomesByMonth(selectUserId(getState()), currentPeriodFor(yearMonth));
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch money in');
     }
@@ -43,7 +45,9 @@ const incomeDataSlice = createSlice({
       })
       .addCase(fetchIncomesByMonth.rejected, (state, action) => {
         settleMonth(state, action.meta.arg, action.meta.requestId, NO_INCOMES);
-      });
+      })
+      // P11: months start on another day now; every slot was read for the old one.
+      .addCase(monthStartChanged, () => initialState);
   },
 });
 

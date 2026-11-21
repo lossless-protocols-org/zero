@@ -25,8 +25,8 @@ interface CategoryDonutProps {
    */
   transactions: ReadonlyArray<{amount: number; category?: CategoryRef}>;
   categoryBudgets: Readonly<Record<string, {amount: number}>>;
-  /** YYYY-MM, for the category drill-down. */
-  yearMonth: string;
+  /** YYYY-MM, for the category drill-down. Without it (a picked range, P11) a category does not open. */
+  yearMonth?: string;
 }
 
 /** Spend per category as a donut with a legend; slices can be hidden and opened. */
@@ -105,7 +105,9 @@ export const CategoryDonut: React.FC<CategoryDonutProps> = ({transactions, categ
 
   const handleCategoryPress = useCallback(
     (categoryId: string) => {
-      navigate('CategoryTransactionScreen', {categoryId, yearMonth});
+      if (yearMonth !== undefined) {
+        navigate('CategoryTransactionScreen', {categoryId, yearMonth});
+      }
     },
     [yearMonth],
   );
@@ -126,7 +128,7 @@ export const CategoryDonut: React.FC<CategoryDonutProps> = ({transactions, categ
         excludedKeys={excludedKeys}
         onToggleExclude={toggleExcluded}
         categoryBudgets={categoryBudgets}
-        onCategoryPress={handleCategoryPress}
+        onCategoryPress={yearMonth === undefined ? undefined : handleCategoryPress}
       />
       {donutData.back.map(item => (
         <Amount weight="medium" key={item.key} size={12} color={colors.secondaryText} style={gs.mt6}>

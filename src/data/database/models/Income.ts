@@ -15,6 +15,8 @@ export class Income extends Model {
   @text('user_id') userId!: string;
   @text('category_id') categoryId!: string;
   @text('account_id') accountId!: string;
+  /** v6 (P9): the recurring rule this row was made from; null when entered by hand. */
+  @text('recurring_id') recurringId!: string | null;
   @field('amount') amount!: number;
   @text('date') date!: string;
   @text('note') note!: string;

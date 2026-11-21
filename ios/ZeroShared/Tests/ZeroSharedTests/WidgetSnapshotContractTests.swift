@@ -145,4 +145,61 @@ final class WidgetSnapshotContractTests: XCTestCase {
     XCTAssertEqual(WidgetSnapshot.monthName(Fixtures.at(2026, 12, 1), languageTag: "fr-FR", Fixtures.calendar), "Décembre")
     XCTAssertEqual(WidgetSnapshot.monthName(Fixtures.at(2026, 12, 1), languageTag: "pt-BR", Fixtures.calendar), "Dezembro")
   }
+
+  // 3.0 (P11): months that start on the user's salary day.
+
+  func testADateBelongsToTheMonthThatStartedOnOrBeforeIt() {
+    let c = Fixtures.calendar
+    XCTAssertEqual(WidgetSnapshot.periodKey(Fixtures.at(2026, 11, 6), startDay: 7, c), "2026-10")
+    XCTAssertEqual(WidgetSnapshot.periodKey(Fixtures.at(2026, 11, 7), startDay: 7, c), "2026-11")
+    XCTAssertEqual(WidgetSnapshot.periodKey(Fixtures.at(2026, 1, 3), startDay: 7, c), "2025-12")
+    XCTAssertEqual(WidgetSnapshot.periodKey(Fixtures.at(2026, 3, 27), startDay: 28, c), "2026-02")
+    XCTAssertEqual(WidgetSnapshot.periodKey(Fixtures.at(2026, 11, 1), startDay: 1, c), "2026-11")
+    // The same rule on a stored day's text (an entry made outside the app).
+    XCTAssertEqual(WidgetSnapshot.periodKey(ofDay: "2026-12-06T09:00:00", startDay: 7), "2026-11")
+    XCTAssertEqual(WidgetSnapshot.periodKey(ofDay: "2026-12-07", startDay: 7), "2026-12")
+    XCTAssertEqual(WidgetSnapshot.periodKey(ofDay: "2026-01-03", startDay: 7), "2025-12")
+  }
+
+  func testWithAStartDayTheMonthRunsToTheDayBeforeTheNextOne() throws {
+    let s = try snapshot("salaryDay")
+    XCTAssertEqual(s.startDay, 7)
+    XCTAssertEqual(s.monthLabel, "7 Nov – 6 Dec")
+    // 1 December is still this month: only today's figure resets.
+    let later = try XCTUnwrap(s.asOf(Fixtures.at(2026, 12, 1, 0), Fixtures.calendar))
+    XCTAssertEqual(later.monthKey, "2026-11")
+    XCTAssertEqual(later.spentMonth, "₹45,029")
+    XCTAssertEqual(later.spentToday, "₹0")
+    XCTAssertNotNil(later.budget)
+    let lastDay = try XCTUnwrap(s.asOf(Fixtures.at(2026, 12, 6, 23), Fixtures.calendar))
+    XCTAssertEqual(lastDay.monthKey, "2026-11")
+  }
+
+  func testTheMonthRollsOverOnTheStartDayNamedByItsDays() throws {
+    let s = try XCTUnwrap(try snapshot("salaryDay").asOf(Fixtures.at(2026, 12, 7, 0), Fixtures.calendar))
+    XCTAssertEqual(s.monthKey, "2026-12")
+    XCTAssertEqual(s.monthLabel, "7 Dec – 6 Jan")
+    XCTAssertEqual(s.spentMonth, "₹0")
+    XCTAssertNil(s.budget)
+    XCTAssertNil(s.incomeLine)
+  }
+
+  func testASnapshotWithoutAStartDayOrWithOneNoMonthIsSureToHaveStartsOnTheFirst() throws {
+    XCTAssertEqual(try snapshot("ready").startDay, 1)
+    var bad = try snapshot("salaryDay")
+    bad.monthStartDay = 31
+    XCTAssertEqual(bad.startDay, 1)
+    bad.monthStartDay = nil
+    XCTAssertEqual(bad.startDay, 1)
+  }
+
+  func testAnEntryMadeOutsideTheAppCountsInTheMonthItsDayBelongsTo() throws {
+    let s = try snapshot("salaryDay")
+    let now = Fixtures.at(2026, 11, 8, 13)
+    // 6 November is last month's (7 Oct to 6 Nov): the month figure does not move.
+    let before = PendingEntry(id: "a", kind: .expense, amount: 100, categoryId: "cat_food", title: "Tea", date: "2026-11-06T10:00:00")
+    XCTAssertEqual(s.applying(before, sign: 1, now: now, Fixtures.calendar).spentMonth, "₹45,029")
+    let inside = PendingEntry(id: "b", kind: .expense, amount: 100, categoryId: "cat_food", title: "Tea", date: "2026-11-08T10:00:00")
+    XCTAssertEqual(s.applying(inside, sign: 1, now: now, Fixtures.calendar).spentMonth, "₹45,129")
+  }
 }

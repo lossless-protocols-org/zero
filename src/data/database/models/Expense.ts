@@ -20,6 +20,8 @@ export class Expense extends Model {
   @text('date') date!: string;
   /** v5: the account it was paid from; the user's default account in 2.8. */
   @text('account_id') accountId!: string;
+  /** v6 (P9): the recurring rule this row was made from; null when entered by hand. */
+  @text('recurring_id') recurringId!: string | null;
   @readonly @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 

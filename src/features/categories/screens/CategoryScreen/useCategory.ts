@@ -3,7 +3,6 @@ import {useThemeColors} from '../../../../ui/hooks/useThemeColors';
 import {
   fetchCategories,
   selectActiveCategories,
-  selectActiveIncomeCategories,
   selectCategoryData,
   selectIncomeCategories,
 } from '../../../../store/slices/categoryDataSlice';
@@ -17,6 +16,7 @@ import type {CategoryKind} from '../../../../domain/types';
 import {useDialog} from '../../../../ui/context/DialogContext';
 import {useTranslation} from 'react-i18next';
 import {appendErrorLog} from '../../../../platform/errorLog';
+import {useIncomeCategories} from '../../../../ui/hooks/useIncomeCategories';
 
 export const useCategory = () => {
   const colors = useThemeColors();
@@ -24,7 +24,9 @@ export const useCategory = () => {
   const {showDialog, showAlert} = useDialog();
   const {t} = useTranslation();
   const categories = useAppSelector(selectActiveCategories);
-  const incomeCategories = useAppSelector(selectActiveIncomeCategories);
+  // The income tab lists what this tier shows: one category without Pro (src/pro/projection.ts).
+  const incomeView = useIncomeCategories();
+  const incomeCategories = incomeView.listed;
   // Every category of each kind, archived ones included: the stored order covers them all.
   const allExpense = useAppSelector(selectCategoryData);
   const allIncome = useAppSelector(selectIncomeCategories);
@@ -49,6 +51,12 @@ export const useCategory = () => {
 
   const handleDelete = useCallback(
     async (categoryId: string) => {
+      // Without Pro the listed income category is the only one there is to the user, whatever a
+      // restored backup holds unlisted: it cannot go, exactly as the last one cannot.
+      if (!incomeView.complete && incomeView.listed.some(category => category.id === categoryId)) {
+        await showAlert({type: 'info', message: t('categories.lastIncomeCategory')});
+        return;
+      }
       // Soft delete keeps historical expenses intact, but there is no in-app way
       // to bring a category back — so confirm before removing it.
       const confirmed = await showDialog({
@@ -70,7 +78,7 @@ export const useCategory = () => {
       }
       // A success shows through the session's category follower (store/followSession).
     },
-    [showAlert, showDialog, t],
+    [incomeView, showAlert, showDialog, t],
   );
 
   /** Move up, down or to the top among the visible (active) categories of its kind. */

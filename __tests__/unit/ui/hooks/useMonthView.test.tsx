@@ -14,10 +14,17 @@ import {setMonthSelection} from '../../../../src/store/slices/monthSelectionSlic
 import {createRefund} from '../../../../src/data/services/refundService';
 import {createIncome} from '../../../../src/data/services/incomeService';
 import {useMonthView} from '../../../../src/ui/hooks/useMonthView';
+import {useMonthNavigation} from '../../../../src/ui/hooks/useMonthNavigation';
 import * as services from '../../../harness/services';
 import {renderHookInApp} from '../../../harness/render';
+import {monthStartChanged} from '../../../../src/store/monthStartChanged';
+import {setStoredMonthStartDay} from '../../../../src/pro/monthStart';
+import {setEntitlement} from '../../../harness/mocks/entitlement';
 
 jest.mock('react-i18next', () => require('../../../harness/mocks/reactI18next'));
+jest.mock('../../../../src/pro/entitlementStore', () =>
+  require('../../../harness/mocks/entitlement').entitlementStoreMock(),
+);
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   ...require('../../../harness/mocks/focusEffect'),
@@ -71,4 +78,85 @@ it('steps a month at a time, across a year, but never into the future', async ()
   await act(() => view.current.month.select(10, 2026));
   await act(() => view.current.month.shift(1));
   expect(view.current.month.yearMonth).toBe('2026-11');
+});
+
+// 3.0 (P11): months that start on the user's salary day (Pro).
+describe('with months starting on the 20th', () => {
+  beforeAll(() => {
+    setEntitlement({state: 'lifetime'});
+    setStoredMonthStartDay(20);
+  });
+  afterAll(() => {
+    setStoredMonthStartDay(1);
+    setEntitlement();
+  });
+
+  it('on the 15th "this month" is still the one that began on 20 October, named by its days', async () => {
+    store.dispatch(monthStartChanged(NOW));
+    const view = await renderHookInApp(() => useMonthView());
+    await act(() => Promise.resolve());
+    expect(view.result.current.month).toMatchObject({
+      yearMonth: '2026-10',
+      period: {start: '2026-10-20', next: '2026-11-20'},
+      days: 31,
+      isCurrent: true,
+      canGoForward: false,
+    });
+    expect(view.result.current.month.label).toMatch(/20.*19/);
+    // Shoes (20 Oct) less its refund (21 Oct), and today's chai; groceries on the 2nd are the month before.
+    expect(view.result.current.totals).toMatchObject({spent: 1520, count: 2, today: 20, refunded: 500});
+    // The October budget is this month's (it is named by the month it starts in): day 27 of 31.
+    expect(view.result.current.budget).toMatchObject({amount: 4000, exceeded: false, left: 2480});
+  });
+
+  it('the month before holds what was dated before the 20th, and can step forward', async () => {
+    store.dispatch(monthStartChanged(NOW));
+    const view = await renderHookInApp(() => useMonthView());
+    await act(() => view.result.current.month.shift(-1));
+    await act(() => Promise.resolve());
+    expect(view.result.current.month).toMatchObject({yearMonth: '2026-09', isCurrent: false, canGoForward: true});
+    expect(view.result.current.totals).toMatchObject({spent: 3000, count: 1, received: 40_000});
+    // Never past the month today is in.
+    await act(() => view.result.current.month.shift(1));
+    await act(() => view.result.current.month.shift(1));
+    expect(view.result.current.month.yearMonth).toBe('2026-10');
+  });
+
+  it('when Pro ends the same screen shows the calendar month again', async () => {
+    store.dispatch(monthStartChanged(NOW));
+    const view = await renderHookInApp(() => useMonthView());
+    await act(() => Promise.resolve());
+    await act(async () => {
+      setEntitlement({state: 'expired'});
+      store.dispatch(monthStartChanged(NOW));
+    });
+    await act(() => Promise.resolve());
+    expect(view.result.current.month).toMatchObject({
+      yearMonth: '2026-11',
+      period: {start: '2026-11-01', next: '2026-12-01'},
+      days: 30,
+    });
+    expect(view.result.current.totals).toMatchObject({spent: 20, count: 1});
+    setEntitlement({state: 'lifetime'});
+  });
+});
+
+// The Money tab keeps a month of its own; nothing in the store resets it (review 2026-11-12).
+it('a selection of its own goes back to today’s month when the start day changes', async () => {
+  const view = await renderHookInApp(() => useMonthNavigation({shared: false}));
+  expect(view.result.current).toMatchObject({yearMonth: '2026-11', isCurrentMonth: true});
+  await act(async () => {
+    setEntitlement({state: 'lifetime'});
+    setStoredMonthStartDay(20);
+  });
+  // On the 15th, with months starting on the 20th, '2026-11' would be days that have not come.
+  expect(view.result.current).toMatchObject({yearMonth: '2026-10', isCurrentMonth: true, canGoForward: false});
+  // A month picked on purpose is also reset: its key names other days now.
+  await act(() => view.result.current.shiftMonth(-1));
+  expect(view.result.current.yearMonth).toBe('2026-09');
+  await act(async () => {
+    setStoredMonthStartDay(1);
+  });
+  expect(view.result.current).toMatchObject({yearMonth: '2026-11', isCurrentMonth: true});
+  await act(async () => setEntitlement());
 });

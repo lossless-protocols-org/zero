@@ -1,10 +1,49 @@
 import {schemaMigrations, createTable, addColumns, unsafeExecuteSql} from '@nozbe/watermelondb/Schema/migrations';
-import {EXPENSES_TITLE_KEY_INDEX_SQL, EXPENSES_USER_DATE_INDEX_SQL, STATUS_INDEXES_SQL} from './indexes';
+import {
+  EXPENSES_ACCOUNT_DATE_INDEX_SQL,
+  EXPENSES_TITLE_KEY_INDEX_SQL,
+  EXPENSES_USER_DATE_INDEX_SQL,
+  INCOMES_ACCOUNT_DATE_INDEX_SQL,
+  REFUNDS_ACCOUNT_DATE_INDEX_SQL,
+  STATUS_INDEXES_SQL,
+} from './indexes';
 import {TIMESTAMP_COLUMNS, V5_TABLES} from './v5Tables';
+import {
+  ACCOUNT_KIND_COLUMN,
+  DEBTS_ACCOUNT_COLUMN,
+  MONTH_START_DAY_COLUMN,
+  RECURRING_ID_COLUMN,
+  V6_TABLES,
+} from './v6Tables';
 import {V5_BACKFILL_SQL} from './v5Backfill';
 
 export const migrations = schemaMigrations({
   migrations: [
+    {
+      // 3.0: additive only (ZERO_SYSTEM_DESIGN.md §10.2). Two new tables, one optional column
+      // (existing debts get null: "no account"), indexes. No row is rewritten, so there is no
+      // backfill to get wrong and nothing a retry could double.
+      //
+      // OPEN until the 3.0 release build: the 3.0 phases that add a table or column (P9, P11,
+      // P13) append their steps here, so 3.0 ships one schema version. Never append to it once a
+      // build that ran it has reached anyone outside development; a later change is toVersion 7.
+      // A development install that ran an earlier v6 is reinstalled, not migrated.
+      toVersion: 6,
+      steps: [
+        ...V6_TABLES.map(table => createTable(table)),
+        addColumns({table: 'debts', columns: [DEBTS_ACCOUNT_COLUMN]}),
+        // P9: the rule a row was made from (transfers have it from their own create above).
+        addColumns({table: 'expenses', columns: [RECURRING_ID_COLUMN]}),
+        addColumns({table: 'incomes', columns: [RECURRING_ID_COLUMN]}),
+        // P11: the day the user's month starts on (existing users get null: the 1st).
+        addColumns({table: 'users', columns: [MONTH_START_DAY_COLUMN]}),
+        // Held and owed (A2): the user's own label for an account (existing accounts get null).
+        addColumns({table: 'accounts', columns: [ACCOUNT_KIND_COLUMN]}),
+        unsafeExecuteSql(
+          EXPENSES_ACCOUNT_DATE_INDEX_SQL + INCOMES_ACCOUNT_DATE_INDEX_SQL + REFUNDS_ACCOUNT_DATE_INDEX_SQL,
+        ),
+      ],
+    },
     {
       // 2.8: the last migration that rewrites rows (ZERO_SYSTEM_DESIGN.md §10).
       // New tables, new columns, then ONE idempotent SQL string that creates

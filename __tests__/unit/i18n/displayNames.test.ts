@@ -7,11 +7,13 @@
 import {i18n} from '../../../src/i18n';
 import {
   SETTLEMENT_DESCRIPTION,
+  displayAccountName,
   displayCategoryName,
   displayDebtAccountName,
   displayDebtDescription,
   displayUserName,
 } from '../../../src/i18n/displayNames';
+import {DEFAULT_ACCOUNT_NAME} from '../../../src/data/database/defaultAccount';
 
 const TEST_LANGUAGE = 'xx';
 
@@ -21,6 +23,7 @@ beforeAll(async () => {
     defaultDebtAccounts: {creditCard: 'Kreditkarte', other: 'Andere'},
     common: {unknown: 'Unbekannt', defaultUserName: 'Nutzer'},
     debts: {settlementDescription: 'Ausgeglichen'},
+    accounts: {cash: 'Bargeld'},
   });
   await i18n.changeLanguage(TEST_LANGUAGE);
 });
@@ -73,5 +76,15 @@ describe('displayDebtDescription', () => {
     expect(SETTLEMENT_DESCRIPTION).toBe('Settled up');
     expect(displayDebtDescription(SETTLEMENT_DESCRIPTION, t)).toBe('Ausgeglichen');
     expect(displayDebtDescription('Dinner', t)).toBe('Dinner');
+  });
+});
+
+describe('displayAccountName', () => {
+  it('translates the default account and a restored Unknown, and keeps the user’s own names', () => {
+    // i18n sits below data, so it repeats the stored name: this keeps the two in step.
+    expect(displayAccountName(DEFAULT_ACCOUNT_NAME, t)).toBe('Bargeld');
+    expect(displayAccountName('Unknown', t)).toBe('Unbekannt');
+    expect(displayAccountName('HDFC', t)).toBe('HDFC');
+    expect(displayAccountName('cash', t)).toBe('cash');
   });
 });

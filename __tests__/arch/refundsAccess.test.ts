@@ -21,6 +21,13 @@ const ALLOWED = new Set([
   'src/data/services/importService.ts', // restore
   'src/data/services/deleteService.ts', // counts
   'src/data/services/tableChanges.ts', // watches it for writes; reads nothing
+  // 3.0: a refund is money into its account. Positions read it per account, never to net spending.
+  'src/data/services/netWorthService.ts',
+  'src/data/services/positionSums.ts', // the same balance read, summed in SQLite or (in jest) in JS
+  // P12: several months' netting in one read, by periodSummaryService's rule (trendsService.test.ts holds them equal).
+  'src/data/services/trendsService.ts',
+  // 3.0: removing Pro data moves refunds on other accounts to the default (law L9).
+  'src/data/services/accountsFold.ts',
 ]);
 
 const walk = (dir: string, out: string[] = []): string[] => {

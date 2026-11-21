@@ -5,8 +5,17 @@ import {Icon} from './Icons';
 import type {IconName} from './IconRegistry';
 import {gs} from '../globalStyles';
 
-const ACTION_WIDTH = 50;
-const EDGE_INSET = 16;
+/** The circle a swipe reveals. */
+const SWIPE_ACTION_CIRCLE = 40;
+/** Space between the circle and the swiped row. */
+const SWIPE_ACTION_GAP = 8;
+/**
+ * How far a row slides open, on every list. The circle's outer edge sits on
+ * the row's resting edge and the gap faces the row; the side margin of an
+ * edge-to-edge list belongs to the swipe container (SwipeableRow), never here.
+ * @internal Exported so a test pins the one geometry every list shares.
+ */
+export const SWIPE_ACTION_SLOT_WIDTH = SWIPE_ACTION_CIRCLE + SWIPE_ACTION_GAP;
 
 /** The edit or delete circle a swipe reveals behind a row (SwipeableRow). */
 export const SwipeAction = memo(
@@ -18,7 +27,6 @@ export const SwipeAction = memo(
     side,
     onPress,
     accessibilityLabel,
-    edgeToEdge = false,
     armed,
   }: {
     /** False until the row starts opening: then only the empty, fixed-width slot exists. */
@@ -30,14 +38,11 @@ export const SwipeAction = memo(
     side: 'left' | 'right';
     onPress: () => void;
     accessibilityLabel: string;
-    edgeToEdge?: boolean;
   }) => {
     const animatedStyle = useAnimatedStyle(() => ({
       opacity: interpolate(progress.value, [0, 0.6, 1], [0, 0.8, 1]),
       transform: [{scale: interpolate(progress.value, [0, 1], [0.6, 1])}],
     }));
-
-    const extraPadding = edgeToEdge ? EDGE_INSET : 0;
 
     return (
       <TouchableOpacity
@@ -52,8 +57,8 @@ export const SwipeAction = memo(
         style={[
           gs.center,
           gs.flex1,
-          {width: ACTION_WIDTH + extraPadding},
-          side === 'left' ? {paddingLeft: extraPadding} : {paddingRight: extraPadding},
+          {width: SWIPE_ACTION_SLOT_WIDTH},
+          side === 'left' ? {paddingRight: SWIPE_ACTION_GAP} : {paddingLeft: SWIPE_ACTION_GAP},
         ]}>
         {armed ? (
           <Animated.View style={[gs.size40, gs.roundedFull, gs.center, animatedStyle, {backgroundColor}]}>

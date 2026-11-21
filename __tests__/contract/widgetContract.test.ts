@@ -43,6 +43,7 @@ const text: Text = {
 const figures: Figures = {
   monthKey: '2026-11',
   todayKey: '2026-11-06',
+  monthStartDay: 1,
   monthLabel: 'November',
   locale: 'en-IN',
   spentMonth: 45_029,
@@ -66,6 +67,11 @@ const contract = {
   hidden: buildWidgetSnapshot({...figures, hideAmounts: true}, text),
   underBudget: buildWidgetSnapshot({...figures, spentMonth: 7_500, received: 0, quick: []}, text),
   setup: setupSnapshot('en-IN', 1_793_980_000_000),
+  // 3.0 (P11): months that start on the 7th. '2026-11' is 7 Nov to 6 Dec; the 8th is its second day.
+  salaryDay: buildWidgetSnapshot(
+    {...figures, monthStartDay: 7, monthLabel: '7 Nov – 6 Dec', todayKey: '2026-11-08'},
+    text,
+  ),
 };
 
 it('the JS snapshot builder writes exactly the pinned contract the Kotlin reader is tested against', () => {

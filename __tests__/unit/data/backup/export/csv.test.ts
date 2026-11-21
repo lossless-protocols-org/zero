@@ -173,3 +173,56 @@ describe('entriesToCsv: refunds and incomes (export v5)', () => {
     ).toEqual(['expense', 'income', 'refund']);
   });
 });
+
+describe('entriesToCsv: accounts (3.0)', () => {
+  const account = (name: string, isDefault = false) => ({
+    name,
+    type: 'bank',
+    currency: 'INR',
+    openingBalance: 0,
+    openingDate: null,
+    isDefault,
+    accountStatus: true,
+    sortOrder: 0,
+    icon: '',
+    color: '',
+  });
+
+  it('with one account there is no Account column: 2.8’s file exactly', () => {
+    const csv = entriesToCsv({expenses: [expense({})], incomes: [], accounts: [account('Cash', true)]});
+    expect(lines(csv)[0]).toBe('Date,Title,Description,Category,Amount,Type');
+  });
+
+  it('with several, each row names its account last: the default when omitted, a refund its expense’s unless it names one', () => {
+    const csv = entriesToCsv({
+      expenses: [
+        expense({
+          title: 'Shoes',
+          amount: 3000,
+          account: 'Amex',
+          refunds: [
+            {amount: 1000, date: '2026-07-16T12:00:00', note: ''},
+            {amount: 500, date: '2026-07-17T12:00:00', note: '', account: 'HDFC'},
+          ],
+        }),
+      ],
+      incomes: [{amount: 50000, date: '2026-07-18', category: {name: 'Salary'}, note: ''}],
+      accounts: [account('Cash', true), account('Amex'), account('=HDFC')],
+    });
+    expect(lines(csv)[0]).toBe('Date,Title,Description,Category,Amount,Type,Account');
+    expect(
+      lines(csv)
+        .slice(1, 5)
+        .map(line => line.split(',').pop()),
+    ).toEqual(['Amex', 'Amex', 'HDFC', 'Cash']);
+  });
+
+  it('an account name is text a spreadsheet must not run', () => {
+    const csv = entriesToCsv({
+      expenses: [expense({account: '=HYPERLINK("x")'})],
+      incomes: [],
+      accounts: [account('Cash', true), account('=HYPERLINK("x")')],
+    });
+    expect(lines(csv)[1]).toContain(`"'=HYPERLINK(""x"")"`);
+  });
+});

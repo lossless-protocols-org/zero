@@ -14,6 +14,9 @@ const makeMinimalData = (overrides: Partial<ExportData> = {}): ExportData => ({
   budgets: [],
   accounts: [],
   incomes: [],
+  transfers: [],
+  checkpoints: [],
+  recurring: [],
   ...overrides,
 });
 
@@ -25,7 +28,7 @@ const withoutBudgets = ({
   debtors,
   debts,
   currencies,
-}: ExportData): Omit<ExportData, 'budgets' | 'accounts' | 'incomes'> => ({
+}: ExportData): Omit<ExportData, 'budgets' | 'accounts' | 'incomes' | 'transfers' | 'checkpoints' | 'recurring'> => ({
   users,
   categories,
   expenses,
@@ -101,6 +104,36 @@ describe('upgradeExportData', () => {
     });
 
     expect(result.budgets).toEqual(budgets);
+  });
+});
+
+describe('v5 → v6 (3.0)', () => {
+  it('a v5 file gains empty transfers and checkpoints, and its debts touch no account', () => {
+    // A v5 file has no transfers or checkpoints key at all.
+    const v5: Partial<ExportData> = makeMinimalData({
+      debts: [{amount: 5, description: 'Lunch', debtor: {title: 'Rohit'}, date: '2026-11-05', type: 'Lend'}],
+    });
+    delete v5.transfers;
+    delete v5.checkpoints;
+    delete v5.recurring;
+    // The upgrader's input allows exactly these lists to be missing; the rest are set above.
+    const upgraded = upgradeExportData({
+      key: 'k',
+      version: 5,
+      data: v5 as Parameters<typeof upgradeExportData>[0]['data'],
+    });
+    expect(upgraded.transfers).toEqual([]);
+    expect(upgraded.checkpoints).toEqual([]);
+    expect(upgraded.recurring).toEqual([]);
+    expect(upgraded.debts.map(debt => debt.account)).toEqual([undefined]);
+  });
+
+  it('a v6 file’s rows pass through untouched', () => {
+    const data = makeMinimalData({
+      transfers: [{fromAccount: 'Cash', toAccount: 'Savings', amount: 1, date: '2026-11-06', note: ''}],
+      checkpoints: [{account: 'Card', balance: -1, date: '2026-11-08', gap: 0, kind: 'revaluation', note: ''}],
+    });
+    expect(upgradeExportData({key: 'k', version: 6, data})).toEqual(data);
   });
 });
 

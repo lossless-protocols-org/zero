@@ -46,3 +46,13 @@ export const normalizeAmountInput = (text: string, maxDecimals?: number): string
   }
   return head + tail;
 };
+
+/**
+ * The same, for a field that may hold an amount below zero (an account's
+ * balance): one leading minus is kept, typed as '-' or '−'.
+ */
+export const normalizeSignedAmountInput = (text: string, maxDecimals?: number): string => {
+  const trimmed = text.trimStart();
+  const negative = trimmed.startsWith('-') || trimmed.startsWith('−');
+  return (negative ? '-' : '') + normalizeAmountInput(trimmed, maxDecimals);
+};

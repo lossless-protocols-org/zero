@@ -84,6 +84,9 @@ struct WidgetSnapshot: Codable, Equatable {
   var locale: String
   var monthKey: String
   var todayKey: String
+  /// The day of the month the user's month starts on, 1 to 28 (3.0, P11). Absent in a
+  /// snapshot written before 3.0. Read through `startDay`, never directly.
+  var monthStartDay: Int?
   var monthLabel: String
   var spentMonth: String
   var spentToday: String
@@ -103,6 +106,13 @@ struct WidgetSnapshot: Codable, Equatable {
   var preview: Preview
 
   var ready: Bool { state == "ready" }
+
+  /// The day months start on: the snapshot's when it is 1 to 28, else the 1st.
+  /// `monthKey` names the month a period starts in: with 7, "2026-11" is 7 Nov to 6 Dec.
+  var startDay: Int {
+    guard let day = monthStartDay, (1...28).contains(day) else { return 1 }
+    return day
+  }
 
   static func parse(_ json: String?) -> WidgetSnapshot? {
     guard let data = json?.data(using: .utf8),
@@ -151,6 +161,45 @@ struct WidgetSnapshot: Codable, Equatable {
     return name.prefix(1).uppercased(with: Locale(identifier: languageTag)) + name.dropFirst()
   }
 
+  /// The key of the month `date` falls in when months start on `startDay`: its calendar
+  /// month, or the one before while the day is still before the start day (src/domain/period.ts).
+  static func periodKey(_ date: Date, startDay: Int, _ calendar: Calendar = .current) -> String {
+    let c = calendar.dateComponents([.year, .month, .day], from: date)
+    guard (c.day ?? 1) < startDay else { return monthKey(date, calendar) }
+    let index = (c.year ?? 0) * 12 + (c.month ?? 1) - 2
+    return String(format: "%04d-%02d", index / 12, index % 12 + 1)
+  }
+
+  /// The key of the month a stored day ('YYYY-MM-DD…') falls in, by the same rule, on the text alone.
+  static func periodKey(ofDay day: String, startDay: Int) -> String {
+    let parts = day.prefix(10).split(separator: "-").compactMap { Int($0) }
+    guard parts.count == 3 else { return String(day.prefix(7)) }
+    guard parts[2] < startDay else { return String(day.prefix(7)) }
+    let index = parts[0] * 12 + parts[1] - 2
+    return String(format: "%04d-%02d", index / 12, index % 12 + 1)
+  }
+
+  /// What a month is called on the widget: its name when months start on the 1st, else its
+  /// first and last day ("7 Nov – 6 Dec"), as the app's own label reads.
+  static func monthLabel(
+    _ monthKey: String, startDay: Int, languageTag: String, _ calendar: Calendar = .current
+  ) -> String {
+    let parts = monthKey.split(separator: "-").compactMap { Int($0) }
+    guard parts.count == 2,
+      let first = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: startDay))
+    else { return monthKey }
+    guard startDay != 1 else { return monthName(first, languageTag: languageTag, calendar) }
+    guard let next = calendar.date(byAdding: .month, value: 1, to: first),
+      let last = calendar.date(byAdding: .day, value: -1, to: next)
+    else { return monthKey }
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: languageTag)
+    formatter.calendar = calendar
+    formatter.timeZone = calendar.timeZone
+    formatter.setLocalizedDateFormatFromTemplate("dMMM")
+    return "\(formatter.string(from: first)) – \(formatter.string(from: last))"
+  }
+
   /// The snapshot as it reads at `now` (same rules as the Android reader):
   /// figures belong to the day and month they were computed for, so once the
   /// date has moved on, today reads zero, and in a new month the month does
@@ -159,7 +208,7 @@ struct WidgetSnapshot: Codable, Equatable {
   /// nothing here is known to be true, the widget says "Open zero".
   func asOf(_ now: Date, _ calendar: Calendar = .current) -> WidgetSnapshot? {
     guard ready else { return self }
-    let month = Self.monthKey(now, calendar)
+    let month = Self.periodKey(now, startDay: startDay, calendar)
     let today = Self.dayKey(now, calendar)
     if monthKey == month && todayKey == today { return self }
     if today < todayKey { return nil }
@@ -170,7 +219,7 @@ struct WidgetSnapshot: Codable, Equatable {
     next.live?.spentToday = 0
     if monthKey != month {
       next.monthKey = month
-      next.monthLabel = Self.monthName(now, languageTag: locale, calendar)
+      next.monthLabel = Self.monthLabel(month, startDay: startDay, languageTag: locale, calendar)
       next.spentMonth = zero
       next.budget = nil
       next.incomeLine = nil
@@ -196,7 +245,8 @@ struct WidgetSnapshot: Codable, Equatable {
   func applying(_ entry: PendingEntry, sign: Decimal, now: Date, _ calendar: Calendar = .current) -> WidgetSnapshot {
     guard var next = asOf(now, calendar), var live = next.live else { return self }
     let amount = Decimal.shortest(entry.amount) * sign
-    let entryMonth = String(entry.date.prefix(7))
+    // The month the entry belongs to, as the month start day cuts it (P11).
+    let entryMonth = Self.periodKey(ofDay: entry.date, startDay: startDay)
     let entryDay = String(entry.date.prefix(10))
     guard entryMonth == next.monthKey else { return next }
     switch entry.kind {

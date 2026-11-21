@@ -11,10 +11,16 @@ import {Budget} from '../database/models/Budget';
 import {Account} from '../database/models/Account';
 import {Refund} from '../database/models/Refund';
 import {Income} from '../database/models/Income';
+import {Transfer} from '../database/models/Transfer';
+import {RecurringRule} from '../database/models/RecurringRule';
+import {nextRunOf} from '../../domain/recurrence';
+import {Checkpoint} from '../database/models/Checkpoint';
 import {MODEL_CLASSES} from '../database/models/modelClasses';
 import {defaultAccountId} from '../database/defaultAccount';
 import {buildImportPlan, categoryKey, type ImportStats} from '../backup/import/planner';
 import {sanitizeString} from '../../domain/sanitize';
+import {ACCOUNT_KIND_MAX, cleanAccountKind} from '../../domain/accounts';
+import {toMonthStartDay} from '../../domain/period';
 import type {ExportData} from '../backup/export/format';
 import {appendErrorLog} from '../../platform/errorLog';
 import {DEFAULT_USER_NAME} from '../../i18n/displayNames';
@@ -75,7 +81,7 @@ export const importAllData = async (
 ): Promise<ImportResult> => {
   await yieldToUi();
   const plan = buildImportPlan(data);
-  const {username, email} = data.users[0];
+  const {username, email, monthStartDay} = data.users[0];
   const userId = nanoid(24);
 
   await database.write(async () => {
@@ -92,6 +98,8 @@ export const importAllData = async (
       user._raw.id = userId;
       user.username = sanitizeString(username, DEFAULT_USER_NAME);
       user.email = sanitizeString(email, '');
+      // P11: kept whoever restores it (L7); whether it applies is Pro's to say, on read.
+      user.monthStartDay = monthStartDay === undefined ? null : toMonthStartDay(monthStartDay);
     });
 
     await yieldToUi();
@@ -159,6 +167,7 @@ export const importAllData = async (
         account.sortOrder = planned.sortOrder;
         account.icon = planned.icon;
         account.color = planned.color;
+        account.kind = planned.kind ? cleanAccountKind(planned.kind).slice(0, ACCOUNT_KIND_MAX) : null;
       });
     });
 
@@ -175,6 +184,44 @@ export const importAllData = async (
       }
       return id;
     };
+    // P9: rules first, so each made row can take its rule's new id.
+    const ruleIdByRef = new Map<string, string>();
+    const newRules = plan.recurring.map(planned => {
+      const id = nanoid(24);
+      ruleIdByRef.set(planned.ref, id);
+      const recurrence = {
+        cadence: planned.cadence,
+        interval: planned.interval,
+        startDate: planned.startDate,
+        endDate: planned.endDate,
+      };
+      return database.get<RecurringRule>('recurring_rules').prepareCreate(rule => {
+        rule._raw.id = id;
+        rule.userId = userId;
+        rule.target = planned.target;
+        rule.title = planned.title;
+        rule.categoryId =
+          planned.categoryName === null || planned.target === 'transfer'
+            ? ''
+            : idFor(categoryIdByKey, categoryKey(planned.target, planned.categoryName), 'category');
+        rule.accountId = idFor(accountIdByName, planned.accountName, 'account');
+        rule.toAccountId =
+          planned.toAccountName === null ? null : idFor(accountIdByName, planned.toAccountName, 'account');
+        rule.amount = planned.amount;
+        rule.cadence = planned.cadence;
+        rule.interval = planned.interval;
+        rule.startDate = planned.startDate;
+        rule.endDate = planned.endDate;
+        rule.nextIndex = planned.nextIndex;
+        // Worked out, not carried: the rule's own schedule says when it runs next.
+        rule.nextRun = nextRunOf(recurrence, planned.nextIndex);
+        rule.remindDaysBefore = planned.remindDaysBefore;
+        rule.ruleStatus = planned.active;
+        keepTimestamps(rule, planned);
+      });
+    });
+    const ruleIdFor = (ref: string | null): string | null => (ref === null ? null : (ruleIdByRef.get(ref) ?? null));
+
     // Refunds are prepared with their expenses: each needs its expense's new id.
     const newExpenses = plan.expenses.map(planned =>
       database.get<Expense>('expenses').prepareCreate(expense => {
@@ -185,6 +232,7 @@ export const importAllData = async (
         expense.userId = userId;
         expense.date = planned.date;
         expense.accountId = idFor(accountIdByName, planned.accountName, 'account');
+        expense.recurringId = ruleIdFor(planned.recurringRef);
         keepTimestamps(expense, planned);
       }),
     );
@@ -195,7 +243,8 @@ export const importAllData = async (
         database.get<Refund>('refunds').prepareCreate(r => {
           r.userId = userId;
           r.expenseId = parent.id;
-          r.accountId = parent.accountId;
+          r.accountId =
+            refund.accountName === null ? parent.accountId : idFor(accountIdByName, refund.accountName, 'account');
           r.amount = refund.amount;
           r.date = refund.date;
           r.note = refund.note;
@@ -213,6 +262,7 @@ export const importAllData = async (
         income.amount = planned.amount;
         income.date = planned.date;
         income.note = planned.note;
+        income.recurringId = ruleIdFor(planned.recurringRef);
         keepTimestamps(income, planned);
       }),
     );
@@ -227,7 +277,33 @@ export const importAllData = async (
         debt.userId = userId;
         debt.date = planned.date;
         debt.type = planned.type;
+        debt.accountId = planned.accountName === null ? null : idFor(accountIdByName, planned.accountName, 'account');
         keepTimestamps(debt, planned);
+      }),
+    );
+    // Positions between the user's own accounts (v6) travel with the debts on the progress list.
+    const newTransfers = plan.transfers.map(planned =>
+      database.get<Transfer>('transfers').prepareCreate(transfer => {
+        transfer.userId = userId;
+        transfer.fromAccountId = idFor(accountIdByName, planned.fromAccountName, 'account');
+        transfer.toAccountId = idFor(accountIdByName, planned.toAccountName, 'account');
+        transfer.amount = planned.amount;
+        transfer.date = planned.date;
+        transfer.note = planned.note;
+        transfer.recurringId = ruleIdFor(planned.recurringRef);
+        keepTimestamps(transfer, planned);
+      }),
+    );
+    const newCheckpoints = plan.checkpoints.map(planned =>
+      database.get<Checkpoint>('checkpoints').prepareCreate(checkpoint => {
+        checkpoint.userId = userId;
+        checkpoint.accountId = idFor(accountIdByName, planned.accountName, 'account');
+        checkpoint.balance = planned.balance;
+        checkpoint.date = planned.date;
+        checkpoint.gap = planned.gap;
+        checkpoint.kind = planned.kind;
+        checkpoint.note = planned.note;
+        keepTimestamps(checkpoint, planned);
       }),
     );
 
@@ -266,6 +342,9 @@ export const importAllData = async (
       ...newRefunds,
       ...newIncomes,
       ...newDebts,
+      ...newTransfers,
+      ...newCheckpoints,
+      ...newRules,
       ...newBudgets,
     ]);
   });

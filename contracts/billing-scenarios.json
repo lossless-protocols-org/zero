@@ -1,0 +1,1545 @@
+{
+  "about": "Store facts and what they mean, read by every side of the billing contract (3.0). Each platform turns its own store facts into the same answer shape (src/pro/schema.ts StoreAnswer); the app then decides the entitlement from the answer alone (src/pro/entitlement.ts). Swift maps ios.facts to ios.answer (ios/ZeroBilling); Kotlin maps android.facts to android.answer (android/app/src/play, PlayAnswer). The JS test checks each answer is well-formed and reduces, from a phone that never had Pro, to `entitlement`, and from a phone that had Pro to `whenProBefore`: `lifetime` is a phone showing the lifetime purchase, `renewingMonthly` one showing a renewing monthly subscription. On iOS that subscription's stored period ended a day before `nowMs` (so the offline allowance is in play); on Android no end date is ever stored, because Google Play's client reports none. The two stores differ where a scenario says so: on the App Store every ending leaves a transaction, so an empty store cannot say; on Google Play a purchase that ended is simply no longer returned, so an empty answer is an answer.",
+  "nowMs": 1800000000000,
+  "products": {
+    "ios": {
+      "subscription": [
+        "zero_pro_monthly"
+      ],
+      "lifetime": [
+        "zero_pro_lifetime",
+        "zero_pro_lifetime_thanks"
+      ]
+    },
+    "android": {
+      "subscription": [
+        "zero_pro"
+      ],
+      "lifetime": [
+        "zero_pro_lifetime",
+        "zero_pro_lifetime_thanks"
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "name": "nothing owned",
+      "ios": {
+        "facts": [],
+        "answer": {
+          "kind": "unknown",
+          "reason": "noTransactions"
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "lifetime owned",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "lifetime",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "lifetime"
+      }
+    },
+    {
+      "name": "the thank-you lifetime owned",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime_thanks",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime_thanks",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "lifetime",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "lifetime"
+      }
+    },
+    {
+      "name": "lifetime refunded",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "verified": true,
+            "entitled": false,
+            "revoked": true,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "revoked",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "revoked",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "revoked",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "lifetime the store could not verify",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "verified": false,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": false
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "why": "reported as it is, marked unverified: it grants nothing, and it takes nothing away from someone who had Pro",
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "a lifetime transaction the store does not list as an entitlement",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "verified": true,
+            "entitled": false,
+            "revoked": false,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": false
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "why": "only the store's own entitlement list makes a product owned; a transaction alone does not",
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "monthly in its free trial",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": true,
+            "renewalState": "subscribed",
+            "willAutoRenew": true,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "trial",
+              "expiresAtMs": 1801728000000,
+              "willRenew": true,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "trial",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "trial",
+        "renewingMonthly": "trial"
+      }
+    },
+    {
+      "name": "monthly paid and renewing",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": false,
+            "renewalState": "subscribed",
+            "willAutoRenew": true,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "active",
+              "expiresAtMs": 1801728000000,
+              "willRenew": true,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "subscribed",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "subscribed",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "monthly paid, renewal switched off",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": false,
+            "renewalState": "subscribed",
+            "willAutoRenew": false,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "active",
+              "expiresAtMs": 1801728000000,
+              "willRenew": false,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "subscribed",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "subscribed",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "monthly in the billing grace period",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": 1799913600000,
+            "freeTrial": false,
+            "renewalState": "inGracePeriod",
+            "willAutoRenew": true,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "grace",
+              "expiresAtMs": 1799913600000,
+              "willRenew": true,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "grace",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "grace",
+        "renewingMonthly": "grace"
+      }
+    },
+    {
+      "name": "monthly in billing retry, grace over",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": false,
+            "revoked": false,
+            "expiresAtMs": 1799913600000,
+            "freeTrial": false,
+            "renewalState": "inBillingRetryPeriod",
+            "willAutoRenew": true,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "onHold",
+              "expiresAtMs": 1799913600000,
+              "willRenew": true,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "onHold",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "revoked",
+        "renewingMonthly": "onHold"
+      }
+    },
+    {
+      "name": "monthly expired",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": false,
+            "revoked": false,
+            "expiresAtMs": 1799913600000,
+            "freeTrial": false,
+            "renewalState": "expired",
+            "willAutoRenew": false,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "expired",
+              "expiresAtMs": 1799913600000,
+              "willRenew": false,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "expired",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "revoked",
+        "renewingMonthly": "expired"
+      }
+    },
+    {
+      "name": "monthly refunded",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": false,
+            "revoked": true,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": false,
+            "renewalState": "revoked",
+            "willAutoRenew": false,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "revoked",
+              "expiresAtMs": 1801728000000,
+              "willRenew": false,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "revoked",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "revoked",
+        "renewingMonthly": "revoked"
+      }
+    },
+    {
+      "name": "a trial that was refunded reads as refunded, not as a trial",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": false,
+            "revoked": true,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": true,
+            "renewalState": "subscribed",
+            "willAutoRenew": true,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "revoked",
+              "expiresAtMs": 1801728000000,
+              "willRenew": true,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "revoked",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "revoked",
+        "renewingMonthly": "revoked"
+      }
+    },
+    {
+      "name": "a status that says subscribed while the store lists no entitlement",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": false,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": false,
+            "renewalState": "subscribed",
+            "willAutoRenew": true,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "active",
+              "expiresAtMs": 1801728000000,
+              "willRenew": true,
+              "verified": false
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "why": "the two sources disagree: not reported as owned, and not reported as ended either",
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "lifetime purchase waiting for approval",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "verified": true,
+            "entitled": false,
+            "revoked": false,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "pending",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "pending",
+        "alsoSubscribed": false
+      },
+      "why": "Ask to Buy or a bank approval: paid for but not cleared, so Pro stays off",
+      "whenProBefore": {
+        "lifetime": "pending",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "a purchase that was waiting and has gone through",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          },
+          {
+            "productId": "zero_pro_lifetime",
+            "verified": true,
+            "entitled": false,
+            "revoked": false,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "lifetime",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "lifetime"
+      }
+    },
+    {
+      "name": "a subscriber who also bought lifetime",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": false,
+            "renewalState": "subscribed",
+            "willAutoRenew": true,
+            "pending": false
+          },
+          {
+            "productId": "zero_pro_lifetime",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "active",
+              "expiresAtMs": 1801728000000,
+              "willRenew": true,
+              "verified": true
+            },
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "lifetime",
+        "alsoSubscribed": true
+      },
+      "why": "the store does not link the two: the subscription keeps renewing until the user cancels it",
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "lifetime"
+      }
+    },
+    {
+      "name": "renewal information the store could not verify",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": false,
+            "renewalState": "subscribed",
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "active",
+              "expiresAtMs": 1801728000000,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "subscribed",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "subscribed",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "no status to be had, still listed as an entitlement",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "active",
+              "expiresAtMs": 1801728000000,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "subscribed",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "subscribed",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "no status to be had, a trial still listed as an entitlement",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": true,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "trial",
+              "expiresAtMs": 1801728000000,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "trial",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "trial",
+        "renewingMonthly": "trial"
+      }
+    },
+    {
+      "name": "no status to be had, no longer listed as an entitlement",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": false,
+            "revoked": false,
+            "expiresAtMs": 1799913600000,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "expired",
+              "expiresAtMs": 1799913600000,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "expired",
+        "alsoSubscribed": false
+      },
+      "why": "offline past the cached end: the app keeps a renewing subscriber on for its offline allowance",
+      "whenProBefore": {
+        "lifetime": "revoked",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "a renewal state this build does not know, still listed as an entitlement, beside a lifetime purchase",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": false,
+            "renewalState": "unrecognised(7)",
+            "willAutoRenew": true,
+            "pending": false
+          },
+          {
+            "productId": "zero_pro_lifetime",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "active",
+              "expiresAtMs": 1801728000000,
+              "willRenew": true,
+              "verified": true
+            },
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "lifetime",
+        "alsoSubscribed": true
+      },
+      "why": "guessing would be wrong for somebody, so the whole answer is \"cannot say\" and nothing changes",
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "lifetime"
+      }
+    },
+    {
+      "name": "a renewal state this build does not know, not listed as an entitlement",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": false,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": false,
+            "renewalState": "unrecognised(7)",
+            "willAutoRenew": true,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "expired",
+              "expiresAtMs": 1801728000000,
+              "willRenew": true,
+              "verified": false
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "a product zero does not sell is ignored",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_gold",
+            "verified": true,
+            "entitled": true,
+            "revoked": false,
+            "expiresAtMs": 1801728000000,
+            "freeTrial": false,
+            "renewalState": "subscribed",
+            "willAutoRenew": true,
+            "pending": false
+          }
+        ],
+        "answer": {
+          "kind": "unknown",
+          "reason": "noTransactions"
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "bought again after it ran out, waiting for approval",
+      "ios": {
+        "facts": [
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": false,
+            "revoked": false,
+            "expiresAtMs": 1799913600000,
+            "freeTrial": false,
+            "renewalState": "expired",
+            "willAutoRenew": false,
+            "pending": false
+          },
+          {
+            "productId": "zero_pro_monthly",
+            "verified": true,
+            "entitled": false,
+            "revoked": false,
+            "expiresAtMs": null,
+            "freeTrial": false,
+            "renewalState": null,
+            "willAutoRenew": null,
+            "pending": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_monthly",
+              "status": "expired",
+              "expiresAtMs": 1799913600000,
+              "willRenew": false,
+              "verified": true
+            },
+            {
+              "productId": "zero_pro_monthly",
+              "status": "pending",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "pending",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "pending",
+        "renewingMonthly": "pending"
+      }
+    },
+    {
+      "name": "play: nothing returned",
+      "android": {
+        "facts": [],
+        "answer": {
+          "kind": "known",
+          "entitlements": []
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "revoked",
+        "renewingMonthly": "expired"
+      }
+    },
+    {
+      "name": "play: lifetime owned",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "lifetime",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "lifetime"
+      }
+    },
+    {
+      "name": "play: the thank-you lifetime owned",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime_thanks",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime_thanks",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "lifetime",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "lifetime"
+      }
+    },
+    {
+      "name": "play: a lifetime purchase Play's signature does not cover",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": false
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "play: lifetime paid for but not cleared",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "purchaseState": "pending",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "pending",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "pending",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "pending",
+        "renewingMonthly": "pending"
+      }
+    },
+    {
+      "name": "play: a cleared purchase beside the same one still marked as waiting",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": true
+          },
+          {
+            "productId": "zero_pro_lifetime",
+            "purchaseState": "pending",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "lifetime",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "lifetime"
+      }
+    },
+    {
+      "name": "play: subscription active and renewing (a trial and a grace period look the same)",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": true,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": true,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "subscribed",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "subscribed",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "play: subscription cancelled, period not over",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": false,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "subscribed",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "subscribed",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "play: subscription suspended (paused, or on hold after a failed payment)",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro",
+            "purchaseState": "purchased",
+            "suspended": true,
+            "autoRenewing": true,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro",
+              "status": "onHold",
+              "expiresAtMs": null,
+              "willRenew": true,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "onHold",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "revoked",
+        "renewingMonthly": "onHold"
+      }
+    },
+    {
+      "name": "play: a subscription Play's signature does not cover",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": true,
+            "verified": false
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": true,
+              "verified": false
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "play: a subscriber who also bought lifetime",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": true,
+            "verified": true
+          },
+          {
+            "productId": "zero_pro_lifetime",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": true,
+              "verified": true
+            },
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "lifetime",
+        "alsoSubscribed": true
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "lifetime"
+      }
+    },
+    {
+      "name": "play: a lifetime owner whose subscription is cancelled",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": true
+          },
+          {
+            "productId": "zero_pro_lifetime",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": false,
+              "verified": true
+            },
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": true
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "lifetime",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "lifetime"
+      }
+    },
+    {
+      "name": "play: a purchase state this build does not know",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro_lifetime",
+            "purchaseState": "unspecified",
+            "suspended": false,
+            "autoRenewing": false,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": [
+            {
+              "productId": "zero_pro_lifetime",
+              "status": "active",
+              "expiresAtMs": null,
+              "willRenew": null,
+              "verified": false
+            }
+          ]
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "lifetime",
+        "renewingMonthly": "subscribed"
+      }
+    },
+    {
+      "name": "play: a product zero does not sell is ignored",
+      "android": {
+        "facts": [
+          {
+            "productId": "zero_pro_gold",
+            "purchaseState": "purchased",
+            "suspended": false,
+            "autoRenewing": true,
+            "verified": true
+          }
+        ],
+        "answer": {
+          "kind": "known",
+          "entitlements": []
+        }
+      },
+      "entitlement": {
+        "state": "none",
+        "alsoSubscribed": false
+      },
+      "whenProBefore": {
+        "lifetime": "revoked",
+        "renewingMonthly": "expired"
+      }
+    }
+  ]
+}

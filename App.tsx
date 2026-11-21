@@ -22,6 +22,10 @@ import './src/navigation/sheets';
 import './src/platform/globalErrorHandler';
 import {getReportMeta} from './src/platform/reportMeta';
 import {startWidgetPublisher} from './src/features/widgets/publish';
+import {startEntitlementSync} from './src/pro/entitlementSync';
+import {startRecurringProducers} from './src/pro/producers';
+import {startAutoBackup} from './src/pro/autoBackup';
+import {formatDisplayDate} from './src/platform/dateFormat';
 import {bootstrapSession} from './src/store/bootstrapSession';
 import {startSession} from './src/store/startSession';
 import {followSession} from './src/store/followSession';
@@ -196,6 +200,25 @@ const App = () => {
 
   // The home-screen widget follows the data from the moment the database is open.
   useEffect(() => (initState === 'ready' ? startWidgetPublisher() : undefined), [initState]);
+  // Who is paying follows the store from the same moment (3.0): at start, on every return to
+  // the foreground, and when the store reports a change. Without a store it changes nothing.
+  // Recurring entries and reminders (3.0) follow it too: registered before the first sync tells them.
+  useEffect(() => {
+    if (initState === 'ready') {
+      startRecurringProducers(({title, daysBefore, day}) => ({
+        title,
+        body:
+          daysBefore === 0
+            ? i18n.t('recurring.reminderToday')
+            : daysBefore === 1
+              ? i18n.t('recurring.reminderTomorrow')
+              : i18n.t('recurring.reminderOn', {date: formatDisplayDate(day, 'dayMonth')}),
+      }));
+      // The automatic backup (3.0, P10): follows the data and the app's state; its producer joins the rest.
+      startAutoBackup();
+      startEntitlementSync();
+    }
+  }, [initState]);
   // zero:// links (widget taps) only once onboarding is done: they must not skip it.
   const isOnboarded = usePreference(isOnboardedPreference);
   // The session (user, currency, categories) is (re)loaded every time the app

@@ -2,6 +2,7 @@ import {useCallback, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {TFunction} from 'i18next';
 import {useThemeColors} from '../../../../ui/hooks/useThemeColors';
+import {rerunProducers} from '../../../../pro/producers';
 import {countAllRecords, deleteAllData, type RecordCounts} from '../../../../data/services/deleteService';
 import {navigate} from '../../../../platform/navigationUtils';
 import {useDialog} from '../../../../ui/context/DialogContext';
@@ -21,17 +22,18 @@ const askAboutExistingRecords = async (
       ? 'delete'
       : 'cancel';
 
-  // Seeded categories and the currency row are not something the user entered.
-  const entered = counts.expenses + counts.refunds + counts.incomes + counts.debts + counts.debtors + counts.budgets;
-  if (entered === 0) {
+  // Seeded rows (the user, categories, currency, default account) are not something the user
+  // entered; everything else is, in every table, including ones added after this was written.
+  if (counts.entered === 0) {
     return 'delete';
   }
-  if (counts.users > 0) {
-    const hasTransactions = counts.expenses > 0;
+  const expenses = counts.byTable['expenses'] ?? 0;
+  if ((counts.byTable['users'] ?? 0) > 0) {
+    const hasTransactions = expenses > 0;
     const keep = await showDialog({
       type: 'info',
       message: hasTransactions
-        ? t('welcome.existingDataPrompt', {count: counts.expenses})
+        ? t('welcome.existingDataPrompt', {count: expenses})
         : t('welcome.existingRecordsPrompt'),
       okLabel: t('welcome.keepData'),
       cancelLabel: t('welcome.startFresh'),
@@ -40,9 +42,7 @@ const askAboutExistingRecords = async (
       return 'keep';
     }
     return confirmDelete(
-      hasTransactions
-        ? t('welcome.deleteExistingConfirm', {count: counts.expenses})
-        : t('welcome.deleteRecordsConfirm'),
+      hasTransactions ? t('welcome.deleteExistingConfirm', {count: expenses}) : t('welcome.deleteRecordsConfirm'),
     );
   }
   // No user row: Zero cannot show these records, so keeping is not on offer,
@@ -102,6 +102,8 @@ export const useWelcome = () => {
       if (counts.total > 0) {
         try {
           await deleteAllData();
+          // 3.0 (P9): no rule is left, so no reminder may stay pending.
+          await rerunProducers();
         } catch (error) {
           appendErrorLog(error, false);
           await showAlert({type: 'error', message: t('welcome.deleteFailed')});

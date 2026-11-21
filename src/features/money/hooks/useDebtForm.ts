@@ -3,6 +3,7 @@ import {useAppSelector} from '../../../store/hooks';
 import {selectUserId} from '../../../store/slices/userIdSlice';
 import {selectCurrencyCode} from '../../../store/slices/currencyDataSlice';
 import {createDebt, updateDebtById} from '../../../data/services/debtService';
+import {useDebtAccount} from '../../../ui/hooks/useDebtAccount';
 import type {DebtData} from '../../../domain/types';
 import {createAmountSchema, expenseSchema} from '../../../i18n/validationSchema';
 import {getISODateTime} from '../../../domain/dates';
@@ -22,6 +23,8 @@ export const useDebtForm = (debtorId: string, editing?: EditedDebt) => {
   const [debtAmount, setDebtAmount] = useState(editing ? String(editing.amount) : '');
   const [createdAt, setCreatedAt] = useState(editing?.date ?? getISODateTime());
   const [debtsType, setDebtsType] = useState(editing?.type ?? BORROW);
+  // Pro: the account the money moved through, or none (a new debt starts on none).
+  const account = useDebtAccount(editing?.accountId);
 
   const amountSchema = useMemo(() => createAmountSchema(currencyCode), [currencyCode]);
   const debtAmountError = hasInteracted ? amountSchema.issues(Number(debtAmount)) : [];
@@ -35,16 +38,29 @@ export const useDebtForm = (debtorId: string, editing?: EditedDebt) => {
     }
     try {
       if (editing) {
-        await updateDebtById(editing.id, Number(debtAmount), debtName, createdAt, debtsType);
+        await updateDebtById(editing.id, Number(debtAmount), debtName, createdAt, debtsType, account.chosen);
       } else {
-        await createDebt(userId, Number(debtAmount), debtName, debtorId, createdAt, debtsType);
+        await createDebt(userId, Number(debtAmount), debtName, debtorId, createdAt, debtsType, {
+          accountId: account.chosen ?? null,
+        });
       }
     } catch (error) {
       await reportSaveFailure(error);
       return;
     }
     goBack(); // the screen underneath reads its debts again on focus (useFreshWhileFocused)
-  }, [isValid, editing, userId, debtAmount, debtName, debtorId, createdAt, debtsType, reportSaveFailure]);
+  }, [
+    isValid,
+    editing,
+    userId,
+    debtAmount,
+    debtName,
+    debtorId,
+    createdAt,
+    debtsType,
+    account.chosen,
+    reportSaveFailure,
+  ]);
 
   // Gates validation errors until the user leaves the field (see ExpenseEntry).
   const handleAmountBlur = useCallback(() => {
@@ -52,6 +68,7 @@ export const useDebtForm = (debtorId: string, editing?: EditedDebt) => {
   }, []);
 
   return {
+    account,
     debtName,
     setDebtName,
     debtAmount,

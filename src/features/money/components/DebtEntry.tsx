@@ -16,6 +16,7 @@ import {PrimaryText} from '../../../ui/atoms/PrimaryText';
 import {gs} from '../../../ui/globalStyles';
 import {AmountInput} from '../../../ui/atoms/AmountInput';
 import {useDebtForm, type EditedDebt} from '../hooks/useDebtForm';
+import {AccountRow} from '../../../ui/molecules/AccountRow';
 
 interface DebtEntryProps {
   debtor: {debtorId: string; debtorName: string};
@@ -42,6 +43,7 @@ const DebtEntryComponent: React.FC<DebtEntryProps> = ({debtor, editing}) => {
     isValid,
     handleAmountBlur,
     save,
+    account,
   } = useDebtForm(debtor.debtorId, editing);
 
   return (
@@ -127,6 +129,8 @@ const DebtEntryComponent: React.FC<DebtEntryProps> = ({debtor, editing}) => {
             setCreatedAt={setCreatedAt}
             label={t('transaction.dateLabel')}
           />
+
+          <AccountRow {...account} />
         </View>
 
         <View style={gs.mb10p}>

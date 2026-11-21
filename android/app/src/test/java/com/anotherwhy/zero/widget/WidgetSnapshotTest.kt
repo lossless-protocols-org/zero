@@ -11,12 +11,19 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * The widget's reader (2.8). The JSON comes from the pinned contract that
  * __tests__/widgetContract.test.ts checks the JS writer against, so a format
- * change on either side fails one of the two suites.
+ * change on either side fails one of the two suites. Under Robolectric since
+ * 3.0 (P11): a month named by its days is formatted with Android's own
+ * locale patterns.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class WidgetSnapshotTest {
 
   private val contract: JSONObject by lazy {
@@ -159,5 +166,58 @@ class WidgetSnapshotTest {
   fun `month names follow the snapshot language`() {
     assertEquals("Décembre", WidgetSnapshot.monthName(at(2026, 12, 1), "fr-FR"))
     assertEquals("Dezembro", WidgetSnapshot.monthName(at(2026, 12, 1), "pt-BR"))
+  }
+
+  // 3.0 (P11): months that start on the user's salary day.
+
+  @Test
+  fun `a date belongs to the month that started on or before it`() {
+    assertEquals("2026-10", WidgetSnapshot.periodKeyOf(at(2026, 11, 6), 7))
+    assertEquals("2026-11", WidgetSnapshot.periodKeyOf(at(2026, 11, 7), 7))
+    assertEquals("2025-12", WidgetSnapshot.periodKeyOf(at(2026, 1, 3), 7))
+    assertEquals("2026-02", WidgetSnapshot.periodKeyOf(at(2026, 3, 27), 28))
+    assertEquals("2026-11", WidgetSnapshot.periodKeyOf(at(2026, 11, 1), 1))
+  }
+
+  @Test
+  fun `with a start day the month runs to the day before the next one`() {
+    val s = snapshot("salaryDay")
+    assertEquals(7, s.monthStartDay)
+    assertEquals("7 Nov – 6 Dec", s.monthLabel)
+    // 1 December is still this month: only today's figure resets.
+    val later = checkNotNull(s.asOf(at(2026, 12, 1, 0)))
+    assertEquals("2026-11", later.monthKey)
+    assertEquals("₹45,029", later.spentMonth)
+    assertEquals("₹0", later.spentToday)
+    assertNotNull(later.budget)
+    val lastDay = checkNotNull(s.asOf(at(2026, 12, 6, 23)))
+    assertEquals("2026-11", lastDay.monthKey)
+  }
+
+  @Test
+  fun `the month rolls over on the start day, named by its days`() {
+    val s = checkNotNull(snapshot("salaryDay").asOf(at(2026, 12, 7, 0)))
+    assertEquals("2026-12", s.monthKey)
+    assertEquals("7 Dec – 6 Jan", s.monthLabel)
+    assertEquals("₹0", s.spentMonth)
+    assertNull(s.budget)
+    assertNull(s.incomeLine)
+    assertEquals(7, s.monthStartDay)
+  }
+
+  @Test
+  fun `a snapshot without a start day, or with one no month is sure to have, starts on the 1st`() {
+    val old = JSONObject(contract.getJSONObject("ready").toString()).apply { remove("monthStartDay") }
+    assertEquals(1, checkNotNull(WidgetSnapshot.parse(old.toString())).monthStartDay)
+    val bad = JSONObject(contract.getJSONObject("salaryDay").toString()).put("monthStartDay", 31)
+    assertEquals(1, checkNotNull(WidgetSnapshot.parse(bad.toString())).monthStartDay)
+  }
+
+  @Test
+  fun `a month's label is its name from the 1st, its days otherwise, in the snapshot language`() {
+    val now = at(2026, 11, 20)
+    assertEquals("November", WidgetSnapshot.monthLabelFor("2026-11", 1, "en-IN", now))
+    assertEquals("28 Feb – 27 Mar", WidgetSnapshot.monthLabelFor("2026-02", 28, "en-IN", now))
+    assertEquals("15 Dec – 14 Jan", WidgetSnapshot.monthLabelFor("2026-12", 15, "en-IN", now))
   }
 }

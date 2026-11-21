@@ -71,8 +71,4 @@ export const selectActiveCategories = createSelector([selectCategoryData], categ
 /** Income categories, active and archived, in the user's order. */
 export const selectIncomeCategories = (state: RootState) => state.category.incomeCategories;
 
-export const selectActiveIncomeCategories = createSelector([selectIncomeCategories], categories =>
-  categories.filter(category => category.categoryStatus),
-);
-
 export const categoryReducer = categoryDataSlice.reducer;

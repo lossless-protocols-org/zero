@@ -33,6 +33,8 @@ module.exports = {
     './src/constants/': {lines: 100, statements: 100, branches: 100, functions: 100},
     './src/data/backup/': {lines: 98, statements: 98, branches: 82, functions: 100},
     './src/data/': {lines: 93, statements: 93, branches: 77, functions: 92},
+    // 3.0: who is paying is decided here and nowhere else; every line and branch is proved.
+    './src/pro/': {lines: 100, statements: 100, branches: 100, functions: 100},
     './src/platform/': {lines: 86, statements: 85, branches: 80, functions: 70},
     './src/i18n/': {lines: 100, statements: 93, branches: 94, functions: 87},
     './src/store/': {lines: 88, statements: 88, branches: 63, functions: 89},

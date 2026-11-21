@@ -3,7 +3,7 @@ import type {RootState} from './rootReducer';
 import type {AppDispatch} from './store';
 import {bootstrapSession} from './bootstrapSession';
 import {selectUserId} from './slices/userIdSlice';
-import {selectMonthIndex, selectYear} from './slices/monthSelectionSlice';
+import {followToday, selectMonthIndex, selectYear} from './slices/monthSelectionSlice';
 import {fetchExpensesByMonth} from './slices/expenseDataSlice';
 import {fetchBudgetsByMonth} from './slices/budgetDataSlice';
 import {fetchIncomesByMonth} from './slices/incomeDataSlice';
@@ -28,10 +28,13 @@ export const startSession = createAsyncThunk<void, void, {state: RootState; disp
   'session/start',
   async (_, {dispatch, getState}) => {
     await dispatch(bootstrapSession());
-    const state = getState();
-    if (!selectUserId(state)) {
+    if (!selectUserId(getState())) {
       return; // no user: bootstrapSession has surfaced why, and Home has nothing to load
     }
+    // The store began on the calendar month, before the user's month start day was known
+    // (bootstrapSession has just read it): move to the month today is really in (P11).
+    dispatch(followToday());
+    const state = getState();
     const yearMonth = toYearMonth(selectYear(state), selectMonthIndex(state));
     await Promise.all([
       dispatch(fetchExpensesByMonth(yearMonth)),

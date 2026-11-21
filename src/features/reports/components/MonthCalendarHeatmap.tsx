@@ -3,7 +3,8 @@ import {StyleSheet, TouchableOpacity, View} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {PrimaryText} from '../../../ui/atoms/PrimaryText';
 import {useThemeColors} from '../../../ui/hooks/useThemeColors';
-import {firstWeekdayOfMonth, isIsoDay, toDayKey, toYearMonth} from '../../../domain/dates';
+import {isIsoDay, parseDate, toDayKey} from '../../../domain/dates';
+import {daysOf, type Period} from '../../../domain/period';
 import {formatDisplayDate} from '../../../platform/dateFormat';
 import {fromMoneyUnits, toMoneyUnits} from '../../../domain/money';
 import {useFormatSpend} from '../../../ui/hooks/useFormatSpend';
@@ -15,10 +16,8 @@ import {gs} from '../../../ui/globalStyles';
 interface MonthCalendarHeatmapProps {
   /** Signed spend rows: refunds are negative (domain/periodMath.toSpendRows). */
   transactions: ReadonlyArray<{date: string; amount: number}>;
-  year: number;
-  /** 0-based, as the month selection stores it. */
-  monthIndex: number;
-  daysInMonth: number;
+  /** The days to draw: the month as the user's month start day cuts it (P11), or a picked range. */
+  period: Period;
   /** Weekday headers, already rotated to `weekStart`. */
   dayNames: readonly string[];
   weekStart: WeekStartDay;
@@ -26,12 +25,10 @@ interface MonthCalendarHeatmapProps {
 
 const LEGEND_OPACITIES = [0.1, 0.3, 0.5, 0.75, 1];
 
-/** The month as a grid shaded by each day's spend; a day opens its transactions. */
+/** The month (or range) as a grid shaded by each day's spend; a day opens its transactions. */
 export const MonthCalendarHeatmap: React.FC<MonthCalendarHeatmapProps> = ({
   transactions,
-  year,
-  monthIndex,
-  daysInMonth,
+  period,
   dayNames,
   weekStart,
 }) => {
@@ -52,19 +49,15 @@ export const MonthCalendarHeatmap: React.FC<MonthCalendarHeatmapProps> = ({
     return {totalsByDay: byDay, maxDayAmount: maxAmount};
   }, [transactions]);
 
-  const yearMonth = toYearMonth(year, monthIndex);
-
   // Each day's key, label and colours, once per month, data, theme and
   // language: they were computed for every cell on every render, a dayjs
   // format and a colour parse each (audit 2026-11-08 §8.3).
   const days = useMemo(() => {
-    const shadeOf = (amount: number): string => {
+    const opacityOf = (amount: number): number => {
       const ratio = maxDayAmount > 0 ? amount / maxDayAmount : 0;
-      const opacity = ratio >= 0.75 ? 1 : ratio >= 0.5 ? 0.75 : ratio >= 0.25 ? 0.5 : 0.3;
-      return hexToRgba(colors.accentGreen, opacity);
+      return ratio >= 0.75 ? 1 : ratio >= 0.5 ? 0.75 : ratio >= 0.25 ? 0.5 : 0.3;
     };
-    return Array.from({length: daysInMonth}, (_, i) => {
-      const dateKey = `${yearMonth}-${String(i + 1).padStart(2, '0')}`;
+    return daysOf(period).map(dateKey => {
       const total = totalsByDay.get(dateKey);
       const hasTransactions = total !== undefined;
       // A day whose refunds outweigh its spending (signed rows) shades as no spend.
@@ -72,25 +65,27 @@ export const MonthCalendarHeatmap: React.FC<MonthCalendarHeatmapProps> = ({
       const date = formatDisplayDate(dateKey, 'date');
       return {
         dateKey,
+        /** The day of its calendar month: a month from the 7th runs 7, 8 … 30, 1 … 6. */
+        number: Number(dateKey.slice(8, 10)),
         hasTransactions,
         shaded,
+        // The day's number is light only on the two darkest shades: on the pale ones white was
+        // unreadable (most of a month), so those keep the page's ink (UX revamp v2).
+        lightInk: shaded && opacityOf(total) >= 0.75,
         // VoiceOver read a bare "5" with no role (2.7.1 iOS pass): the date, and the day's spend when there is one.
         label: hasTransactions ? t('common.fieldValue', {field: date, value: formatSpend(total).text}) : date,
-        background: shaded ? shadeOf(total) : colors.secondaryAccent,
+        background: shaded ? hexToRgba(colors.accentGreen, opacityOf(total)) : colors.secondaryAccent,
         border: hasTransactions ? colors.accentGreen : colors.secondaryContainerColor,
       };
     });
     // `t` is also the language signal for formatDisplayDate's month names.
-  }, [daysInMonth, yearMonth, totalsByDay, maxDayAmount, colors, formatSpend, t]);
-  // Shifted by the week-start preference so day 1 lands under its header.
-  const blanks = leadingBlanks(firstWeekdayOfMonth(year, monthIndex), weekStart);
+  }, [period, totalsByDay, maxDayAmount, colors, formatSpend, t]);
+  // Shifted by the week-start preference so the first day lands under its header (0 = Sunday).
+  const blanks = leadingBlanks(parseDate(period.start).day(), weekStart);
 
   // Leading blanks, the days, then blanks to finish the last week: every row
   // holds exactly seven equal columns, so the grid fills any screen width.
-  const cells: Array<number | null> = [
-    ...Array.from({length: blanks}, () => null),
-    ...Array.from({length: daysInMonth}, (_, i) => i + 1),
-  ];
+  const cells: Array<number | null> = [...Array.from({length: blanks}, () => null), ...days.map((_, i) => i + 1)];
   while (cells.length % 7 !== 0) {
     cells.push(null);
   }
@@ -124,7 +119,7 @@ export const MonthCalendarHeatmap: React.FC<MonthCalendarHeatmapProps> = ({
               }
               const cell = days[day - 1];
               if (!cell) {
-                return null; // `day` runs 1…daysInMonth, the length of `days`
+                return null; // `day` runs 1 to the length of `days`
               }
               return (
                 <TouchableOpacity
@@ -148,9 +143,9 @@ export const MonthCalendarHeatmap: React.FC<MonthCalendarHeatmapProps> = ({
                   <PrimaryText
                     size={12}
                     weight={cell.hasTransactions ? 'semibold' : 'regular'}
-                    color={cell.shaded ? colors.buttonText : colors.primaryText}
+                    color={cell.lightInk ? colors.buttonText : colors.primaryText}
                     variant="number">
-                    {day}
+                    {cell.number}
                   </PrimaryText>
                 </TouchableOpacity>
               );

@@ -14,6 +14,7 @@ import {CustomInput} from '../../../../ui/atoms/CustomInput';
 import {AmountInput} from '../../../../ui/atoms/AmountInput';
 import {DatePicker} from '../../../../ui/atoms/DatePicker';
 import {RecordGate} from '../../../../ui/molecules/RecordGate';
+import {AccountRow} from '../../../../ui/molecules/AccountRow';
 import {useRecord} from '../../../../ui/hooks/useRecord';
 import {useRefundForm} from '../../hooks/useRefundForm';
 import {useThemeColors} from '../../../../ui/hooks/useThemeColors';
@@ -85,6 +86,8 @@ const RefundForm: React.FC<{expense: ExpenseWithCategory; refundId?: string}> = 
           minDate={new Date(`${toDayKey(expense.date)}T00:00:00`)}
           maxDate={new Date()}
         />
+
+        <AccountRow {...form.account} />
 
         <CustomInput
           colors={colors}

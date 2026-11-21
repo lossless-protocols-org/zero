@@ -5,6 +5,7 @@ import {useAppDispatch} from '../../../store/hooks';
 import {resetSession} from '../../../store/rootReducer';
 import {useDialog} from '../../../ui/context/DialogContext';
 import {retryMigrations} from '../../../data/startup';
+import {rerunProducers} from '../../../pro/producers';
 import {deleteAllData} from '../../../data/services/deleteService';
 import type {ExportOutcome} from '../../../data/backup/export/exportFiles';
 import {isOnboardedPreference} from '../../../platform/onboarding';
@@ -64,6 +65,8 @@ export const useDataActions = () => {
 
       try {
         await deleteAllData();
+        // 3.0 (P9): no rule is left, so no reminder may stay pending.
+        await rerunProducers();
       } catch (error) {
         // Never leave the user on a "deleted" screen with their data intact.
         appendErrorLog(error, false);

@@ -1,12 +1,17 @@
 import type {AppDispatch} from './store';
 import {fetchCategories} from './slices/categoryDataSlice';
 import {fetchCurrency} from './slices/currencyDataSlice';
+import {fetchUserData} from './slices/userIdSlice';
+import {monthStartChanged} from './monthStartChanged';
+import {subscribeMonthStartDay} from '../pro/monthStart';
 import {observeTables, type WatchedTable} from '../data/services/tableChanges';
 
 /** Session data, the table it comes from, and how to read it again. */
 const FOLLOWED: ReadonlyArray<{table: WatchedTable; read: (dispatch: AppDispatch) => unknown}> = [
   {table: 'categories', read: dispatch => dispatch(fetchCategories())},
   {table: 'currencies', read: dispatch => dispatch(fetchCurrency())},
+  // P11: the user row holds the day their month starts on; reading it again tells src/pro/monthStart.ts.
+  {table: 'users', read: dispatch => dispatch(fetchUserData())},
 ];
 
 /**
@@ -16,7 +21,8 @@ const FOLLOWED: ReadonlyArray<{table: WatchedTable; read: (dispatch: AppDispatch
  * 2026-11-08, Appendix A: "refresh-after-write is a manual contract"). Forms
  * no longer refetch them, and Settings no longer patches the currency into
  * the store by hand. Screen data (a month, a day, debts) is kept fresh by
- * the screen showing it (ui/hooks/useFreshWhileFocused).
+ * the screen showing it (ui/hooks/useFreshWhileFocused). The user row is
+ * followed for the day their month starts on (3.0, P11).
  *
  * Writes in the same tick are read once. Returns the function that stops.
  */
@@ -41,5 +47,9 @@ export const followSession = (dispatch: AppDispatch): (() => void) => {
       }
     };
   });
+  // P11: when the day months start on moves (a new day in Settings, or Pro turning on or off),
+  // every month in the store was read for the old boundaries: drop them and show today's month.
+  // The screens read again by themselves (useMonthView and the rest depend on the day).
+  stops.push(subscribeMonthStartDay(() => dispatch(monthStartChanged())));
   return () => stops.forEach(stop => stop());
 };

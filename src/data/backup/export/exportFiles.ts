@@ -111,24 +111,30 @@ const writeAndShareFile = async (
   }
 };
 
+/** The backup JSON, or why there is none. */
+export type BackupJson =
+  | {ok: true; json: string}
+  | {ok: false; reason: 'readFailed'}
+  | {ok: false; reason: 'noUser'}
+  | {ok: false; reason: 'invalid'; detail: string | undefined};
+
 /**
- * The JSON backup. `handleDeleteAllData` awaits this as its backup-before-
- * delete step and will NOT wipe unless it returns 'saved'.
+ * The backup file's text: the database read NOW, as one envelope, checked
+ * against the importer's own validator. The manual export and the automatic
+ * backup (3.0, P10) both write exactly this, so there is one backup format.
  *
- * Reads the database NOW rather than a redux snapshot: a budget set in the
- * sheet seconds earlier was missing from the file a snapshot produced (B8).
+ * Reads the database rather than a redux snapshot: a budget set in the sheet
+ * seconds earlier was missing from the file a snapshot produced (B8).
  */
-export const exportJson = async (deps: ExportDeps): Promise<ExportOutcome> => {
-  const dataToExport = await deps.getAllData();
+export const buildBackupJson = async (getAllData: ExportDeps['getAllData']): Promise<BackupJson> => {
+  const dataToExport = await getAllData();
   if (!dataToExport) {
-    await deps.handleExportResult(false);
-    return 'failed';
+    return {ok: false, reason: 'readFailed'};
   }
   if (dataToExport.users.length === 0) {
     // The validator would refuse this file at restore anyway; say why now.
     appendErrorLog(new Error('Export refused: no user row'), false);
-    await deps.handleExportResult(false, deps.noUserMessage);
-    return 'failed';
+    return {ok: false, reason: 'noUser'};
   }
   const envelope = {key: generateUniqueKey(), version: CURRENT_EXPORT_VERSION, data: dataToExport};
   // The file must restore. Raw rows (L4) bypass the model layer's coercions,
@@ -140,15 +146,40 @@ export const exportJson = async (deps: ExportDeps): Promise<ExportOutcome> => {
     // Rows that an older, laxer import accepted can sit in the database; the
     // user must be told WHICH one, or export and delete-all are both blocked
     // with no way out.
-    const detail = describeInvalidRow(dataToExport, validation.issuePath, validation.error);
-    await deps.handleExportResult(false, detail ? deps.invalidRowMessage(detail) : undefined);
-    return 'failed';
+    return {
+      ok: false,
+      reason: 'invalid',
+      detail: describeInvalidRow(dataToExport, validation.issuePath, validation.error),
+    };
   }
   // No pretty-printing (L4): indentation was ~45% of the file at 10k rows and
-  // the import never needed it.
-  return writeAndShareFile(deps, `zero_v${CURRENT_EXPORT_VERSION}_${getTimestamp()}.json`, () =>
-    JSON.stringify(envelope),
-  );
+  // the import never needed it. A throw here (out of memory) is a logged failure, never an escape.
+  try {
+    return {ok: true, json: JSON.stringify(envelope)};
+  } catch (error) {
+    appendErrorLog(error, false);
+    return {ok: false, reason: 'readFailed'};
+  }
+};
+
+/**
+ * The JSON backup. `handleDeleteAllData` awaits this as its backup-before-
+ * delete step and will NOT wipe unless it returns 'saved'.
+ */
+export const exportJson = async (deps: ExportDeps): Promise<ExportOutcome> => {
+  const built = await buildBackupJson(deps.getAllData);
+  if (!built.ok) {
+    await deps.handleExportResult(
+      false,
+      built.reason === 'noUser'
+        ? deps.noUserMessage
+        : built.reason === 'invalid' && built.detail
+          ? deps.invalidRowMessage(built.detail)
+          : undefined,
+    );
+    return 'failed';
+  }
+  return writeAndShareFile(deps, `zero_v${CURRENT_EXPORT_VERSION}_${getTimestamp()}.json`, () => built.json);
 };
 
 /** "expenses row 4712 (\"Petrol\", 2024-13-45), amount: must not be negative" when the row can be found. */

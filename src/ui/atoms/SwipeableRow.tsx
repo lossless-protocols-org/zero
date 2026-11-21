@@ -7,6 +7,7 @@ import {swipeActionsPreference} from '../../platform/swipeActions';
 import {usePreference} from '../hooks/usePreference';
 import {useRowActions, type RowExtraAction} from '../hooks/useRowActions';
 import {SwipeAction} from './SwipeAction';
+import {gs} from '../globalStyles';
 
 interface SwipeableRowProps {
   onEdit?: () => void;
@@ -31,6 +32,11 @@ interface SwipeableRowProps {
   };
   swipeRef?: React.RefObject<SwipeableMethods | null>;
   openSwipeableRef?: React.RefObject<{close: () => void} | null>;
+  /**
+   * The list runs to the screen edges, so the row brings its own 16 side
+   * margin. It goes on the swipe container, not the row content: the action
+   * slots then start at the row's resting edge, as on a padded screen.
+   */
   edgeToEdge?: boolean;
   /**
    * Identity of the row this instance shows. FlashList reuses a mounted row
@@ -110,11 +116,13 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = memo(
         children
       );
 
+    const sideMargin = edgeToEdge ? gs.mx16 : undefined;
+
     if (!swipeEnabled) {
       return (
         // Touch only: assistive tech uses the row's own actions, so this wrapper
         // must not become a second, unlabelled element around it.
-        <Pressable onLongPress={openMenu} delayLongPress={350} accessible={false}>
+        <Pressable onLongPress={openMenu} delayLongPress={350} accessible={false} style={sideMargin}>
           {content}
         </Pressable>
       );
@@ -134,6 +142,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = memo(
     return (
       <ReanimatedSwipeable
         ref={combinedRef}
+        containerStyle={sideMargin}
         renderLeftActions={
           onEdit
             ? (progress, _translation, swipeableMethods) => (
@@ -145,7 +154,6 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = memo(
                   side="left"
                   armed={actionsArmed}
                   accessibilityLabel={editLabel ?? t('common.edit')}
-                  edgeToEdge={edgeToEdge}
                   onPress={() => {
                     onEdit();
                     swipeableMethods.close();
@@ -165,7 +173,6 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = memo(
                   side="right"
                   armed={actionsArmed}
                   accessibilityLabel={deleteLabel ?? t('common.delete')}
-                  edgeToEdge={edgeToEdge}
                   onPress={() => {
                     onDelete();
                     swipeableMethods.close();

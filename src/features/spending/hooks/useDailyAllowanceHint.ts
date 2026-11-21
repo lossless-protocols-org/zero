@@ -4,7 +4,10 @@ import {selectUserId} from '../../../store/slices/userIdSlice';
 import {fetchBudgetsByMonth, selectCurrentBudget} from '../../../store/slices/budgetDataSlice';
 import {getAllowanceSpend} from '../../../data/services/periodSummaryService';
 import {computeDailyAllowance} from '../../../domain/budgetMath';
-import {formatDate, getDaysInMonthByYearMonth, toDayKey} from '../../../domain/dates';
+import {toDayKey} from '../../../domain/dates';
+import {dayNumberIn, daysIn, periodFor, periodHas, periodKeyOf} from '../../../domain/period';
+import {monthKeyNow} from '../../../pro/monthStart';
+import {useMonthStartDay} from '../../../ui/hooks/useMonthStartDay';
 import {fromMoneyUnits, toMoneyUnits} from '../../../domain/money';
 import {appendErrorLog} from '../../../platform/errorLog';
 
@@ -26,7 +29,10 @@ export const useDailyAllowanceHint = ({createdAt, amount, original}: DailyAllowa
   const userId = useAppSelector(selectUserId);
   // Once per date, not per keystroke in the amount: the day key (domain/dates, the app's one day rule) and its month.
   const expenseDateStr = useMemo(() => toDayKey(createdAt), [createdAt]);
-  const expenseYearMonth = expenseDateStr.slice(0, 7);
+  // The month the entry belongs to, as the user's month start day cuts it (P11), and its days.
+  const monthStartDay = useMonthStartDay();
+  const expenseYearMonth = periodKeyOf(expenseDateStr, monthStartDay);
+  const period = useMemo(() => periodFor(expenseYearMonth, monthStartDay), [expenseYearMonth, monthStartDay]);
   // Null until this month's budgets land: never the month another screen fetched.
   const currentBudget = useAppSelector(state => selectCurrentBudget(state, expenseYearMonth));
 
@@ -41,11 +47,11 @@ export const useDailyAllowanceHint = ({createdAt, amount, original}: DailyAllowa
   // running for a newly picked date, leaves no figure, and the hint shows
   // nothing: zero spent would have read as the whole daily budget "left
   // today", a confident wrong number (audit 2026-11-08 §3.12).
-  const readKey = `${userId}|${expenseYearMonth}|${expenseDateStr}`;
+  const readKey = `${userId}|${period.start}|${expenseDateStr}`;
   const [monthSpend, setMonthSpend] = useState<{key: string; daySpend: number; spentBeforeDay: number} | null>(null);
   useEffect(() => {
     let cancelled = false;
-    getAllowanceSpend(userId, expenseDateStr)
+    getAllowanceSpend(userId, period, expenseDateStr)
       .then(({spentOnDay, spentBeforeDay}) => {
         if (!cancelled) {
           setMonthSpend({key: readKey, daySpend: spentOnDay, spentBeforeDay});
@@ -61,7 +67,7 @@ export const useDailyAllowanceHint = ({createdAt, amount, original}: DailyAllowa
     return () => {
       cancelled = true;
     };
-  }, [readKey, userId, expenseYearMonth, expenseDateStr]);
+  }, [readKey, userId, period, expenseDateStr]);
 
   const originalAmount = original?.amount ?? 0;
   const originalDate = original?.date ?? '';
@@ -70,11 +76,12 @@ export const useDailyAllowanceHint = ({createdAt, amount, original}: DailyAllowa
       return null;
     }
 
-    const dayOfMonth = Number.parseInt(expenseDateStr.slice(8, 10), 10) || 1;
-    const daysInMonthCount = getDaysInMonthByYearMonth(expenseYearMonth);
+    // Counted from the month's first day, whichever day of the calendar that is.
+    const dayOfMonth = dayNumberIn(period, expenseDateStr);
+    const daysInMonthCount = daysIn(period);
     // The allowance adapts only when the entry's month is the real current
     // month — a backdated entry gets the plain monthly average.
-    const isEntryInCurrentMonth = expenseYearMonth === formatDate(new Date(), 'YYYY-MM');
+    const isEntryInCurrentMonth = expenseYearMonth === monthKeyNow();
 
     // When editing, the stored amount is inside the read spend only where the
     // stored row is: on the entry's day, or earlier in the same month. Take it
@@ -85,7 +92,7 @@ export const useDailyAllowanceHint = ({createdAt, amount, original}: DailyAllowa
     const originalUnits = toMoneyUnits(originalAmount);
     const onEntryDayUnits = originalDay === expenseDateStr ? originalUnits : 0;
     const beforeDayUnits =
-      originalDay.startsWith(`${expenseYearMonth}-`) && originalDay < expenseDateStr ? originalUnits : 0;
+      originalDay !== '' && periodHas(period, originalDay) && originalDay < expenseDateStr ? originalUnits : 0;
     const otherSpendTodayUnits = Math.max(toMoneyUnits(monthSpend.daySpend) - onEntryDayUnits, 0);
     const spentBefore = fromMoneyUnits(Math.max(toMoneyUnits(monthSpend.spentBeforeDay) - beforeDayUnits, 0));
 
@@ -102,5 +109,15 @@ export const useDailyAllowanceHint = ({createdAt, amount, original}: DailyAllowa
     const dailyRemaining = fromMoneyUnits(toMoneyUnits(allowance) - otherSpendTodayUnits - enteredUnits);
 
     return {dailyBudget: allowance, dailyRemaining, exceeded: dailyRemaining < 0};
-  }, [currentBudget, readKey, expenseYearMonth, expenseDateStr, monthSpend, amount, originalAmount, originalDate]);
+  }, [
+    currentBudget,
+    readKey,
+    expenseYearMonth,
+    period,
+    expenseDateStr,
+    monthSpend,
+    amount,
+    originalAmount,
+    originalDate,
+  ]);
 };

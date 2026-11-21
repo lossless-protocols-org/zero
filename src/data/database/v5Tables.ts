@@ -11,7 +11,7 @@ export const TIMESTAMP_COLUMNS: ColumnSchema[] = [
   {name: 'updated_at', type: 'number'},
 ];
 
-interface TableDefinition {
+export interface TableDefinition {
   name: string;
   columns: ColumnSchema[];
   unsafeSql?: (sql: string) => string;

@@ -7,6 +7,7 @@ import {displayCategoryName} from '../../../../i18n/displayNames';
 import {navigate} from '../../../../platform/navigationUtils';
 import {HeaderContainer} from '../../../../ui/molecules/HeaderContainer';
 import {useCategory} from './useCategory';
+import {useProFeature} from '../../../../ui/hooks/useProFeature';
 import {useSwipeTutorial} from '../../../../ui/hooks/useSwipeTutorial';
 import {SwipeTutorialTooltip} from '../../../../ui/atoms/SwipeTutorialTooltip';
 import {PrimaryView} from '../../../../ui/atoms/PrimaryView';
@@ -25,11 +26,15 @@ import {logRejection} from '../../../../platform/errorLog';
 import {ReorderList, type ReorderItem} from '../../components/ReorderList';
 import {CategoryRow} from '../../components/CategoryRow';
 import {ReorderToolbar} from '../../components/ReorderToolbar';
+import {AccountGroupList} from './AccountGroupList';
 
 /** A category with its place in its kind's list. */
 type ListItem = {key: string; category: Category; isFirst: boolean; isLast: boolean; canDelete: boolean};
 
 const keyExtractor = (item: ListItem): string => item.key;
+
+/** The two kinds of category, and with Pro the groups the accounts are in. */
+type Tab = CategoryKind | 'accounts';
 
 export const CategoryScreen = () => {
   const {
@@ -45,7 +50,12 @@ export const CategoryScreen = () => {
   } = useCategory();
   const {t} = useTranslation();
   // One kind at a time (owner, 2.8): Income no longer hides under a long expense list.
-  const [kind, setKind] = useState<CategoryKind>('expense');
+  const [tab, setTab] = useState<Tab>('expense');
+  // The groups of accounts are Pro (3.0): without it the tab is not there, and a downgrade
+  // while it is open falls back to the expense list.
+  const groupsOn = useProFeature('accounts');
+  const onGroups = groupsOn && tab === 'accounts';
+  const kind: CategoryKind = tab === 'income' ? 'income' : 'expense';
   // Reorder mode (2.8): the same categories as drag handles; every drop is saved.
   const [reordering, setReordering] = useState(false);
   const rows = kind === 'income' ? incomeCategories : categories;
@@ -56,9 +66,9 @@ export const CategoryScreen = () => {
     itemCount: categories.length,
   });
 
-  const switchKind = useCallback((next: CategoryKind) => {
+  const switchTab = useCallback((next: Tab) => {
     setReordering(false);
-    setKind(next);
+    setTab(next);
   }, []);
 
   const listData = useMemo<ListItem[]>(
@@ -128,8 +138,12 @@ export const CategoryScreen = () => {
     />
   );
 
+  // A second income category is Pro (3.0). Free has exactly one, which the user may rename; it is
+  // seeded with the user and repaired if ever archived (categoryService.ensureIncomeCategory).
+  const moreIncome = useProFeature('incomeCategories');
+  const canAddHere = kind === 'expense' || moreIncome;
   const incomeNote =
-    kind === 'income' ? (
+    kind === 'income' && !moreIncome ? (
       <View style={[gs.px14, gs.py12, gs.rounded12, gs.mb10, {backgroundColor: colors.secondaryAccent}]}>
         <PrimaryText size={12} color={colors.secondaryText}>
           {t('categories.incomeFreeNote')}
@@ -146,23 +160,27 @@ export const CategoryScreen = () => {
         <View style={gs.px16}>
           <DataErrorBanner domains={['category']} />
           <View style={gs.mb10}>
-            <SegmentedTabs<CategoryKind>
+            <SegmentedTabs<Tab>
               tabs={[
                 {key: 'expense', label: t('categories.tabExpense'), count: categories.length},
                 {key: 'income', label: t('categories.tabIncome'), count: incomeCategories.length},
+                // No count: the accounts are read only once the tab is open.
+                ...(groupsOn ? [{key: 'accounts' as const, label: t('categories.tabAccounts')}] : []),
               ]}
-              value={kind}
-              onChange={switchKind}
+              value={onGroups ? 'accounts' : kind}
+              onChange={switchTab}
               colors={colors}
             />
           </View>
           {incomeNote}
-          {toolbar}
+          {onGroups ? null : toolbar}
         </View>
-        {shouldShowTutorial && kind === 'expense' && !reordering ? (
+        {shouldShowTutorial && kind === 'expense' && !reordering && !onGroups ? (
           <SwipeTutorialTooltip onDismiss={dismissTutorial} />
         ) : null}
-        {reordering ? (
+        {onGroups ? (
+          <AccountGroupList />
+        ) : reordering ? (
           <ScrollView contentContainerStyle={[gs.px16, gs.pb100]} showsVerticalScrollIndicator={false}>
             <ReorderList items={reorderItems} colors={colors} onReorder={onReorder} />
           </ScrollView>
@@ -187,14 +205,15 @@ export const CategoryScreen = () => {
           </View>
         )}
       </PrimaryView>
-      {/* Expense categories only: Free has one income category (rename it; more come with Pro).
-          Hidden while reordering: it sat over the last rows' grips. */}
+      {/* Free has one income category (rename it; more come with Pro): no add there without Pro.
+          Hidden while reordering: it sat over the last rows' grips. Hidden on Accounts: a group is
+          made on the account form. */}
       <AddFab
         kind="category"
-        onPress={() => navigate('AddCategoryScreen')}
-        label={t('categories.addCategory')}
+        onPress={() => navigate('AddCategoryScreen', kind === 'income' ? {kind: 'income'} : {})}
+        label={kind === 'income' ? t('categories.addIncomeCategory') : t('categories.addCategory')}
         colors={colors}
-        hidden={reordering || kind === 'income'}
+        hidden={reordering || !canAddHere || onGroups}
       />
     </>
   );

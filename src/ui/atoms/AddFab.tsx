@@ -14,7 +14,7 @@ import {gs, hitSlop} from '../globalStyles';
  * debts, the text colour for spending and categories. The glyph is always
  * the same plus (owner: the Debts button adds any debt, not just a person).
  */
-type AddKind = 'expense' | 'income' | 'person' | 'debt' | 'category';
+type AddKind = 'expense' | 'income' | 'person' | 'debt' | 'category' | 'account';
 
 const inkOf = (kind: AddKind, colors: ThemeColors): string => {
   switch (kind) {
@@ -25,6 +25,7 @@ const inkOf = (kind: AddKind, colors: ThemeColors): string => {
       return colors.accentBlue;
     case 'expense':
     case 'category':
+    case 'account':
       return colors.primaryText;
   }
 };

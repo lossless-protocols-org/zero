@@ -11,7 +11,10 @@ import {buildQueryDescription, queryWithoutDeleted} from '@nozbe/watermelondb/Qu
 import encodeQuery from '@nozbe/watermelondb/adapters/sqlite/encodeQuery';
 import {encodeSchema} from '@nozbe/watermelondb/adapters/sqlite/encodeSchema';
 import {schema} from '../../src/data/database/schema';
-import {monthDateClauses} from '../../src/data/services/expenseDateRange';
+import {periodClauses} from '../../src/data/services/expenseDateRange';
+import {periodFor} from '../../src/domain/period';
+
+const monthDateClauses = (yearMonth: string) => periodClauses(periodFor(yearMonth));
 
 const planFor = (db: Database, table: string): string => {
   const description = queryWithoutDeleted(

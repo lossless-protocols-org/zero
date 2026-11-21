@@ -1,0 +1,170 @@
+{
+  "key": "zeroAAAAAAAAAAAAAAAA",
+  "version": 5,
+  "data": {
+    "users": [
+      {
+        "username": "Meera",
+        "email": ""
+      }
+    ],
+    "categories": [
+      {
+        "name": "Food",
+        "categoryStatus": true,
+        "icon": "utensils-crossed",
+        "color": "#6E8E55",
+        "kind": "expense",
+        "sortOrder": 10
+      },
+      {
+        "name": "Shopping",
+        "categoryStatus": true,
+        "icon": "shopping-bag",
+        "color": "#B5543A",
+        "kind": "expense",
+        "sortOrder": 20
+      },
+      {
+        "name": "Travel",
+        "categoryStatus": false,
+        "icon": "car",
+        "color": "#3A85B5",
+        "kind": "expense",
+        "sortOrder": 30
+      },
+      {
+        "name": "Income",
+        "categoryStatus": true,
+        "icon": "coins",
+        "color": "#3D9960",
+        "kind": "income",
+        "sortOrder": 10
+      }
+    ],
+    "expenses": [
+      {
+        "title": "Lunch",
+        "amount": 250.5,
+        "description": "",
+        "category": {
+          "name": "Food"
+        },
+        "date": "2026-11-05T13:10:00",
+        "createdAt": 1762328400000,
+        "updatedAt": 1762328400000
+      },
+      {
+        "title": "Shoes",
+        "amount": 3000,
+        "description": "online",
+        "category": {
+          "name": "Shopping"
+        },
+        "date": "2026-11-10T18:05:00",
+        "createdAt": 1762797900000,
+        "updatedAt": 1762797900000,
+        "refunds": [
+          {
+            "amount": 1200,
+            "date": "2026-11-20T12:00:00",
+            "note": "size",
+            "createdAt": 1763640000000,
+            "updatedAt": 1763640000000
+          }
+        ]
+      },
+      {
+        "title": "Cab",
+        "amount": 420,
+        "description": "",
+        "category": {
+          "name": "Travel"
+        },
+        "date": "2026-10-02T09:00:00",
+        "createdAt": 1759395600000,
+        "updatedAt": 1759395600000
+      }
+    ],
+    "currencies": [
+      {
+        "code": "INR",
+        "symbol": "₹",
+        "name": "Indian Rupee"
+      }
+    ],
+    "debtors": [
+      {
+        "title": "Rohit",
+        "debtorStatus": true,
+        "icon": "user",
+        "type": "Person",
+        "color": "#3A85B5"
+      }
+    ],
+    "debts": [
+      {
+        "amount": 1800,
+        "description": "Movie tickets",
+        "debtor": {
+          "title": "Rohit"
+        },
+        "date": "2026-11-03T20:00:00",
+        "type": "Lend",
+        "createdAt": 1762200000000,
+        "updatedAt": 1762200000000
+      }
+    ],
+    "budgets": [
+      {
+        "amount": 45000,
+        "month": "recurring:2026-11",
+        "budgetType": "monthly"
+      },
+      {
+        "amount": 5000,
+        "month": "2026-11",
+        "budgetType": "category",
+        "category": {
+          "name": "Food"
+        }
+      }
+    ],
+    "accounts": [
+      {
+        "name": "Cash",
+        "type": "cash",
+        "currency": "INR",
+        "openingBalance": 0,
+        "openingDate": null,
+        "isDefault": true,
+        "accountStatus": true,
+        "sortOrder": 0,
+        "icon": "wallet",
+        "color": "#6E8B3D"
+      }
+    ],
+    "incomes": [
+      {
+        "amount": 50000,
+        "date": "2026-11-01",
+        "category": {
+          "name": "Income"
+        },
+        "note": "Salary",
+        "createdAt": 1761955200000,
+        "updatedAt": 1761955200000
+      },
+      {
+        "amount": 2500.75,
+        "date": "2026-11-15",
+        "category": {
+          "name": "Income"
+        },
+        "note": "",
+        "createdAt": 1763164800000,
+        "updatedAt": 1763164800000
+      }
+    ]
+  }
+}

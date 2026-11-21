@@ -7,6 +7,7 @@
  *   platform            the device: MMKV, preferences, locale and formatting, error log, navigation ref
  *   i18n                strings and validation messages
  *   data, native        the database, its services, data migrations, backup; the TurboModule specs
+ *   pro                 who is paying (3.0): the entitlement decision, capabilities, the Free projection
  *   store               Redux: slices, session start, middleware
  *   ui                  shared view code: hooks, contexts and helpers → atoms → molecules → sheets
  *   features/<name>     one product area each: lib → hooks → components → sheets → screens
@@ -17,12 +18,27 @@
  *   - platform has no React and no i18next (it sits below i18n);
  *   - components (ui atoms/molecules and features' components) reach the store and the data
  *     layer only through hooks;
- *   - only features/widgets/bridge.ts talks to src/native (the widget TurboModule);
+ *   - src/native has one gateway per module and no other importer: features/widgets/bridge.ts (the
+ *     widget TurboModules), pro/billing.ts (the store), pro/reminders.ts (reminders) and
+ *     data/backup/vault.ts (the encrypted backup, P10) and pro/reportPdf.ts (PDF reports, P12);
  *   - a feature never imports another feature: what two features share moves down a layer;
  *   - inside a feature, lib < hooks < components < sheets < screens (quickAdd/ is a root, screen level);
  *   - no import cycles.
- * Type-only imports are exempt from every rule: the compiler erases them, so
- * they create no runtime edge, init-order cycle or bundle coupling.
+ * Type-only imports are exempt from every rule but one: the compiler erases
+ * them, so they create no runtime edge, init-order cycle or bundle coupling.
+ *
+ * The 3.0 laws (handbook/blueprint/ZERO_3.0_ENTITLEMENT.md) that are import rules:
+ *   - L1, tier-blind data: domain, constants, data and native import nothing from src/pro or
+ *     from any layer above it, not even a type. Who is paying changes what is shown and what
+ *     runs, never a stored row, so the layers that own rows cannot ask, directly or through a
+ *     type some higher layer re-exports. (This is the one rule type-only imports do not escape.)
+ *   - L8, gated features: a feature in PRO_FEATURE_DIRS is imported only by
+ *     navigation/ProStack.tsx, and ProStack only by navigation/HomeStack.tsx, which mounts it
+ *     only for Pro. No free screen can render one.
+ *   - src/pro decides and nothing else: no React and no i18next (its hooks live in ui/hooks).
+ *   - domain/freeTier (what Free includes) is read only above the data layer, for the same
+ *     reason as L1. One 2.8 data module still reads it and is listed in the rule as debt; 3.0 removes it
+ *     (handbook/blueprint/ZERO_3.0_PLAN.md, P9; the import planner's was removed in P7).
  *
  * Run: `bun run check:layers`. __tests__/arch/layers.test.ts runs it on src/
  * and on a fixture tree that breaks every rule once, so a rule that stops
@@ -36,14 +52,31 @@ const LAYERS = [
   {name: 'platform', rank: 1, path: '^src/platform/'},
   {name: 'i18n', rank: 2, path: '^src/i18n/'},
   {name: 'data', rank: 3, path: '^src/(data|native)/'},
-  {name: 'store', rank: 4, path: '^src/store/'},
-  {name: 'ui', rank: 5, path: '^src/ui/(hooks/|context/|[^/]+$)'},
-  {name: 'ui/atoms', rank: 6, path: '^src/ui/atoms/'},
-  {name: 'ui/molecules', rank: 7, path: '^src/ui/molecules/'},
-  {name: 'ui/sheets', rank: 8, path: '^src/ui/sheets/'},
-  {name: 'features', rank: 9, path: '^src/features/'},
-  {name: 'navigation', rank: 10, path: '^src/navigation/'},
+  {name: 'pro', rank: 4, path: '^src/pro/'},
+  {name: 'store', rank: 5, path: '^src/store/'},
+  {name: 'ui', rank: 6, path: '^src/ui/(hooks/|context/|[^/]+$)'},
+  {name: 'ui/atoms', rank: 7, path: '^src/ui/atoms/'},
+  {name: 'ui/molecules', rank: 8, path: '^src/ui/molecules/'},
+  {name: 'ui/sheets', rank: 9, path: '^src/ui/sheets/'},
+  {name: 'features', rank: 10, path: '^src/features/'},
+  {name: 'navigation', rank: 11, path: '^src/navigation/'},
 ];
+
+/**
+ * The features that exist only for Pro (L8). A phase adds its folder here in the commit that
+ * creates it. features/pro is NOT one: the upgrade sheet, the notices and the Settings rows
+ * are what a free user sees.
+ */
+const PRO_FEATURE_DIRS = ['accounts', 'recurring', 'backup'];
+/**
+ * A whole Pro feature folder, or a `pro/` folder inside a free feature: the Pro screens of a
+ * feature a free user also has (Reports' range and trends, P11 and P12) live there.
+ */
+const PRO_FEATURES = `^src/features/((${PRO_FEATURE_DIRS.join('|')})/|[^/]+/pro/)`;
+/** The one module that imports them, mounted only when the entitlement says Pro… */
+const PRO_STACK = '^src/navigation/ProStack\\.tsx$';
+/** …and the one module that mounts it. */
+const PRO_STACK_MOUNT = '^src/navigation/HomeStack\\.tsx$';
 const ANY_LAYER = LAYERS.map(l => `(${l.path})`).join('|');
 
 /** Parts of one feature in order; a file at the feature's root is its lib. */
@@ -52,7 +85,7 @@ const FEATURE_PARTS = [
   {name: 'hooks', path: 'hooks/'},
   {name: 'components', path: 'components/'},
   {name: 'sheets', path: 'sheets/'},
-  {name: 'screens', path: '(screens|quickAdd)/'},
+  {name: 'screens', path: '(screens|quickAdd|pro)/'},
 ];
 
 const pkgs = names => `^(node_modules/)?(${names.join('|')})(/|$)`;
@@ -130,9 +163,13 @@ module.exports = {
     },
     {
       name: 'native-gateway',
-      comment: 'only features/widgets/bridge.ts talks to the widget module',
+      comment:
+        'each native module has one gateway: features/widgets/bridge.ts for the widget modules, pro/billing.ts for the store, pro/reminders.ts for reminders, data/backup/vault.ts for the encrypted backup, pro/reportPdf.ts for PDF reports',
       severity: 'error',
-      from: {path: '^src/', pathNot: '^src/features/widgets/bridge\\.ts$'},
+      from: {
+        path: '^src/',
+        pathNot: '^src/(features/widgets/bridge|pro/billing|pro/reminders|pro/reportPdf|data/backup/vault)\\.ts$',
+      },
       to: {...RUNTIME, path: '^src/native/'},
     },
     {
@@ -143,6 +180,47 @@ module.exports = {
       to: {...RUNTIME, path: '^src/features/', pathNot: '^src/features/$1/'},
     },
     ...featureOrder,
+    {
+      name: 'tier-blind-data',
+      comment:
+        'L1: domain, data and native import nothing from src/pro or any layer above it, not even a type: stored rows never depend on who pays, and a type re-exported through a higher layer is still asking',
+      severity: 'error',
+      from: {path: '^src/(domain|constants|data|native)/'},
+      // No RUNTIME here on purpose: this is the one rule a type-only import does not escape.
+      to: {path: '^src/(pro|store|ui|features|navigation)/'},
+    },
+    {
+      name: 'free-limits-not-in-data',
+      comment:
+        'L1: what Free includes (a domain/freeTier module, when one exists) is read only above the data layer. P9 removed the last one, the income-category limit in categoryService: the Categories screen decides it now. No new one, and no re-export from domain',
+      severity: 'error',
+      from: {
+        path: '^src/',
+        pathNot: '^src/(pro|store|ui|features|navigation)/|^src/domain/freeTier(\\.ts$|/)',
+      },
+      to: {path: '^src/domain/freeTier(\\.ts$|/)'},
+    },
+    {
+      name: 'pro-decides-only',
+      comment: 'src/pro has no React and no i18next: it decides; hooks over it live in ui/hooks',
+      severity: 'error',
+      from: {path: '^src/pro/'},
+      to: {...RUNTIME, path: pkgs(REACT_AND_I18N)},
+    },
+    {
+      name: 'pro-features-behind-pro-stack',
+      comment: 'L8: a Pro-only feature is imported only by navigation/ProStack.tsx (add new ones to PRO_FEATURE_DIRS)',
+      severity: 'error',
+      from: {path: '^src/', pathNot: `${PRO_FEATURES}|${PRO_STACK}`},
+      to: {...RUNTIME, path: PRO_FEATURES},
+    },
+    {
+      name: 'pro-stack-single-mount',
+      comment: 'L8: only HomeStack mounts ProStack, so there is one place that decides whether Pro screens exist',
+      severity: 'error',
+      from: {path: '^src/', pathNot: PRO_STACK_MOUNT},
+      to: {...RUNTIME, path: PRO_STACK},
+    },
     {
       name: 'no-circular',
       comment: 'no import cycles (an init-order cycle is a crash waiting for the right import order)',

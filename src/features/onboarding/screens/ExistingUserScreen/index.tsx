@@ -1,11 +1,12 @@
 import {ActivityIndicator, TouchableOpacity, View} from 'react-native';
-import React, {memo, useMemo} from 'react';
+import React, {memo, useEffect, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {PrimaryView} from '../../../../ui/atoms/PrimaryView';
 import {FormScroll} from '../../../../ui/atoms/FormScroll';
 import {PrimaryText} from '../../../../ui/atoms/PrimaryText';
 import {Icon} from '../../../../ui/atoms/Icons';
 import {PrimaryButton} from '../../../../ui/atoms/PrimaryButton';
+import {CustomInput} from '../../../../ui/atoms/CustomInput';
 import {useExistingUser} from './useExistingUser';
 import {gs} from '../../../../ui/globalStyles';
 import {logRejection} from '../../../../platform/errorLog';
@@ -68,8 +69,19 @@ export const ExistingUserScreen = () => {
     syncStatus,
     syncStats,
     syncError,
+    needsPassphrase,
+    unlocking,
+    unlock,
+    cancelUnlock,
   } = useExistingUser();
   const {t} = useTranslation();
+  // Held here only while the file waits; never stored, never logged.
+  const [passphrase, setPassphrase] = useState('');
+  useEffect(() => {
+    if (!needsPassphrase) {
+      setPassphrase('');
+    }
+  }, [needsPassphrase]);
 
   const showSyncProgress = isSyncing || isSyncComplete;
 
@@ -148,6 +160,43 @@ export const ExistingUserScreen = () => {
             </TouchableOpacity>
           )}
 
+          {/* 3.0 (P10): an encrypted automatic backup asks for its passphrase before anything is restored. */}
+          {needsPassphrase ? (
+            <View style={gs.mt20}>
+              <CustomInput
+                colors={colors}
+                input={passphrase}
+                setInput={setPassphrase}
+                placeholder={t('existingUser.passphraseLabel')}
+                label={t('existingUser.passphraseLabel')}
+                secureTextEntry
+                autoCapitalize="none"
+                returnKeyType="done"
+                onSubmitEditing={() => logRejection(unlock(passphrase))}
+                disabled={unlocking}
+              />
+              <PrimaryButton
+                onPress={() => logRejection(unlock(passphrase))}
+                colors={colors}
+                buttonTitle={t('existingUser.unlock')}
+                disabled={passphrase.length === 0 || unlocking}
+                loading={unlocking}
+              />
+              <TouchableOpacity
+                onPress={() => {
+                  setPassphrase('');
+                  cancelUnlock();
+                }}
+                disabled={unlocking}
+                style={[gs.mt10, gs.minTouch, gs.justifyCenter]}
+                accessibilityRole="button">
+                <PrimaryText size={12} color={colors.accentOrange}>
+                  {t('existingUser.chooseAnother')}
+                </PrimaryText>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {showSyncProgress && (
             <View style={gs.mt30}>
               <PrimaryText
@@ -202,11 +251,26 @@ export const ExistingUserScreen = () => {
                   {t('existingUser.recoveredEntries', {count: syncStats.autoCreated})}
                 </PrimaryText>
               )}
-              {isSyncComplete && syncStats.mergedIncome > 0 && syncStats.incomeCategoryKept ? (
+              {isSyncComplete && syncStats.autoCreatedAccounts > 0 && (
                 <PrimaryText size={11} color={colors.secondaryText} style={gs.mt10}>
-                  {t('existingUser.incomeMerged', {count: syncStats.mergedIncome, name: syncStats.incomeCategoryKept})}
+                  {t('existingUser.recoveredAccounts', {count: syncStats.autoCreatedAccounts})}
                 </PrimaryText>
-              ) : null}
+              )}
+              {isSyncComplete && syncStats.reassignedToDefaultAccount > 0 && (
+                <PrimaryText size={11} color={colors.secondaryText} style={gs.mt10}>
+                  {t('existingUser.reassignedEntries', {count: syncStats.reassignedToDefaultAccount})}
+                </PrimaryText>
+              )}
+              {isSyncComplete && syncStats.rejectedRefunds > 0 && (
+                <PrimaryText size={11} color={colors.secondaryText} style={gs.mt10}>
+                  {t('existingUser.leftOutRefunds', {count: syncStats.rejectedRefunds})}
+                </PrimaryText>
+              )}
+              {isSyncComplete && syncStats.rejectedTransfers > 0 && (
+                <PrimaryText size={11} color={colors.secondaryText} style={gs.mt10}>
+                  {t('existingUser.leftOutTransfers', {count: syncStats.rejectedTransfers})}
+                </PrimaryText>
+              )}
             </View>
           )}
         </View>

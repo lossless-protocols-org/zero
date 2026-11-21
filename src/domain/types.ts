@@ -48,6 +48,8 @@ interface ExpenseData {
    * would need a cast. Read it through domain/dates, never by slicing.
    */
   date: string;
+  /** 3.0 (P9): the recurring rule that made it; absent or null when entered by hand. */
+  recurringId?: string | null;
 }
 
 /**
@@ -133,7 +135,15 @@ export interface IncomeData {
   note: string;
   createdAt: number;
   updatedAt: number;
+  /** 3.0 (P9): the recurring rule that made it; absent or null when entered by hand. */
+  recurringId?: string | null;
 }
+
+/**
+ * How a checkpoint's gap is read: on an investment account a value change
+ * (never income, R15); on any other account an unexplained adjustment.
+ */
+export type CheckpointKind = 'revaluation' | 'adjustment';
 
 /**
  * The flow figures of one period (the income statement). Spent is net of the
@@ -168,6 +178,8 @@ export interface DebtData {
   userId: string;
   date: string;
   type: DebtType;
+  /** 3.0: the account the money moved through; null when it touched none. */
+  accountId: string | null;
 }
 
 export interface CurrencyData {

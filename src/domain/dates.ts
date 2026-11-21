@@ -6,7 +6,8 @@ import type {IsoDay} from './types';
  * day keys and 'YYYY-MM' month keys. Pure: no device locale, no storage
  * (audit 2026-11-08 §4.5). Anything that depends on the user's language or
  * region (month and weekday names, display formats, "Today"/"Yesterday")
- * lives in platform/dateFormat.ts.
+ * lives in platform/dateFormat.ts. Which days a month covers, and which month
+ * a date belongs to, is domain/period.ts's alone (3.0, P11).
  */
 
 export type DateInput = string | number | Date | Dayjs | null | undefined;
@@ -21,39 +22,46 @@ export const formatDate = (date?: DateInput, format: string = 'YYYY-MM-DD'): str
   return parseDate(date).format(format);
 };
 
-export const getCurrentYear = (): number => dayjs().year();
-
 /**
  * The month is carried as a 0-based index, never as its localised name (M20):
  * the name round trip fell back to the current month when it did not resolve,
  * and `dayjs().month(i)` rolled over from today's date (on the 31st,
  * February became March).
+ * @internal Used by toDayKey's date check here; tests check it alone.
  */
 export const daysInMonth = (year: number, monthIndex: number): number => new Date(year, monthIndex + 1, 0).getDate();
-
-/** 0 = Sunday, like dayjs's `.day()`. */
-export const firstWeekdayOfMonth = (year: number, monthIndex: number): number => new Date(year, monthIndex, 1).getDay();
 
 /** The `YYYY-MM` key the database and the slices use. */
 export const toYearMonth = (year: number, monthIndex: number): string =>
   `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
-
-/** The 'YYYY-MM' key `delta` months from `yearMonth` (across years: 2026-01 − 1 is 2025-12). */
-export const shiftYearMonth = (yearMonth: string, delta: number): string =>
-  dayjs(`${yearMonth}-01`).add(delta, 'month').format('YYYY-MM');
-
-/** Days in a month expressed as a `YYYY-MM` key (the DB/query convention). */
-export const getDaysInMonthByYearMonth = (yearMonth: string): number => {
-  return dayjs(`${yearMonth}-01`).daysInMonth();
-};
 
 /** @internal test */
 export const diffDates = (date1: DateInput, date2: DateInput, unit: DateUnit = 'day'): number => {
   return parseDate(date1).diff(parseDate(date2), unit);
 };
 
+/** Today, local, as a day key. */
+export const todayIsoDay = (): IsoDay => formatDate(undefined) as IsoDay; // formatDate's default shape is YYYY-MM-DD
+
 /** True for a 'YYYY-MM-DD' string, so it can be passed where an IsoDay is expected. */
 export const isIsoDay = (value: string): value is IsoDay => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+/**
+ * A 'YYYY-MM-DD' day that is on the calendar: 2026-02-29 and 2026-11-31 are not.
+ * What the 3.0 tables (transfers, checkpoints, an account's opening day) store.
+ */
+export const isCalendarDay = (value: string): value is IsoDay => isIsoDay(value) && shiftIsoDay(value, 0) === value;
+
+/**
+ * The day `delta` days from a 'YYYY-MM-DD' day, by the calendar (UTC
+ * arithmetic, so no time zone or DST shift can skip or repeat a day).
+ */
+export const shiftIsoDay = (day: string, delta: number): IsoDay => {
+  const [year, month, date] = day.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, (date ?? 1) + delta));
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}` as IsoDay; // built from three numbers in YYYY-MM-DD form
+};
 
 /** A real month key 'YYYY-MM' (month 01–12): what a link or route param must be before it is used as one. */
 export const isYearMonth = (value: unknown): value is string =>

@@ -4,9 +4,13 @@ import {fetchExpensesByMonth, selectMonthTotals} from '../../store/slices/expens
 import {fetchIncomesByMonth, selectReceived} from '../../store/slices/incomeDataSlice';
 import {fetchBudgetsByMonth, selectCurrentBudget} from '../../store/slices/budgetDataSlice';
 import {selectUserId} from '../../store/slices/userIdSlice';
-import {daysInMonth, formatDate} from '../../domain/dates';
+import {formatDate} from '../../domain/dates';
+import {dayNumberIn, daysIn, periodFor} from '../../domain/period';
 import {budgetStatus} from '../../domain/budgetMath';
-import {formatDisplayDate} from '../../platform/dateFormat';
+import {useCommitments} from './useCommitments';
+import {useProFeature} from './useProFeature';
+import {formatMonthLabel} from '../../platform/dateFormat';
+import {useMonthStartDay} from './useMonthStartDay';
 import {useMonthNavigation} from './useMonthNavigation';
 import {useFreshWhileFocused} from './useFreshWhileFocused';
 import type {WatchedTable} from '../../data/services/tableChanges';
@@ -36,6 +40,9 @@ export const useMonthView = () => {
   const nav = useMonthNavigation();
   const availableYears = useAvailableYears();
   const {yearMonth, isCurrentMonth, selectedYear, selectedMonthIndex} = nav;
+  // The days this month covers: the calendar month, or from the user's month start day (P11).
+  const monthStartDay = useMonthStartDay();
+  const period = useMemo(() => periodFor(yearMonth, monthStartDay), [yearMonth, monthStartDay]);
 
   useFreshWhileFocused(
     useCallback(() => {
@@ -44,7 +51,9 @@ export const useMonthView = () => {
         void dispatch(fetchBudgetsByMonth(yearMonth));
         void dispatch(fetchIncomesByMonth(yearMonth));
       }
-    }, [dispatch, userId, yearMonth]),
+      // monthStartDay: the same key covers other days once the day changes, so the month is read again.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dispatch, userId, yearMonth, monthStartDay]),
     MONTH_TABLES,
   );
 
@@ -66,9 +75,13 @@ export const useMonthView = () => {
     [monthTotals, todaySpent, received],
   );
 
-  // Read now, not at import: "today" moves at midnight.
-  const dayOfMonth = new Date().getDate();
-  const days = daysInMonth(selectedYear, selectedMonthIndex);
+  // Read now, not at import: "today" moves at midnight. Counted from the month's first day,
+  // whichever day of the calendar that is.
+  const dayOfMonth = dayNumberIn(period, today);
+  const days = daysIn(period);
+  // Pro: recurring expenses still to come this month are not free to spend (UX revamp v2).
+  const recurringOn = useProFeature('recurring');
+  const {bills} = useCommitments(recurringOn && isCurrentMonth && budgetAmount !== undefined);
   const budget = useMemo(
     () =>
       budgetAmount === undefined
@@ -80,15 +93,18 @@ export const useMonthView = () => {
             dayOfMonth,
             daysInMonth: days,
             isCurrentMonth,
+            billsStillDue: bills,
           }),
-    [budgetAmount, totals, dayOfMonth, days, isCurrentMonth],
+    [budgetAmount, totals, dayOfMonth, days, isCurrentMonth, bills],
   );
 
   const month = useMemo(
     () => ({
       name: nav.selectedMonthName,
-      /** "November 2026" in the locale's own order (never name and year joined here). */
-      label: formatDisplayDate(`${yearMonth}-01`, 'monthYearLong'),
+      /** "November 2026" in the locale's own order, or "7 Nov – 6 Dec" when months start on another day. */
+      label: formatMonthLabel(period),
+      /** The days the month covers, `[start, next)`. */
+      period,
       index: selectedMonthIndex,
       year: selectedYear,
       yearMonth,
@@ -105,6 +121,7 @@ export const useMonthView = () => {
       selectedMonthIndex,
       selectedYear,
       yearMonth,
+      period,
       days,
       isCurrentMonth,
       nav.canGoForward,

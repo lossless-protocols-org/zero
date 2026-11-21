@@ -7,17 +7,9 @@
 import {act, renderHook} from '@testing-library/react-native';
 import {useWelcome} from '../../../../../../src/features/onboarding/screens/WelcomeScreen/useWelcome';
 
-const mockCounts = {
-  users: 0,
-  expenses: 0,
-  categories: 0,
-  debts: 0,
-  debtors: 0,
-  budgets: 0,
-  currencies: 0,
-  accounts: 0,
-  refunds: 0,
-  incomes: 0,
+const mockCounts: {byTable: Record<string, number>; entered: number; total: number} = {
+  byTable: {},
+  entered: 0,
   total: 0,
 };
 const mockDeleteAllData = jest.fn(() => Promise.resolve());
@@ -36,25 +28,17 @@ jest.mock('../../../../../../src/store/hooks', () => ({useAppDispatch: () => jes
 jest.mock('../../../../../../src/ui/hooks/useThemeColors', () => ({useThemeColors: () => ({})}));
 jest.mock('react-i18next', () => require('../../../../../harness/mocks/reactI18next'));
 
-const setCounts = (c: Partial<typeof mockCounts>) => {
-  Object.assign(
-    mockCounts,
-    {
-      users: 0,
-      expenses: 0,
-      categories: 0,
-      debts: 0,
-      debtors: 0,
-      budgets: 0,
-      currencies: 0,
-      accounts: 0,
-      refunds: 0,
-      incomes: 0,
-    },
-    c,
-  );
-  const {users, expenses, categories, debts, debtors, budgets, currencies} = mockCounts;
-  mockCounts.total = users + expenses + categories + debts + debtors + budgets + currencies;
+/**
+ * What countAllRecords would report for these rows. Which tables count as entered is the
+ * service's rule (deleteService.test.ts checks it on a real database); this hook only reads it.
+ */
+const SEEDED = ['users', 'categories', 'currencies', 'accounts'];
+const setCounts = (byTable: Record<string, number>) => {
+  mockCounts.byTable = byTable;
+  mockCounts.entered = Object.entries(byTable)
+    .filter(([table]) => !SEEDED.includes(table))
+    .reduce((sum, [, n]) => sum + n, 0);
+  mockCounts.total = Object.values(byTable).reduce((sum, n) => sum + n, 0);
 };
 
 const pressGetStarted = async () => {

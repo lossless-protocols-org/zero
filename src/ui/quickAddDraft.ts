@@ -7,7 +7,31 @@ export interface QuickAddDraft {
   title: string;
   amount: string;
   categoryId: string;
+  /** Reconcile's "Record what's missing" (3.0): the day and the account the missing expense belongs to. */
+  date?: string;
+  accountId?: string;
 }
+
+/** What reconcile hands to Add money in (3.0): the amount, day and account a missing income belongs to. */
+export interface IncomeDraft {
+  amount: string;
+  /** 'YYYY-MM-DD'. */
+  date: string;
+  accountId: string;
+}
+
+let incomeDraft: IncomeDraft | null = null;
+
+export const setIncomeDraft = (next: IncomeDraft): void => {
+  incomeDraft = next;
+};
+
+/** Returns the waiting income draft and clears it. */
+export const takeIncomeDraft = (): IncomeDraft | null => {
+  const taken = incomeDraft;
+  incomeDraft = null;
+  return taken;
+};
 
 let draft: QuickAddDraft | null = null;
 

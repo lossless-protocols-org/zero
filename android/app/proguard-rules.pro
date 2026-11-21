@@ -97,3 +97,14 @@
 # ==========================================
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# ==========================================
+# Google Play Billing without Google's usage uploader (play flavour)
+# ==========================================
+# transport-runtime and transport-backend-cct are left out of the build on purpose
+# (android/app/build.gradle). The billing library's logger refers to these three classes,
+# catches their absence at run time ("Skipping logging since initialization failed") and
+# carries on. If a library bump adds a name here, re-run the device check in docs/NATIVE.md.
+-dontwarn com.google.android.datatransport.cct.CCTDestination
+-dontwarn com.google.android.datatransport.runtime.Destination
+-dontwarn com.google.android.datatransport.runtime.TransportRuntime

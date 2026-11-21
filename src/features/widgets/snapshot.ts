@@ -25,6 +25,12 @@ export interface WidgetSnapshot {
   /** 'YYYY-MM' and 'YYYY-MM-DD' the figures belong to; older ones read as 0 on the widget. */
   monthKey: string;
   todayKey: string;
+  /**
+   * The day of the month the user's month starts on, 1 to 28 (3.0, P11; 1 without Pro).
+   * `monthKey` names the month it starts in. The widget needs it to know, after midnight
+   * and before zero has run, whether a new month has begun and what to call it.
+   */
+  monthStartDay: number;
   monthLabel: string;
   spentMonth: string;
   spentToday: string;
@@ -105,6 +111,7 @@ const PREVIEW = widgetAssets.preview;
 interface WidgetFigures {
   monthKey: string;
   todayKey: string;
+  monthStartDay: number;
   monthLabel: string;
   locale: string;
   /** Net of refunds (R2). */
@@ -149,6 +156,7 @@ export const setupSnapshot = (locale: string, now: number): WidgetSnapshot => ({
   locale,
   monthKey: '',
   todayKey: '',
+  monthStartDay: 1,
   monthLabel: '',
   spentMonth: '',
   spentToday: '',
@@ -209,6 +217,7 @@ export const buildWidgetSnapshot = (f: WidgetFigures, text: WidgetText): WidgetS
     locale: f.locale,
     monthKey: f.monthKey,
     todayKey: f.todayKey,
+    monthStartDay: f.monthStartDay,
     monthLabel: f.monthLabel,
     spentMonth,
     spentToday,

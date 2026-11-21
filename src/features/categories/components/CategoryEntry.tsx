@@ -16,14 +16,16 @@ import {SheetManager} from 'react-native-actions-sheet';
 import {logRejection} from '../../../platform/errorLog';
 import {gs} from '../../../ui/globalStyles';
 import {useCategoryForm, type EditedCategory} from '../hooks/useCategoryForm';
-import type {CategoryChoice} from '../../../domain/types';
+import type {CategoryChoice, CategoryKind} from '../../../domain/types';
 
 interface CategoryEntryProps {
   /** The category being edited; absent when adding one. */
   editing?: EditedCategory;
+  /** What a new category is for; an edit keeps its own kind. */
+  kind?: CategoryKind;
 }
 
-const CategoryEntryComponent: React.FC<CategoryEntryProps> = ({editing}) => {
+const CategoryEntryComponent: React.FC<CategoryEntryProps> = ({editing, kind = 'expense'}) => {
   const {t} = useTranslation();
   const colors = useThemeColors();
   const {
@@ -40,7 +42,8 @@ const CategoryEntryComponent: React.FC<CategoryEntryProps> = ({editing}) => {
     isDuplicate,
     isValid,
     save,
-  } = useCategoryForm(editing);
+    kind: formKind,
+  } = useCategoryForm(editing, kind);
 
   const handleOpenIconPicker = useCallback(() => {
     void SheetManager.show('icon-picker-sheet', {
@@ -120,7 +123,13 @@ const CategoryEntryComponent: React.FC<CategoryEntryProps> = ({editing}) => {
             <AppHeader
               onPress={goBack}
               colors={colors}
-              text={editing ? t('category.editTitle') : t('category.addTitle')}
+              text={
+                editing
+                  ? t('category.editTitle')
+                  : formKind === 'income'
+                    ? t('category.addIncomeTitle')
+                    : t('category.addTitle')
+              }
             />
           </View>
 

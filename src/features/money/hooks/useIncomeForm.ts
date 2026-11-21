@@ -3,7 +3,6 @@ import {useTranslation} from 'react-i18next';
 import {useAppSelector} from '../../../store/hooks';
 import {selectUserId} from '../../../store/slices/userIdSlice';
 import {selectCurrencyCode} from '../../../store/slices/currencyDataSlice';
-import {selectActiveIncomeCategories} from '../../../store/slices/categoryDataSlice';
 import {IncomeRuleError, createIncome, deleteIncome, updateIncome} from '../../../data/services/incomeService';
 import {createAmountSchema, expenseDescriptionSchema} from '../../../i18n/validationSchema';
 import {getISODateTime, isIsoDay, isYearMonth, toDayKey} from '../../../domain/dates';
@@ -11,6 +10,9 @@ import {goBack} from '../../../platform/navigationUtils';
 import {appendErrorLog} from '../../../platform/errorLog';
 import {useDialog} from '../../../ui/context/DialogContext';
 import type {IncomeData} from '../../../domain/types';
+import {useIncomeCategories} from '../../../ui/hooks/useIncomeCategories';
+import {useEntryAccount} from '../../../ui/hooks/useEntryAccount';
+import type {IncomeDraft} from '../../../ui/quickAddDraft';
 
 /** Where a new income's date starts: today in the current month, else the 1st of the month being viewed. */
 const initialPickerDate = (yearMonth: string | undefined): string => {
@@ -28,18 +30,27 @@ const initialPickerDate = (yearMonth: string | undefined): string => {
  * its day is stored. Every user has an income category from the start (Free
  * has one), so the category is chosen for the user unless they have more.
  */
-export const useIncomeForm = (editing?: IncomeData, yearMonth?: string) => {
+export const useIncomeForm = (editing?: IncomeData, yearMonth?: string, draft?: IncomeDraft) => {
   const {t} = useTranslation();
   const {showAlert, showDialog} = useDialog();
   const userId = useAppSelector(selectUserId);
   const currencyCode = useAppSelector(selectCurrencyCode);
-  const categories = useAppSelector(selectActiveIncomeCategories);
+  // As this tier lists them: one without Pro, so a hidden category is never offered (3.0, L5).
+  // An entry being edited keeps its own category whatever is listed: the save sends it back unchanged.
+  const {listed: categories} = useIncomeCategories();
   const [categoryId, setCategoryId] = useState(editing?.categoryId ?? '');
-  const [pickerDate, setPickerDate] = useState(editing ? `${editing.date}T09:00:00` : initialPickerDate(yearMonth));
-  const [amount, setAmount] = useState(editing ? String(editing.amount) : '');
+  const [pickerDate, setPickerDate] = useState(() => {
+    if (editing) {
+      return `${editing.date}T09:00:00`;
+    }
+    return draft ? `${draft.date}T09:00:00` : initialPickerDate(yearMonth);
+  });
+  const [amount, setAmount] = useState(editing ? String(editing.amount) : (draft?.amount ?? ''));
   const [note, setNote] = useState(editing?.note ?? '');
   const [hasInteracted, setHasInteracted] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Pro's account row: an account is sent only when the user picked one (L6 on an edit).
+  const account = useEntryAccount(editing?.accountId, draft?.accountId);
 
   // A new entry takes the first income category once they arrive.
   useEffect(() => {
@@ -71,7 +82,7 @@ export const useIncomeForm = (editing?: IncomeData, yearMonth?: string) => {
     }
     setSaving(true);
     try {
-      const input = {categoryId, amount: Number(amount), date: day, note: note.trim()};
+      const input = {categoryId, amount: Number(amount), date: day, note: note.trim(), accountId: account.chosen};
       if (editing) {
         await updateIncome(editing.id, input);
       } else {
@@ -85,7 +96,7 @@ export const useIncomeForm = (editing?: IncomeData, yearMonth?: string) => {
     }
     setSaving(false);
     goBack(); // Money reads its month again on focus (useFreshWhileFocused)
-  }, [isValid, saving, day, categoryId, amount, note, editing, userId, showAlert, messageFor]);
+  }, [isValid, saving, day, categoryId, amount, note, account.chosen, editing, userId, showAlert, messageFor]);
 
   const remove = useCallback(async () => {
     if (!editing) {
@@ -106,6 +117,7 @@ export const useIncomeForm = (editing?: IncomeData, yearMonth?: string) => {
   }, [editing, showDialog, showAlert, t]);
 
   return {
+    account,
     categories,
     categoryId,
     setCategoryId,

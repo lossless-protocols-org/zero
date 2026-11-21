@@ -19,10 +19,15 @@
  * - v5: categories are keyed by (kind, name): "Gift" may be an expense and an
  *   income category at once. Expenses and budgets resolve to expense
  *   categories, incomes to income categories, each auto-created if missing.
- * - v5: exactly one ACTIVE income category: the file's first (extras are
- *   merged into it), made active if it was archived, else the default
- *   'Income'. Money in always has somewhere to land after a restore, as after
- *   createUser and the v5 upgrade (audit 2026-11-08 §4.1).
+ * - Every income category is kept, with its entries (3.0). Who is paying plays
+ *   no part in a restore (law L1): a Free app restoring a Pro backup stores
+ *   all of them and shows one (src/pro/projection.ts); the others wait in
+ *   Settings → Pro data kept. 2.8 merged extras into the first; a 3.0 backup
+ *   (envelope v6) is refused by 2.8 as too new, so 2.8 never meets one.
+ * - Money in always has an ACTIVE income category to land in after a restore,
+ *   as after createUser and the v5 upgrade (audit 2026-11-08 §4.1): a file
+ *   with none gets the default 'Income'; a file whose income categories are
+ *   all archived has its first one (domain/incomeCategories order) reactivated.
  * - v5: exactly one default account is planned (the file's, else a new
  *   'Cash'); entries naming no account or an unknown one land on it.
  * - v5: a refund that does not fit its expense (before its day, or more in
@@ -30,6 +35,15 @@
  *   its expense is kept.
  * - v5: an entry without `createdAt` gets it from its date, exactly as the
  *   database migration does (domain/isoEpoch.ts); `updatedAt` defaults to it.
+ * - v6: a transfer, a checkpoint or a debt that names an account the file
+ *   does not list makes that account (type 'other', counted in
+ *   `autoCreatedAccounts`) rather than lose the row or move it onto another
+ *   account, whose balance it would then be wrong for. An expense or income
+ *   naming an unknown account still lands on the default, as in 2.8: its
+ *   total is right either way.
+ * - v6: a transfer whose two ends are the same account moves nothing; it is
+ *   left out and counted in `rejectedTransfers`.
+ * - v6: a debt without an account touched none, and stays so.
  */
 
 import type {ExportData} from '../export/validate';
@@ -37,9 +51,9 @@ import {DEFAULTS, sanitizeString} from '../../../domain/sanitize';
 import {epochFromIsoDate} from '../../../domain/isoEpoch';
 import {toMoneyUnits} from '../../../domain/money';
 import type {CategoryKind} from '../../../domain/types';
-import {FREE_INCOME_CATEGORIES} from '../../../domain/freeTier';
 import {CATEGORY_SORT_STEP, sortOrderAt} from '../../../domain/categoryOrder';
 import {DEFAULT_ACCOUNT_COLOR, DEFAULT_ACCOUNT_ICON, DEFAULT_ACCOUNT_NAME} from '../../database/defaultAccount';
+import {UNKNOWN_NAME} from '../../../i18n/displayNames';
 import {
   DEFAULT_INCOME_CATEGORY_COLOR,
   DEFAULT_INCOME_CATEGORY_ICON,
@@ -83,27 +97,60 @@ interface Timestamps {
 /** A refund as the file nests it in its expense. */
 type FileRefund = NonNullable<FileRow<'expenses'>['refunds']>[number];
 
-type PlannedRefund = Omit<FileRefund, 'createdAt' | 'updatedAt'> & Timestamps;
+/** `accountName` null: the refund follows its expense's account (every refund before v6, and most after). */
+type PlannedRefund = Omit<FileRefund, 'account' | 'createdAt' | 'updatedAt'> &
+  Timestamps & {accountName: string | null};
 
 type PlannedExpense = Omit<
   FileRow<'expenses'>,
-  'description' | 'category' | 'account' | 'refunds' | 'createdAt' | 'updatedAt'
+  'description' | 'category' | 'account' | 'refunds' | 'recurring' | 'createdAt' | 'updatedAt'
 > &
   Timestamps & {
     description: string;
     categoryName: string;
     accountName: string;
     refunds: PlannedRefund[];
+    /** P9: the ref of the rule that made it, kept only when that rule is in the plan. */
+    recurringRef: string | null;
   };
 
-type PlannedIncome = Omit<FileRow<'incomes'>, 'category' | 'account' | 'createdAt' | 'updatedAt'> &
+type PlannedIncome = Omit<FileRow<'incomes'>, 'category' | 'account' | 'recurring' | 'createdAt' | 'updatedAt'> &
   Timestamps & {
     categoryName: string;
     accountName: string;
+    recurringRef: string | null;
   };
 
 /** `type` is already a DebtType: the schema folds free-text types into the two. */
-type PlannedDebt = Omit<FileRow<'debts'>, 'debtor' | 'createdAt' | 'updatedAt'> & Timestamps & {debtorTitle: string};
+type PlannedDebt = Omit<FileRow<'debts'>, 'debtor' | 'account' | 'createdAt' | 'updatedAt'> &
+  Timestamps & {
+    debtorTitle: string;
+    /** v6: the account the money moved through; null when none. */
+    accountName: string | null;
+  };
+
+type PlannedTransfer = Omit<
+  FileRow<'transfers'>,
+  'fromAccount' | 'toAccount' | 'recurring' | 'createdAt' | 'updatedAt'
+> &
+  Timestamps & {
+    fromAccountName: string;
+    toAccountName: string;
+    recurringRef: string | null;
+  };
+
+type PlannedCheckpoint = Omit<FileRow<'checkpoints'>, 'account' | 'createdAt' | 'updatedAt'> &
+  Timestamps & {
+    accountName: string;
+  };
+
+/** v6 (P9): a recurring rule. Its category (null for a transfer) and accounts by name. */
+type PlannedRule = Omit<FileRow<'recurring'>, 'category' | 'account' | 'toAccount' | 'createdAt' | 'updatedAt'> &
+  Timestamps & {
+    categoryName: string | null;
+    accountName: string;
+    toAccountName: string | null;
+  };
 
 export interface ImportStats {
   categories: number;
@@ -121,9 +168,16 @@ export interface ImportStats {
   rejectedRefunds: number;
   /** Entries whose account was not in the file, recorded on the default account. */
   reassignedToDefaultAccount: number;
-  /** Income categories beyond Free's one, folded into `incomeCategoryKept` with their entries. */
-  mergedIncomeCategories: number;
-  incomeCategoryKept: string | null;
+  transfers: number;
+  checkpoints: number;
+  /** v6: accounts a transfer, checkpoint or debt named that the file did not list. */
+  autoCreatedAccounts: number;
+  /** v6: transfers left out because both ends were the same account. */
+  rejectedTransfers: number;
+  /** v6 (P9): recurring rules. */
+  recurringRules: number;
+  /** v6 (P9): rules left out: a ref the file used twice, or a transfer rule whose ends are one account. */
+  rejectedRules: number;
 }
 
 interface ImportPlan {
@@ -135,6 +189,9 @@ interface ImportPlan {
   expenses: PlannedExpense[];
   incomes: PlannedIncome[];
   debts: PlannedDebt[];
+  transfers: PlannedTransfer[];
+  checkpoints: PlannedCheckpoint[];
+  recurring: PlannedRule[];
   stats: ImportStats;
 }
 
@@ -223,6 +280,87 @@ export const buildImportPlan = (data: ExportData, now: number = Date.now()): Imp
     account.isDefault = account === defaultAccount;
   }
   accountsByName.set(defaultAccount.name, defaultAccount);
+  // v6 references name their account outright; one the file does not list is made, not
+  // swapped for another account (whose balance the row would then be wrong for).
+  let autoCreatedAccounts = 0;
+  const ensureAccount = (name: string): string => {
+    if (!accountsByName.has(name)) {
+      accountsByName.set(name, {
+        name,
+        type: 'other',
+        currency: userCurrency,
+        openingBalance: 0,
+        openingDate: null,
+        isDefault: false,
+        accountStatus: true,
+        sortOrder: Math.max(0, ...[...accountsByName.values()].map(a => a.sortOrder)) + CATEGORY_SORT_STEP,
+        icon: DEFAULT_ACCOUNT_ICON,
+        color: DEFAULT_ACCOUNT_COLOR,
+      });
+      autoCreatedAccounts++;
+    }
+    return name;
+  };
+
+  // Made before any entry is placed, so an expense or income naming one of these lands on it,
+  // not on the default (the file names the account; only the list of accounts left it out).
+  for (const row of data.debts) {
+    if (row.account !== undefined) {
+      ensureAccount(row.account);
+    }
+  }
+  for (const row of data.transfers) {
+    ensureAccount(row.fromAccount);
+    ensureAccount(row.toAccount);
+  }
+  for (const row of data.checkpoints) {
+    ensureAccount(row.account);
+  }
+  for (const expense of data.expenses) {
+    for (const refund of expense.refunds ?? []) {
+      if (refund.account !== undefined) {
+        ensureAccount(refund.account);
+      }
+    }
+  }
+  for (const rule of data.recurring) {
+    ensureAccount(rule.account);
+    if (rule.toAccount !== undefined) {
+      ensureAccount(rule.toAccount);
+    }
+  }
+
+  // P9: rules by ref, first one wins; a transfer rule must name two different accounts.
+  let rejectedRules = 0;
+  const rulesByRef = new Map<string, PlannedRule>();
+  for (const rule of data.recurring) {
+    const isTransfer = rule.target === 'transfer';
+    const toAccountName = isTransfer && rule.toAccount !== undefined ? rule.toAccount : null;
+    if (rulesByRef.has(rule.ref) || (isTransfer && (toAccountName === null || toAccountName === rule.account))) {
+      rejectedRules++;
+      continue;
+    }
+    rulesByRef.set(rule.ref, {
+      ref: rule.ref,
+      target: rule.target,
+      title: rule.title,
+      categoryName: isTransfer ? null : (rule.category?.name ?? UNKNOWN_NAME),
+      accountName: rule.account,
+      toAccountName,
+      amount: rule.amount,
+      cadence: rule.cadence,
+      interval: rule.interval,
+      startDate: rule.startDate,
+      endDate: rule.endDate,
+      nextIndex: rule.nextIndex,
+      remindDaysBefore: rule.remindDaysBefore,
+      active: rule.active,
+      ...timestampsOf({date: rule.startDate, createdAt: rule.createdAt, updatedAt: rule.updatedAt}, now),
+    });
+  }
+  /** A made row keeps its rule only when that rule is coming in with it. */
+  const ruleRefOf = (ref: string | undefined): string | null => (ref !== undefined && rulesByRef.has(ref) ? ref : null);
+
   let reassignedToDefaultAccount = 0;
   const accountNameFor = (name: string | undefined): string => {
     if (name === undefined) {
@@ -268,7 +406,13 @@ export const buildImportPlan = (data: ExportData, now: number = Date.now()): Imp
         continue;
       }
       refundedUnits += units;
-      refunds.push({amount: refund.amount, date: refund.date, note: refund.note, ...timestampsOf(refund, now)});
+      refunds.push({
+        amount: refund.amount,
+        date: refund.date,
+        note: refund.note,
+        accountName: refund.account === undefined ? null : ensureAccount(refund.account),
+        ...timestampsOf(refund, now),
+      });
     }
     refundCount += refunds.length;
     return {
@@ -280,6 +424,7 @@ export const buildImportPlan = (data: ExportData, now: number = Date.now()): Imp
       accountName: accountNameFor(expense.account),
       ...timestampsOf(expense, now),
       refunds,
+      recurringRef: ruleRefOf(expense.recurring),
     };
   });
 
@@ -290,6 +435,7 @@ export const buildImportPlan = (data: ExportData, now: number = Date.now()): Imp
     categoryName: income.category.name,
     accountName: accountNameFor(income.account),
     ...timestampsOf(income, now),
+    recurringRef: ruleRefOf(income.recurring),
   }));
 
   // Types were folded into the two the app knows by the schema, so no row can
@@ -301,6 +447,38 @@ export const buildImportPlan = (data: ExportData, now: number = Date.now()): Imp
     date: debt.date,
     type: debt.type,
     ...timestampsOf(debt, now),
+    accountName: debt.account === undefined ? null : ensureAccount(debt.account),
+  }));
+
+  let rejectedTransfers = 0;
+  const transfers: PlannedTransfer[] = data.transfers.flatMap(transfer => {
+    const fromAccountName = ensureAccount(transfer.fromAccount);
+    const toAccountName = ensureAccount(transfer.toAccount);
+    if (fromAccountName === toAccountName) {
+      rejectedTransfers++;
+      return [];
+    }
+    return [
+      {
+        fromAccountName,
+        toAccountName,
+        amount: transfer.amount,
+        date: transfer.date,
+        note: transfer.note,
+        ...timestampsOf(transfer, now),
+        recurringRef: ruleRefOf(transfer.recurring),
+      },
+    ];
+  });
+
+  const checkpoints: PlannedCheckpoint[] = data.checkpoints.map(checkpoint => ({
+    accountName: ensureAccount(checkpoint.account),
+    balance: checkpoint.balance,
+    date: checkpoint.date,
+    gap: checkpoint.gap,
+    kind: checkpoint.kind,
+    note: checkpoint.note,
+    ...timestampsOf(checkpoint, now),
   }));
 
   // Auto-create anything referenced by an entry but missing from the
@@ -327,32 +505,22 @@ export const buildImportPlan = (data: ExportData, now: number = Date.now()): Imp
   };
   expenses.forEach(expense => ensureCategory('expense', expense.categoryName));
   incomes.forEach(income => ensureCategory('income', income.categoryName));
-
-  // Free has one income category (domain/freeTier). A file with more (an old
-  // dev build, or an edited JSON) keeps the first one, active before archived
-  // and then in its own order, and every money-in entry moves onto it. Nothing
-  // is lost: an entry without a note keeps its old category's name as the note
-  // ("Freelance"), so the row still says what it was. The restore summary says so.
-  const incomeCategories = [...categoriesByKey.values()]
-    .filter(c => c.kind === 'income')
-    .sort((a, b) => Number(b.status) - Number(a.status) || a.sortOrder - b.sortOrder);
-  const keptIncome = incomeCategories.slice(0, FREE_INCOME_CATEGORIES);
-  const extraIncome = incomeCategories.slice(FREE_INCOME_CATEGORIES);
-  const keeper = keptIncome[0];
-  if (keeper && extraIncome.length > 0) {
-    extraIncome.forEach(c => categoriesByKey.delete(categoryKey('income', c.name)));
-    incomes.forEach(income => {
-      if (income.categoryName !== keeper.name) {
-        income.note = income.note || income.categoryName;
-        income.categoryName = keeper.name;
-      }
-    });
+  // A rule keeps its category, as an entry does (made if the file lacks it).
+  for (const rule of rulesByRef.values()) {
+    if (rule.categoryName !== null && rule.target !== 'transfer') {
+      ensureCategory(rule.target, rule.categoryName);
+    }
   }
 
   // Money in always has an active category to land in: a file with none (every
-  // backup made before v5) gets the default, and a lone archived one is made
-  // active again; the app would otherwise have nowhere to put money in.
-  if (!keeper) {
+  // backup made before v5) gets the default, and one whose income categories are
+  // all archived has the first of them made active again; the app would otherwise
+  // have nowhere to put money in. Every income category and entry is kept as it was.
+  const incomeCategories = [...categoriesByKey.values()]
+    .filter(c => c.kind === 'income')
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const firstIncome = incomeCategories[0];
+  if (!firstIncome) {
     categoriesByKey.set(categoryKey('income', DEFAULT_INCOME_CATEGORY_NAME), {
       name: DEFAULT_INCOME_CATEGORY_NAME,
       kind: 'income',
@@ -362,8 +530,8 @@ export const buildImportPlan = (data: ExportData, now: number = Date.now()): Imp
       sortOrder: sortOrderAt(0),
       autoCreated: false,
     });
-  } else if (!keeper.status) {
-    keeper.status = true;
+  } else if (!incomeCategories.some(c => c.status)) {
+    firstIncome.status = true;
   }
 
   let autoCreatedDebtors = 0;
@@ -396,6 +564,9 @@ export const buildImportPlan = (data: ExportData, now: number = Date.now()): Imp
     expenses,
     incomes,
     debts,
+    transfers,
+    checkpoints,
+    recurring: [...rulesByRef.values()],
     stats: {
       categories: categories.length,
       debtors: debtors.length,
@@ -410,8 +581,12 @@ export const buildImportPlan = (data: ExportData, now: number = Date.now()): Imp
       autoCreatedDebtors,
       rejectedRefunds,
       reassignedToDefaultAccount,
-      mergedIncomeCategories: keeper ? extraIncome.length : 0,
-      incomeCategoryKept: keeper && extraIncome.length > 0 ? keeper.name : null,
+      transfers: transfers.length,
+      checkpoints: checkpoints.length,
+      autoCreatedAccounts,
+      rejectedTransfers,
+      recurringRules: rulesByRef.size,
+      rejectedRules,
     },
   };
 };

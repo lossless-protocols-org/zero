@@ -9,6 +9,7 @@ import {PrimaryText} from '../../../ui/atoms/PrimaryText';
 import {Amount} from '../../../ui/atoms/Amount';
 import {Icon} from '../../../ui/atoms/Icons';
 import {CategoryContainer} from '../../../ui/molecules/CategoryContainer';
+import {AccountRow} from '../../../ui/molecules/AccountRow';
 import {PrimaryButton} from '../../../ui/atoms/PrimaryButton';
 import {useThemeColors} from '../../../ui/hooks/useThemeColors';
 import {useFormatAmount} from '../../../ui/hooks/useFormatAmount';
@@ -39,6 +40,7 @@ const ExpenseEntryComponent: React.FC<ExpenseEntryProps> = ({editing, draft}) =>
   const descriptionRef = useRef<React.ElementRef<typeof TextInput>>(null);
   const amountRef = useRef<React.ElementRef<typeof TextInput>>(null);
   const {
+    account,
     categories,
     selectedCategories,
     toggleCategorySelection,
@@ -155,6 +157,8 @@ const ExpenseEntryComponent: React.FC<ExpenseEntryProps> = ({editing, draft}) =>
           label={t('transaction.dateLabel')}
           maxDate={new Date()}
         />
+
+        <AccountRow {...account} />
 
         <View style={[gs.rowCenter, gs.gap6, gs.mb8]}>
           <PrimaryText size={12} color={colors.secondaryText}>

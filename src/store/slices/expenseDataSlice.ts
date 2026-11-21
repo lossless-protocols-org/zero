@@ -18,6 +18,8 @@ import {
 import {selectUserId} from './userIdSlice';
 import type {AppDispatch} from '../store';
 import {onDay, spendingOf, toSpendRows} from '../../domain/periodMath';
+import {currentPeriodFor, monthKeyOf} from '../../pro/monthStart';
+import {monthStartChanged} from '../monthStartChanged';
 import type {RefundListRow} from '../../domain/types';
 
 /**
@@ -105,10 +107,12 @@ export const fetchExpensesByMonth = createAsyncThunk<SpendingPeriod, string, {st
   async (yearMonth: string, {getState, rejectWithValue}) => {
     try {
       const userId = selectUserId(getState());
+      // Which days the month covers is asked once per read, at the one read point (P11).
+      const period = currentPeriodFor(yearMonth);
       return await readPeriod(
-        getAllExpensesByMonth(userId, yearMonth),
-        getRefundRowsByMonth(userId, yearMonth),
-        getRefundedAmountsByMonth(userId, yearMonth),
+        getAllExpensesByMonth(userId, period),
+        getRefundRowsByMonth(userId, period),
+        getRefundedAmountsByMonth(userId, period),
       );
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch expenses');
@@ -139,10 +143,11 @@ export const fetchExpensesByCategory = createAsyncThunk<
 >('expense/fetchByCategory', async ({categoryId, yearMonth}, {getState, rejectWithValue}) => {
   try {
     const userId = selectUserId(getState());
+    const period = currentPeriodFor(yearMonth);
     return await readPeriod(
-      getAllExpensesByCategoryAndMonth(userId, categoryId, yearMonth),
-      getRefundRowsByCategoryAndMonth(userId, categoryId, yearMonth),
-      getRefundedAmountsByCategoryAndMonth(userId, categoryId, yearMonth),
+      getAllExpensesByCategoryAndMonth(userId, categoryId, period),
+      getRefundRowsByCategoryAndMonth(userId, categoryId, period),
+      getRefundedAmountsByCategoryAndMonth(userId, categoryId, period),
     );
   } catch (error) {
     return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch category expenses');
@@ -161,7 +166,8 @@ export const refetchExpenses = async (
   scope: {targetMonth?: string; targetDate?: string},
 ): Promise<void> => {
   // Route params default to '' when missing, so '' counts as absent too.
-  const month = scope.targetMonth || scope.targetDate?.slice(0, 7);
+  // The month a date belongs to follows the user's month start day (P11): never its first seven characters.
+  const month = scope.targetMonth || (scope.targetDate ? monthKeyOf(scope.targetDate) : undefined);
   if (!month) {
     throw new Error('refetchExpenses needs a month or a date');
   }
@@ -207,7 +213,14 @@ const expenseDataSlice = createSlice({
       })
       .addCase(fetchExpensesByCategory.rejected, (state, action) => {
         settleFilter(state, action.meta.requestId, {kind: 'category', ...action.meta.arg}, EMPTY_PERIOD);
-      });
+      })
+      // P11: months start on another day now; every slot (and a category's month) was read for the
+      // old one. One day's list is the same days whatever the start day, so it stays on screen.
+      .addCase(monthStartChanged, state =>
+        state.filtered?.filter.kind === 'day'
+          ? {...initialState, filtered: state.filtered, filterRequestId: state.filterRequestId}
+          : initialState,
+      );
   },
 });
 

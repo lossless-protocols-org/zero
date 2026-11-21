@@ -4,11 +4,12 @@
  * columns, and days a screen reader names by date (with the spend).
  */
 import React from 'react';
-import {fireEvent} from '@testing-library/react-native';
+import {fireEvent, within} from '@testing-library/react-native';
 import {StyleSheet, type StyleProp, type ViewStyle} from 'react-native';
 import {MonthCalendarHeatmap} from '../../../../../src/features/reports/components/MonthCalendarHeatmap';
 import {renderWithTheme} from '../../../../harness/render';
 import {setMockTranslations} from '../../../../harness/mocks/reactI18next';
+import {periodFor} from '../../../../../src/domain/period';
 
 const mockNavigate = jest.fn();
 jest.mock('../../../../../src/platform/navigationUtils', () => ({
@@ -19,7 +20,7 @@ beforeAll(() => setMockTranslations({'common.fieldValue': '{{field}}, {{value}}'
 jest.mock('../../../../../src/ui/hooks/useFormatAmount', () => ({useFormatAmount: () => (n: number) => `₹${n}`}));
 
 // October 2026 starts on a Thursday.
-const props = {year: 2026, monthIndex: 9, daysInMonth: 31, dayNames: ['S', 'M', 'T', 'W', 'T', 'F', 'S']};
+const props = {period: periodFor('2026-10'), dayNames: ['S', 'M', 'T', 'W', 'T', 'F', 'S']};
 type WeekStart = 'sunday' | 'monday';
 const show = (weekStart: WeekStart, transactions: Array<{date: string; amount: number}> = []) =>
   renderWithTheme(<MonthCalendarHeatmap {...props} transactions={transactions} weekStart={weekStart} />);
@@ -94,4 +95,45 @@ it('opens the tapped day', async () => {
   }
   await fireEvent.press(fifth);
   expect(mockNavigate).toHaveBeenCalledWith('EverydayTransactionScreen', {isDate: '2026-10-05'});
+});
+
+// 3.0 (P11): a month that starts on the user's salary day.
+describe('a month from the 7th', () => {
+  // 7 October 2026 is a Wednesday; the month runs to 6 November: 31 days.
+  const fromSeventh = (transactions: Array<{date: string; amount: number}> = []) =>
+    renderWithTheme(
+      <MonthCalendarHeatmap
+        period={periodFor('2026-10', 7)}
+        dayNames={props.dayNames}
+        transactions={transactions}
+        weekStart="sunday"
+      />,
+    );
+
+  it('starts under its own weekday and shows each day’s own number, across the month end', async () => {
+    const view = await fromSeventh();
+    expect(byTestId(view, 'calendar-blank')).toHaveLength(3);
+    const cells = view.getAllByRole('button');
+    expect(cells).toHaveLength(31);
+    const numbers = cells.map(cell => within(cell).getByText(/^\d+$/).props['children'] as number);
+    expect(numbers.slice(0, 3)).toEqual([7, 8, 9]);
+    expect(numbers.slice(24, 27)).toEqual([31, 1, 2]);
+    expect(numbers.at(-1)).toBe(6);
+  });
+
+  it('shades and opens a day of the next calendar month that belongs to this one', async () => {
+    const view = await fromSeventh([
+      {date: '2026-11-03T10:00:00', amount: 40},
+      // The 6th of October is last month's: not drawn here at all.
+      {date: '2026-10-06T10:00:00', amount: 999},
+    ]);
+    const third = view.getAllByRole('button')[27];
+    if (!third) {
+      throw new Error('no cell for 3 November');
+    }
+    expect(third.props['accessibilityLabel']).toContain('₹40');
+    await fireEvent.press(third);
+    expect(mockNavigate).toHaveBeenCalledWith('EverydayTransactionScreen', {isDate: '2026-11-03'});
+    expect(view.queryByLabelText(/₹999/)).toBeNull();
+  });
 });

@@ -26,6 +26,9 @@ const sample: ExportDraft = {
   budgets: [],
   accounts: [],
   incomes: [],
+  transfers: [],
+  checkpoints: [],
+  recurring: [],
 };
 
 const makeDeps = (
@@ -178,7 +181,7 @@ describe('exportJson', () => {
     expect(deps.calls).toEqual([true]);
     expect(share).toHaveBeenCalledTimes(1);
     const path = writeFile.mock.calls[0]?.[0];
-    expect(path).toMatch(/^\/tmp\/temporary\/zero_v5_\d{14}\.json$/); // single slash despite the trailing-slash constant
+    expect(path).toMatch(/^\/tmp\/temporary\/zero_v6_\d{14}\.json$/); // single slash despite the trailing-slash constant
     expect(share).toHaveBeenCalledWith({url: `file://${path}`, title: 'Export Zero Data'});
     expect(unlink).toHaveBeenCalledWith(path);
   });

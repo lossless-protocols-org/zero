@@ -9,7 +9,7 @@ import {flattenDayGroups, type DayListItem} from '../../../ui/groupExpensesByDay
 import {usePreference} from '../../../ui/hooks/usePreference';
 import {useFormatAmount} from '../../../ui/hooks/useFormatAmount';
 import {useFormatSpend} from '../../../ui/hooks/useFormatSpend';
-import {navigate} from '../../../platform/navigationUtils';
+import {useOpenEntry} from '../../../ui/hooks/useOpenEntry';
 import type {ExpenseWithCategory, RefundListRow} from '../../../domain/types';
 import {arrangeRows, listSortPreference} from '../listSort';
 import {toListRows, type ListRow} from '../listRows';
@@ -115,9 +115,14 @@ const TransactionListComponent: React.FC<TransactionListProps> = ({
     presentIds,
   });
 
-  const handleEdit = useCallback((expense: ExpenseWithCategory) => {
-    navigate('UpdateTransactionScreen', {expenseId: String(expense.id)});
-  }, []);
+  // An entry a recurring rule made asks "this one or the rule?" first (Pro, P9).
+  const {openExpense, showsRepeat} = useOpenEntry();
+  const handleEdit = useCallback(
+    (expense: ExpenseWithCategory) => {
+      void openExpense({id: String(expense.id), recurringId: expense.recurringId});
+    },
+    [openExpense],
+  );
 
   const groupedData = useMemo(
     () => arrangeRows(rows, sort, row => (row.category?.name ? displayCategoryName(row.category.name, t) : '')),
@@ -179,10 +184,23 @@ const TransactionListComponent: React.FC<TransactionListProps> = ({
           dayLabel={item.dayLabel}
           t={t}
           formatAmount={formatAmount}
+          showRepeat={showsRepeat}
         />
       );
     },
-    [colors, edgeToEdge, undo, handleEdit, remove, tutorialSwipeRef, undoHeightOf, t, formatAmount, formatSpend],
+    [
+      colors,
+      edgeToEdge,
+      undo,
+      handleEdit,
+      remove,
+      tutorialSwipeRef,
+      undoHeightOf,
+      t,
+      formatAmount,
+      formatSpend,
+      showsRepeat,
+    ],
   );
 
   const refreshControl = useMemo(

@@ -3,6 +3,7 @@ import {BORROW, LEND} from '../../../../domain/debtType';
 import type {DebtType} from '../../../../domain/types';
 import React, {useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
+import {MoveTally} from '../../components/MoveTally';
 import {AppHeader} from '../../../../ui/atoms/AppHeader';
 import {goBack, navigate} from '../../../../platform/navigationUtils';
 import {useRoute} from '@react-navigation/native';
@@ -197,6 +198,8 @@ export const IndividualDebtsScreen = () => {
       <View style={gs.px16}>
         <DataErrorBanner domains={['debt', 'debtor', 'individualDebtor']} />
       </View>
+      {/* Pro: a card or loan tally can become a full card or loan. Nothing for a person, or without Pro. */}
+      <MoveTally debtorId={debtorId} />
       {shouldShowTutorial && <SwipeTutorialTooltip onDismiss={dismissTutorial} />}
       <DebtList
         colors={colors}

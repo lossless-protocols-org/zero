@@ -28,6 +28,8 @@ interface ExpenseRowProps {
   /** From the list, once: a row subscribes to nothing of its own (audit 2026-11-08 §8.3). */
   t: TFunction;
   formatAmount: (amount: number) => string;
+  /** Pro (P9): mark an entry a recurring rule made. False without Pro: it is then an ordinary row. */
+  showRepeat: boolean;
 }
 
 /**
@@ -45,7 +47,8 @@ const sameRow = (a: ExpenseListRow, b: ExpenseListRow): boolean =>
     a.refunded === b.refunded &&
     a.category?.name === b.category?.name &&
     a.category?.icon === b.category?.icon &&
-    a.category?.color === b.category?.color);
+    a.category?.color === b.category?.color &&
+    a.recurringId === b.recurringId);
 
 const sameProps = (a: ExpenseRowProps, b: ExpenseRowProps): boolean =>
   sameRow(a.expense, b.expense) &&
@@ -57,12 +60,26 @@ const sameProps = (a: ExpenseRowProps, b: ExpenseRowProps): boolean =>
   a.tutorialSwipeRef === b.tutorialSwipeRef &&
   a.dayLabel === b.dayLabel &&
   a.t === b.t &&
-  a.formatAmount === b.formatAmount;
+  a.formatAmount === b.formatAmount &&
+  a.showRepeat === b.showRepeat;
 
 /** An expense in a spending list: swipe to edit or delete, long-press for "Got money back". */
 export const ExpenseRow: React.FC<ExpenseRowProps> = React.memo(
-  ({expense, colors, onEdit, onDelete, openSwipeableRef, edgeToEdge, tutorialSwipeRef, dayLabel, t, formatAmount}) => {
+  ({
+    expense,
+    colors,
+    onEdit,
+    onDelete,
+    openSwipeableRef,
+    edgeToEdge,
+    tutorialSwipeRef,
+    dayLabel,
+    t,
+    formatAmount,
+    showRepeat,
+  }) => {
     const amount = formatAmount(expense.amount);
+    const repeats = showRepeat && Boolean(expense.recurringId);
     const categoryName = expense.category?.name ? displayCategoryName(expense.category.name, t) : undefined;
 
     const handleEdit = useCallback(() => {
@@ -105,7 +122,15 @@ export const ExpenseRow: React.FC<ExpenseRowProps> = React.memo(
           onDelete={handleDelete}
           extraActions={extraActions}
           menuTitle={expense.title}
-          accessibilityLabel={[expense.title, amount, refundedLabel, categoryName, expense.description, dayLabel]
+          accessibilityLabel={[
+            expense.title,
+            repeats ? t('recurring.repeats') : '',
+            amount,
+            refundedLabel,
+            categoryName,
+            expense.description,
+            dayLabel,
+          ]
             .filter(Boolean)
             .join(', ')}
           colors={colors}
@@ -114,14 +139,7 @@ export const ExpenseRow: React.FC<ExpenseRowProps> = React.memo(
           edgeToEdge={edgeToEdge}>
           <View
             onLayout={measure}
-            style={[
-              gs.rounded12,
-              gs.rowBetweenCenter,
-              gs.px14,
-              gs.py10,
-              edgeToEdge && gs.mx16,
-              {backgroundColor: colors.containerColor},
-            ]}>
+            style={[gs.rounded12, gs.rowBetweenCenter, gs.px14, gs.py10, {backgroundColor: colors.containerColor}]}>
             <View style={[gs.rowCenter, gs.flex1]}>
               <View style={[gs.size36, gs.center, gs.rounded10, gs.mr10, {backgroundColor: colors.iconContainer}]}>
                 <Icon
@@ -131,9 +149,12 @@ export const ExpenseRow: React.FC<ExpenseRowProps> = React.memo(
                 />
               </View>
               <View style={[gs.flex1, gs.gap2]}>
-                <PrimaryText weight="medium" numberOfLines={1}>
-                  {expense.title}
-                </PrimaryText>
+                <View style={[gs.rowCenter, gs.gap6]}>
+                  <PrimaryText weight="medium" numberOfLines={1} style={gs.flexShrink}>
+                    {expense.title}
+                  </PrimaryText>
+                  {repeats ? <Icon name="repeat" size={12} color={colors.secondaryText} /> : null}
+                </View>
                 <PrimaryText size={11} color={colors.secondaryText} numberOfLines={1}>
                   {categoryName}
                   {expense.description ? ` · ${expense.description}` : ''}

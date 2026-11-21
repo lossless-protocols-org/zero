@@ -10,6 +10,7 @@ import {CustomInput} from '../../../ui/atoms/CustomInput';
 import {AmountInput} from '../../../ui/atoms/AmountInput';
 import {DatePicker} from '../../../ui/atoms/DatePicker';
 import {CategoryContainer} from '../../../ui/molecules/CategoryContainer';
+import {AccountRow} from '../../../ui/molecules/AccountRow';
 import {useThemeColors} from '../../../ui/hooks/useThemeColors';
 import {useIncomeForm} from '../hooks/useIncomeForm';
 import {expenseDescriptionSchema} from '../../../i18n/validationSchema';
@@ -17,12 +18,15 @@ import {goBack} from '../../../platform/navigationUtils';
 import {logRejection} from '../../../platform/errorLog';
 import {gs} from '../../../ui/globalStyles';
 import type {IncomeData} from '../../../domain/types';
+import type {IncomeDraft} from '../../../ui/quickAddDraft';
 
 interface IncomeEntryProps {
   /** The income being edited; absent when adding one. */
   editing?: IncomeData;
   /** The month the Money tab showed, for a new entry's date. */
   yearMonth?: string;
+  /** Filled in by reconcile's "Record what's missing" (3.0). */
+  draft?: IncomeDraft;
 }
 
 /**
@@ -30,11 +34,11 @@ interface IncomeEntryProps {
  * no title, no category grid while there is one income category, no
  * daily-allowance hint, no time of day.
  */
-const IncomeEntryComponent: React.FC<IncomeEntryProps> = ({editing, yearMonth}) => {
+const IncomeEntryComponent: React.FC<IncomeEntryProps> = ({editing, yearMonth, draft}) => {
   const {t} = useTranslation();
   const colors = useThemeColors();
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const form = useIncomeForm(editing, yearMonth);
+  const form = useIncomeForm(editing, yearMonth, draft);
   const selected = form.categories.filter(c => c.id === form.categoryId);
 
   return (
@@ -74,6 +78,8 @@ const IncomeEntryComponent: React.FC<IncomeEntryProps> = ({editing, yearMonth}) 
           label={t('transaction.dateLabel')}
           maxDate={new Date()}
         />
+
+        <AccountRow {...form.account} />
 
         <CustomInput
           colors={colors}

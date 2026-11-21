@@ -33,10 +33,11 @@ bun run check:no-read  # design §14: an ALLOW list; any permission, Info.plist 
                        #   entitlement or dependency not on it fails the gate
 node scripts/contrast-check.mjs
 bun run test:android   # the widget's Kotlin (reader, rendering, store, alarm, quick-add intents;
-                       #   Robolectric); CI runs it with Android Lint (./gradlew :app:lintDebug)
+                       #   Robolectric); CI runs it with Android Lint (./gradlew :app:lintPlayDebug :app:lintFossDebug)
 bun run test:ios       # the Swift shared by app and widget (snapshot reader, money format,
-                       #   queue, Siri matching) on a simulator; CI runs it on macOS
-cd android && ./gradlew assembleDebug
+                       #   queue, Siri matching) and the App Store code against Xcode's local
+                       #   test store, on a simulator; CI runs it on macOS
+cd android && ./gradlew assemblePlayDebug
 bun run test:e2e       # Maestro, on an emulator or the QA build only: it clears the app's data
                        #   (__tests__/e2e/README.md); CI runs it weekly
 ```
@@ -167,6 +168,27 @@ bun run test:e2e       # Maestro, on an emulator or the QA build only: it clears
 - [ ] Restore on **Android 10, 11 or 12** specifically (storage permission path)
 - [ ] After restore, the month/year picker shows the restored data's years
 
+From 3.0 (schema v6, backup v6), on both platforms:
+
+- [ ] **Upgrade over the live store build with data**: install the current store release, restore the
+      10k seed (`node scripts/seed-backup.mjs 10000`) and add an entry, then install the 3.0 build over
+      it. It opens on Home with every row; then add, export, and restore that export
+- [ ] A 3.0 backup restored on the current 2.8 store build says "newer version" and changes nothing
+- [ ] A backup with several money-in categories restored **without Pro**: every one is kept; the Money
+      tab, the money-in form and quick add show one; Settings → zero Pro shows "Pro data kept"; Remove
+      Pro data folds them into the one shown, every entry kept. **With Pro**: all of them are listed
+- [ ] `bun run test:sqlite` green: every shipped schema, 2.8.0's included, upgrades to v6 with every
+      value unchanged
+- [ ] **Accounts restored without Pro** (`node scripts/seed-backup.mjs 10000 --accounts`): no account row on
+      add expense, money in or refund; no net-worth card on Money; Home and Money show the same totals as
+      with Pro; editing an entry that is on another account keeps it there (export and look); Settings
+      counts the accounts, transfers and checkpoints as Pro data kept, and Remove Pro data leaves one
+      account with every entry on it and the same month totals
+- [ ] A refund recorded to another account than its expense (Pro) comes back on that account after export
+      and restore
+- [ ] Recurring rules and the link from each made entry to its rule come back after export and restore;
+      a backup of the restore is the same file
+
 ## 6. Locale, theme, accessibility
 
 - [ ] Switch theme (light / dark / system) — including a system-level change
@@ -190,6 +212,161 @@ bun run test:e2e       # Maestro, on an emulator or the QA build only: it clears
 - [ ] Low storage
 - [ ] Cold start time and list scroll feel unchanged vs the previous release
 - [ ] Settings → Diagnostics lists recorded errors and clears them
+
+### zero Pro on screen (from 3.0)
+
+Before the first 3.0 build goes to a store:
+
+- [ ] `SHIPPED_PRO_FEATURES` (`src/pro/features.ts`) lists every Pro feature in the build, and nothing else: the
+      upgrade sheet lists exactly these. **3.0 does not ship while it is empty.**
+- [ ] `THANKS_ENDS_ON_MS` (`src/pro/eligibility.ts`) is set to the fixed end date, 90 days after launch, and the
+      test that pins it unset is updated with it
+- [ ] The words on the sheet, the what's-new screen and the ended notice are true of this build (no feature
+      named that is not in it)
+
+Each release, on both platforms:
+
+- [ ] Settings → zero Pro: the row's second line matches the entitlement (Diagnostics shows the state); the
+      sheet opens and closes; Restore says how it went
+- [ ] Without Pro: no Pro screen can be reached, by tap or by link; nothing about Pro appears outside Settings
+- [ ] With a trial offered: the sheet prints the date of the first charge, and it is fourteen days from today
+- [ ] Pro ending shows "zero Pro has ended" once, and not again on the next launch
+- [ ] VoiceOver and TalkBack: every control on the sheet, the notice and the what's-new screen is read with
+      its name and role; the price and its terms are read before the button
+
+Accounts and net worth (P8), with Pro, each release:
+
+- [ ] Money → net worth card → Net worth: the total equals the four lines; "Since 1 …" reads kept, then only
+      what moved (investments, unexplained, opening balances, debts outside accounts)
+- [ ] Add an account (a card with a balance below zero), transfer to it, reconcile it: the gap shown is
+      what the entries do not explain; on an investment it reads as gained or lost
+- [ ] Add expense with two or more active accounts: the account row is filled in with the default and adding
+      takes the same taps as without it; picking another account puts the expense there
+- [ ] Archive an account: it leaves the pickers, stays in net worth; the default cannot be archived
+- [ ] Reconcile a bank account below what the entries give: "Record the missing expense" opens Add expense
+      with the gap, the day and that account; after saving it, the gap reads "explain it exactly"
+- [ ] Reports in a month with a balance set on cash or bank shows "Unexplained"; a fund's value change does not
+- [ ] A debt: "No account" by default; picking an account moves that account's balance and not net worth
+- [ ] Export CSV with two or more accounts has an Account column; with one account it has none
+
+Income categories and recurring entries (P9), each release:
+
+- [ ] Without Pro the Income tab of Categories offers no add (and says why); with Pro it adds an income
+      category, and Money groups money in by category with each total
+- [ ] With Pro, a rule due today makes its entry on opening the app, once (open, close, open again: one row)
+- [ ] A rule left behind (the app not opened for two occurrences) is not filled by itself: the app says
+      entries were missed and Recurring offers "Add them" or "Start from today"
+- [ ] A rule whose amount varies waits under "To confirm"; Enter amount makes the entry, Skip makes none
+- [ ] The first rule saved with a reminder asks for notifications (Android 13+, iOS), never earlier; the
+      reminder arrives at 09:00 on its day, says the name and when, and shows no amount
+- [ ] **Reboot the phone with a reminder pending: it still arrives, without opening zero** (Android: the
+      boot receiver; iOS: the system keeps it); one due while the phone was off shows at boot. Do this on
+      a Motorola (its BatteryCare suspends apps at boot) and on one other maker
+- [ ] Pro ends: no entry is made by any rule and no reminder stays pending; Settings counts the rules as
+      Pro data kept; the entries rules already made are ordinary rows
+- [ ] Editing an entry a rule made asks "just this one, or the recurring entry?"; backing out of the
+      question edits just the entry
+- [ ] Diagnostics → Accounts: "Net worth check … holds", and the slowest single account is 20 ms or less on
+      the low-end Android device with the 10k seed with accounts
+
+Automatic encrypted backup (P10), each release, on the low-end Android device and on an iPhone:
+
+- [ ] Without Pro, Settings → Data shows no "Automatic backup" row; with Pro it shows "Off"
+- [ ] Setup: Choose folder opens the system picker (Android: in Documents; a Google Drive or other cloud folder is
+      refused with "not on this phone"; iOS: On My iPhone and iCloud Drive both work); a passphrase shorter than 8
+      or typed differently twice is refused; Turn on writes `zero-backup-<today>.zbak` into the folder at once
+- [ ] Add an entry and leave zero: today's file is replaced within a few seconds. Leave again without a change:
+      the file is not touched
+- [ ] Keep 7 days with more than 7 older `zero-backup-…zbak` files in the folder: only the newest 7 stay; any other
+      file in the folder is untouched
+- [ ] Delete the folder in Files, then Back up now: "zero can't reach the backup folder"; Change folder fixes it and
+      writes at once. (iOS: also take access back in Settings → Privacy → Files and Folders)
+- [ ] Restore on another phone, or after Delete all data: "I have a backup" → the `.zbak` → a wrong passphrase is
+      refused and nothing changes; the right one restores everything. Restoring works without Pro
+- [ ] **Cross-platform:** a file written on Android restores on iOS, and the reverse
+- [ ] Delete all data does not replace today's backup file (automatic backup is off afterwards)
+- [ ] Pro ends with automatic backup on: the notice says it stopped and when the last backup was made; leaving
+      zero writes nothing more
+
+Month start day and custom range (P11), each release, both platforms:
+
+- [ ] Without Pro, Settings shows no "Month starts on" row and every month is the calendar month
+- [ ] With Pro, pick a day (say 7): the sheet shows "This month: 7 Nov – 6 Dec" before Apply; after it Home, Reports,
+      Money and Settings' budget row all name the same days, and Home's count changes to the entries in those days
+- [ ] On a day before the start day, "this month" is still the month that began last month, and › is disabled
+- [ ] Reports' calendar starts under the right weekday and runs across the month end (7 … 30, 1 … 6)
+- [ ] A budget set for the month applies to the month as now cut; the daily allowance counts days from the start day
+- [ ] Widget: its label reads the month's days; left on the home screen over midnight into the start day, the
+      month figure resets and the label moves on, without opening zero
+- [ ] Export, Delete all data, restore: the day comes back. Restored without Pro: calendar months, and Settings
+      counts the day as Pro data kept
+- [ ] Pro ends: the notice says months are calendar months again; the screens redraw on calendar months at once
+- [ ] Reports → Custom range: From and To pick any days up to today; an end before the start moves the other end;
+      the figures are the entries dated in those days; no budget is shown
+
+Trends and PDF reports (P12), each release, both platforms:
+
+- [ ] Reports shows Trends, Custom range and Share as PDF only with Pro
+- [ ] Trends: 3, 6 and 12 months; Spent, Money in, Kept; a category chip; tapping a bar shows that month against the
+      one before; "What stood out" is about the last finished month and each sentence shows its figures
+- [ ] Each month in Trends equals what Reports shows for that month
+- [ ] Diagnostics → Accounts: "Trends, 12 months" is 50 ms or less on the low-end Android device with the 10k seed
+- [ ] Share as PDF (month, range, trends): the share sheet opens with the file; opened elsewhere it shows the same
+      figures as the screen, text can be selected, a long list continues on the next page with its header, and
+      every page has its foot and number. In a right-to-left language the page is mirrored
+- [ ] The PDF is light in dark mode too; nothing is sent anywhere until the user picks an app in the share sheet
+
+### The store on iOS (from 3.0; until the Pro screens exist, read the result in Settings → Diagnostics → "zero Pro and the store")
+
+Local test store, no Apple account (Xcode: Product → Scheme → Edit Scheme → Run → Options → StoreKit
+Configuration → `zero.storekit`; purchases are made from Debug → StoreKit → Manage Transactions):
+
+- [ ] A fresh run reads `pro: none` and `store: did not say (noTransactions)`: a store that holds no
+      transaction of zero's cannot say, by design (docs/NATIVE.md)
+- [ ] Buy the lifetime product in the transaction manager → on the next foreground `pro: lifetime`
+- [ ] Refund it there → `pro: revoked`, with an `ended` time
+- [ ] Buy the monthly product → `pro: trial`, `renews: yes`; turn renewal off → `renews: no`; let it
+      expire (Editor → Subscription Renewal Rate) → `pro: expired` after the next foreground
+- [ ] Aeroplane mode at launch → the last state stands and `store:` never reads as an error
+
+Sandbox, with a sandbox Apple account on a real iPhone (needs the paid-apps agreement and the
+products in App Store Connect; never on the owner's everyday iPhone build):
+
+- [ ] The three products load with the store's own price text; an unknown id is simply absent
+- [ ] Buy, cancel at the sheet, and Ask to Buy: approve → Pro arrives without a tap; **decline → no Pro**
+      (Xcode's test store cannot show a decline)
+- [ ] Restore on a second device signs in once and brings Pro back
+- [ ] Billing retry and grace period read `onHold` and `grace`; a refund from reportaproblem.apple.com
+      reads `revoked`
+- [ ] Manage subscription opens Apple's sheet
+- [ ] `first seen` and the signed original install agree for a TestFlight build installed over 2.8
+
+### The store on Android (from 3.0; `play` flavour)
+
+Every build, on a real phone with the Play Store, using the **minified** QA or release build:
+
+- [ ] `node scripts/check-no-read.mjs --flavour play --apk …` and `--flavour foss --apk …` are clean: play
+      adds only `com.android.vending.BILLING`; neither holds `INTERNET` or Google's uploader
+- [ ] Cold start, then `adb logcat` for the app's process. Expected: one `BillingLogger` line saying it is
+      skipping logging. Not expected: `FATAL EXCEPTION`, `NoClassDefFoundError`, or any line from
+      `TransportRuntime` or `CctTransportBackend`
+- [ ] Settings → Diagnostics reads `store: answered, …` with the licence key in place, and
+      `did not say (noLicenceKey)` without it
+- [ ] **After any bump of the billing library:** read the new POM for added dependencies, repeat the three
+      lines above, and leave the phone two days with the app opened now and then: no crash, no ANR, and
+      `adb shell dumpsys jobscheduler | grep datatransport` prints nothing
+
+With products in Play Console and a licence tester account (plan P5 spike part 2):
+
+- [ ] The three products load with Play's own price text; the trial offer shows 14 days once, the base
+      plan after that
+- [ ] Buy, cancel at the sheet, slow test card approve → Pro arrives without a tap; slow card decline → no Pro
+- [ ] Kill the app right after paying, relaunch → Pro on, and the order shows as acknowledged in Play Console
+      (an unacknowledged order is refunded after three days)
+- [ ] Refund with revoke in Play Console → Pro off at the next foreground once Play's cache has it
+- [ ] Payment declined (Play Billing Lab) → still Pro in grace, `onHold` after it; paused → `onHold`
+- [ ] Aeroplane mode at each step, and the Play Store disabled → the last state stands (`did not say`)
+- [ ] A second phone on the same Google account shows Pro with no Restore tap
 
 ## 8. Sign-off
 

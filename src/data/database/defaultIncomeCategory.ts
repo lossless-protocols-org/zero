@@ -1,6 +1,6 @@
 /**
- * The income category every user has (2.8; Free has exactly one,
- * domain/freeTier). Seeded where users come from, so money in always has
+ * The income category every user has (2.8; Free has exactly one, which
+ * the Categories screen keeps so; 3.0 Pro adds more). Seeded where users come from, so money in always has
  * somewhere to land without any screen having to create it (audit 2026-11-08
  * §4.1): createUser, the v5 upgrade (v5Backfill.ts) and a restore (the import
  * planner). Its id derives from the user id, like the default account's, so a

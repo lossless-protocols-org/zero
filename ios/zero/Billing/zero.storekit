@@ -1,0 +1,111 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "5E7A1C02",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "29.99",
+      "familyShareable" : false,
+      "internalID" : "9B4D10A1",
+      "localizations" : [
+        {
+          "description" : "Every Pro feature, one payment, no renewal",
+          "displayName" : "zero Pro Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "zero_pro_lifetime",
+      "referenceName" : "zero Pro Lifetime",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "14.99",
+      "familyShareable" : false,
+      "internalID" : "9B4D10A2",
+      "localizations" : [
+        {
+          "description" : "Half price for people here before 3.0",
+          "displayName" : "zero Pro Lifetime (Thank you)",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "zero_pro_lifetime_thanks",
+      "referenceName" : "zero Pro Lifetime Thank You",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6759560225",
+    "_developerTeamID" : "6LUZGX8TBM",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "7C3F20B1",
+      "localizations" : [
+        {
+          "description" : "",
+          "displayName" : "zero Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "zero Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "2.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "7C3F20B2",
+          "introductoryOffer" : {
+            "internalID" : "7C3F20B3",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P2W"
+          },
+          "localizations" : [
+            {
+              "description" : "Every Pro feature, renews monthly",
+              "displayName" : "zero Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "zero_pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "zero Pro Monthly",
+          "subscriptionGroupID" : "7C3F20B1",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

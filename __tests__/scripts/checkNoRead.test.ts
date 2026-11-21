@@ -60,7 +60,7 @@ it('passes a clean tree (the debug manifest’s INTERNET never ships)', () => {
 });
 
 it.each([
-  ['a permission nobody listed', {appManifest: manifest(permission('POST_NOTIFICATIONS'))}, 'POST_NOTIFICATIONS'],
+  ['a permission nobody listed', {appManifest: manifest(permission('READ_CONTACTS'))}, 'READ_CONTACTS'],
   ['the network', {appManifest: manifest(permission('INTERNET'))}, 'INTERNET'],
   [
     'a dependency asking for calendars',
@@ -84,4 +84,32 @@ it('judges a dependency’s uncapped storage permission by the app’s cap, as t
   const appWithout = run({...uncapped, appManifest: manifest()});
   expect(appWithout.status).toBe(1);
   expect(appWithout.output).toContain('every API level');
+});
+
+describe('a built APK is judged as one flavour', () => {
+  const apkRun = (...args: string[]): {status: number | null; output: string} => {
+    const result = spawnSync('node', [SCRIPT, ...args], {encoding: 'utf8'});
+    return {status: result.status, output: `${result.stdout}${result.stderr}`};
+  };
+
+  it('refuses to check an APK without knowing which flavour it is', () => {
+    const result = apkRun('--apk', 'app-play-release.apk');
+    expect(result.status).toBe(1);
+    expect(result.output).toContain('--flavour <play|foss>');
+  });
+
+  it('refuses a flavour it has no allow list for', () => {
+    const result = apkRun('--flavour', 'amazon', '--apk', 'app-amazon-release.apk');
+    expect(result.status).toBe(1);
+    expect(result.output).toContain('--flavour <play|foss>');
+  });
+
+  it('refuses a play file judged as foss, and the reverse', () => {
+    const asFoss = apkRun('--flavour', 'foss', '--apk', 'app-play-release-unsigned.apk');
+    expect(asFoss.status).toBe(1);
+    expect(asFoss.output).toContain('is a play build, but --flavour says foss');
+    const asPlay = apkRun('--flavour', 'play', '--apk', 'app-foss-release.apk');
+    expect(asPlay.status).toBe(1);
+    expect(asPlay.output).toContain('is a foss build, but --flavour says play');
+  });
 });

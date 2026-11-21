@@ -20,6 +20,14 @@ import type {ExportData} from './validate';
  *                 without its expense and expense ids are minted afresh on
  *                 import. All additions are optional or defaulted, so every
  *                 v0–v4 file still validates.
+ *   v6          — DB schema v6 (3.0): `transfers` and `checkpoints` (each naming
+ *                 its accounts by name, every end named, the default included);
+ *                 debts carry `account`, omitted when the debt touched no account
+ *                 (unlike an expense's, where omitted means the default). Every
+ *                 income category is kept on restore (2.8 merged extras into
+ *                 one). Additions only, so 2.8's validator accepts a v6 file and
+ *                 then refuses it as too new: the only path to its "update the
+ *                 app" message (__tests__/contract/v6RefusedBy28.test.ts).
  *
  * RULES:
  *   - Bump when the ExportData shape or data semantics change.
@@ -31,7 +39,7 @@ import type {ExportData} from './validate';
  *   Example: zero_v3_20260321163018.json
  *   The version in the filename matches the version inside the JSON.
  */
-export const CURRENT_EXPORT_VERSION = 5;
+export const CURRENT_EXPORT_VERSION = 6;
 
 /**
  * A file written by a NEWER app may carry fields this version does not know

@@ -15,6 +15,9 @@ const emptyData: ExportData = {
   budgets: [],
   accounts: [],
   incomes: [],
+  transfers: [],
+  checkpoints: [],
+  recurring: [],
 };
 
 /** The planned categories of one kind (every plan also holds the income category money in lands in). */
@@ -180,8 +183,12 @@ describe('buildImportPlan — empty payload', () => {
       autoCreatedDebtors: 0,
       rejectedRefunds: 0,
       reassignedToDefaultAccount: 0,
-      mergedIncomeCategories: 0,
-      incomeCategoryKept: null,
+      transfers: 0,
+      checkpoints: 0,
+      autoCreatedAccounts: 0,
+      rejectedTransfers: 0,
+      recurringRules: 0,
+      rejectedRules: 0,
     });
   });
 });
@@ -287,10 +294,9 @@ describe('buildImportPlan — v5: kinds, accounts, refunds, timestamps', () => {
       incomes: [{amount: 100, date: '2026-11-07', category: {name: 'Rent'}, note: ''}],
     });
     expect(plan.categories.find(c => c.name === 'Rent')).toMatchObject({kind: 'income', autoCreated: true});
-    expect(plan.stats.mergedIncomeCategories).toBe(0);
   });
 
-  it('Free keeps ONE income category: an edited backup with more is merged into the first, entries kept', () => {
+  it('keeps every income category and every entry as it was: a restore never asks who is paying (3.0)', () => {
     const plan = buildImportPlan({
       ...emptyData,
       categories: [
@@ -305,17 +311,48 @@ describe('buildImportPlan — v5: kinds, accounts, refunds, timestamps', () => {
         {amount: 25, date: '2026-11-09', category: {name: 'Bonus'}, note: ''},
       ],
     });
-    // Active before archived, then the file's order: Salary stays.
-    expect(plan.categories.filter(c => c.kind === 'income').map(c => c.name)).toEqual(['Salary']);
-    expect(plan.categories.some(c => c.name === 'Food')).toBe(true);
-    // A note of its own stays; an empty one takes the old category's name.
+    // Archived stays archived, the rest active, and the missing Bonus is made so its entry has a home.
+    expect(plan.categories.filter(c => c.kind === 'income').map(c => [c.name, c.status, c.autoCreated])).toEqual([
+      ['Old', false, false],
+      ['Salary', true, false],
+      ['Freelance', true, false],
+      ['Bonus', true, true],
+    ]);
+    // Each entry on its own category, its note untouched (2.8 rewrote both).
     expect(plan.incomes.map(i => [i.amount, i.categoryName, i.note])).toEqual([
       [100, 'Salary', ''],
-      [50, 'Salary', 'client'],
-      [25, 'Salary', 'Bonus'],
+      [50, 'Freelance', 'client'],
+      [25, 'Bonus', ''],
     ]);
-    // Old, Freelance and the referenced-but-missing Bonus.
-    expect(plan.stats).toMatchObject({mergedIncomeCategories: 3, incomeCategoryKept: 'Salary', incomes: 3});
+    expect(plan.stats).toMatchObject({categories: 5, incomes: 3, autoCreatedCategories: 1});
+  });
+
+  it('when every income category is archived, the first in the file’s order is made active, and only it', () => {
+    const plan = buildImportPlan({
+      ...emptyData,
+      categories: [
+        category('Later', {kind: 'income', sortOrder: 20, categoryStatus: false}),
+        category('First', {kind: 'income', sortOrder: 10, categoryStatus: false}),
+      ],
+    });
+    expect(plan.categories.filter(c => c.kind === 'income').map(c => [c.name, c.status])).toEqual([
+      ['Later', false],
+      ['First', true],
+    ]);
+  });
+
+  it('an active income category anywhere in the file means nothing is reactivated', () => {
+    const plan = buildImportPlan({
+      ...emptyData,
+      categories: [
+        category('Archived', {kind: 'income', sortOrder: 5, categoryStatus: false}),
+        category('Live', {kind: 'income', sortOrder: 30}),
+      ],
+    });
+    expect(plan.categories.filter(c => c.kind === 'income').map(c => [c.name, c.status])).toEqual([
+      ['Archived', false],
+      ['Live', true],
+    ]);
   });
 
   it('a file with no income category (every backup before v5) gets the default, active', () => {
@@ -385,5 +422,222 @@ describe('buildImportPlan — v5: kinds, accounts, refunds, timestamps', () => {
       [Date.UTC(2026, 10, 10, 18, 5, 0), Date.UTC(2026, 10, 10, 18, 5, 0)],
     ]);
     expect(plan.debts[0]?.createdAt).toBe(Date.UTC(2026, 7, 3));
+  });
+});
+
+describe('buildImportPlan — v6: transfers, checkpoints, debt accounts', () => {
+  const account = (name: string, more: Partial<ExportData['accounts'][number]> = {}) => ({
+    name,
+    type: 'bank',
+    currency: 'INR',
+    openingBalance: 0,
+    openingDate: null,
+    isDefault: false,
+    accountStatus: true,
+    sortOrder: 20,
+    icon: 'landmark',
+    color: '#224466',
+    ...more,
+  });
+  const base = {
+    ...emptyData,
+    currencies: [{code: 'INR', symbol: '₹', name: 'Indian Rupee'}],
+    accounts: [account('Cash', {type: 'cash', isDefault: true, sortOrder: 0}), account('Savings')],
+    debtors: [{title: 'Rohit'}],
+  };
+  const transfer = (fromAccount: string, toAccount: string, amount = 750) => ({
+    fromAccount,
+    toAccount,
+    amount,
+    date: '2026-11-06',
+    note: '',
+  });
+
+  it('plans transfers between the file’s accounts with their timestamps from the day', () => {
+    const plan = buildImportPlan({...base, transfers: [transfer('Cash', 'Savings')]});
+    expect(plan.transfers).toEqual([
+      {
+        fromAccountName: 'Cash',
+        toAccountName: 'Savings',
+        amount: 750,
+        date: '2026-11-06',
+        note: '',
+        createdAt: expect.any(Number),
+        updatedAt: expect.any(Number),
+        recurringRef: null,
+      },
+    ]);
+    expect(plan.stats).toMatchObject({transfers: 1, autoCreatedAccounts: 0, rejectedTransfers: 0});
+  });
+
+  it('an account a transfer, checkpoint or debt names but the file lacks is made, not swapped for another', () => {
+    const plan = buildImportPlan({
+      ...base,
+      transfers: [transfer('Cash', 'Wallet')],
+      checkpoints: [{account: 'Card', balance: -50, date: '2026-11-08', gap: 0, kind: 'adjustment', note: ''}],
+      debts: [
+        {amount: 1, description: '', debtor: {title: 'Rohit'}, date: '2026-11-05', type: 'Lend', account: 'Loan'},
+      ],
+    });
+    expect(plan.accounts.filter(a => !['Cash', 'Savings'].includes(a.name))).toEqual([
+      expect.objectContaining({name: 'Loan', type: 'other', isDefault: false, accountStatus: true, currency: 'INR'}),
+      expect.objectContaining({name: 'Wallet', type: 'other', isDefault: false}),
+      expect.objectContaining({name: 'Card', type: 'other', isDefault: false}),
+    ]);
+    expect(plan.transfers.map(t => t.toAccountName)).toEqual(['Wallet']);
+    expect(plan.checkpoints.map(c => c.accountName)).toEqual(['Card']);
+    expect(plan.debts.map(d => d.accountName)).toEqual(['Loan']);
+    expect(plan.stats).toMatchObject({autoCreatedAccounts: 3, accounts: 5});
+    // Still exactly one default.
+    expect(plan.accounts.filter(a => a.isDefault).map(a => a.name)).toEqual(['Cash']);
+  });
+
+  it('a transfer from an account to itself moves nothing: left out and counted', () => {
+    const plan = buildImportPlan({...base, transfers: [transfer('Savings', 'Savings'), transfer('Cash', 'Savings')]});
+    expect(plan.transfers).toHaveLength(1);
+    expect(plan.stats).toMatchObject({transfers: 1, rejectedTransfers: 1});
+  });
+
+  it('a debt without an account touched none, and stays so', () => {
+    const plan = buildImportPlan({
+      ...base,
+      debts: [{amount: 1, description: '', debtor: {title: 'Rohit'}, date: '2026-11-05', type: 'Lend'}],
+    });
+    expect(plan.debts.map(d => d.accountName)).toEqual([null]);
+  });
+});
+
+describe('buildImportPlan — accounts and timestamps at their edges', () => {
+  const account = (name: string, more: Partial<ExportData['accounts'][number]> = {}) => ({
+    name,
+    type: 'bank',
+    currency: 'USD',
+    openingBalance: 0,
+    openingDate: null,
+    isDefault: false,
+    accountStatus: true,
+    sortOrder: 20,
+    icon: 'landmark',
+    color: '#224466',
+    ...more,
+  });
+
+  it('two accounts of one name are one account: the first, in the user’s currency', () => {
+    const plan = buildImportPlan({
+      ...emptyData,
+      currencies: [{code: 'INR', symbol: '₹', name: 'Indian Rupee'}],
+      accounts: [account('Savings', {openingBalance: 100}), account('Savings', {openingBalance: 999})],
+    });
+    expect(plan.accounts.filter(a => a.name === 'Savings')).toEqual([
+      expect.objectContaining({openingBalance: 100, currency: 'INR', isDefault: false}),
+    ]);
+  });
+
+  it('a file whose own account is called Cash, with no default, gets a default that does not take its name', () => {
+    const plan = buildImportPlan({...emptyData, accounts: [account('Cash')]});
+    expect(plan.accounts.map(a => [a.name, a.isDefault])).toEqual([
+      ['Cash', false],
+      ['Cash (default)', true],
+    ]);
+  });
+
+  it('an entry whose date cannot be read is stamped with the moment of the restore, never 0', () => {
+    // The validator lets no such date through; the planner does not rely on that.
+    const now = Date.UTC(2026, 10, 11, 12);
+    const plan = buildImportPlan(
+      {
+        ...emptyData,
+        expenses: [{title: 'Odd', amount: 1, category: {name: 'Food'}, date: 'not a date'}],
+      },
+      now,
+    );
+    expect(plan.expenses.map(e => [e.createdAt, e.updatedAt])).toEqual([[now, now]]);
+  });
+});
+
+describe('buildImportPlan — an account the list left out', () => {
+  it('an expense on an account only a v6 row names lands on that account, not on the default', () => {
+    const plan = buildImportPlan({
+      ...emptyData,
+      categories: [category('Food')],
+      expenses: [{title: 'Rent', amount: 100, category: {name: 'Food'}, date: '2026-11-05', account: 'Savings'}],
+      transfers: [{fromAccount: 'Cash', toAccount: 'Savings', amount: 50, date: '2026-11-06', note: ''}],
+    });
+    expect(plan.expenses.map(e => e.accountName)).toEqual(['Savings']);
+    expect(plan.stats).toMatchObject({reassignedToDefaultAccount: 0, autoCreatedAccounts: 1});
+  });
+});
+
+describe('buildImportPlan — a refund to another account (v6, 3.0)', () => {
+  it('keeps the refund on the account it names, making it if the list left it out; an unnamed one follows its expense', () => {
+    const plan = buildImportPlan({
+      ...emptyData,
+      categories: [category('Food')],
+      expenses: [
+        {
+          title: 'Shoes',
+          amount: 100,
+          category: {name: 'Food'},
+          date: '2026-11-05',
+          account: 'Card',
+          refunds: [
+            {amount: 30, date: '2026-11-06', note: 'to the bank', account: 'Bank'},
+            {amount: 20, date: '2026-11-07', note: ''},
+          ],
+        },
+      ],
+    });
+    expect(plan.expenses[0]?.refunds.map(r => r.accountName)).toEqual(['Bank', null]);
+    // The refund's account is a v6 reference and is made. The expense's unlisted account
+    // follows the 2.8 rule (the default), and the unnamed refund follows the expense there.
+    expect(plan.expenses[0]?.accountName).toBe('Cash');
+    expect(plan.stats).toMatchObject({autoCreatedAccounts: 1});
+  });
+});
+
+describe('buildImportPlan — recurring rules (v6, P9)', () => {
+  const rule = (ref: string, more: Record<string, unknown> = {}) =>
+    ({
+      ref,
+      target: 'expense',
+      title: 'Rent',
+      category: {name: 'Housing'},
+      account: 'HDFC',
+      amount: 18000,
+      cadence: 'monthly',
+      interval: 1,
+      startDate: '2026-11-01',
+      endDate: null,
+      nextIndex: 2,
+      remindDaysBefore: 1,
+      active: true,
+      ...more,
+    }) as ExportData['recurring'][number]; // a v6 file's rule row, as the schema reads it
+
+  it('keeps a rule with its category and accounts (made if the file lacks them), and a made row keeps its rule', () => {
+    const plan = buildImportPlan({
+      ...emptyData,
+      expenses: [
+        {title: 'Rent', amount: 18000, category: {name: 'Housing'}, date: '2026-11-01T09:00:00', recurring: 'r1'},
+      ],
+      incomes: [{amount: 1, date: '2026-11-01', category: {name: 'Income'}, note: '', recurring: 'gone'}],
+      recurring: [
+        rule('r1'),
+        rule('r1', {title: 'Again'}),
+        rule('r2', {target: 'transfer', category: undefined, toAccount: 'HDFC'}),
+        rule('r3', {target: 'transfer', category: undefined, toAccount: 'Fund'}),
+      ],
+    });
+    expect(plan.recurring.map(r => [r.ref, r.categoryName, r.accountName, r.toAccountName])).toEqual([
+      ['r1', 'Housing', 'HDFC', null],
+      ['r3', null, 'HDFC', 'Fund'],
+    ]);
+    // A ref used twice keeps the first; a transfer rule from an account to itself is left out.
+    expect(plan.stats).toMatchObject({recurringRules: 2, rejectedRules: 2});
+    expect(plan.accounts.map(a => a.name).sort()).toEqual(['Cash', 'Fund', 'HDFC']);
+    expect(plan.categories.some(c => c.name === 'Housing' && c.kind === 'expense')).toBe(true);
+    // A made row keeps its rule only when that rule came in too.
+    expect(plan.expenses[0]?.recurringRef).toBe('r1');
+    expect(plan.incomes[0]?.recurringRef).toBeNull();
   });
 });

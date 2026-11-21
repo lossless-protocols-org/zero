@@ -25,6 +25,12 @@ interface DailyAllowanceInput {
   daysInMonth: number;
   /** False → static monthly average (historical months). */
   isCurrentMonth: boolean;
+  /**
+   * Recurring expenses still to come this month (Pro; 0 otherwise). They are
+   * already promised, so they come off what is left before it is spread over
+   * the days: rent due on the 1st is not money to spend this week.
+   */
+  billsStillDue?: number;
 }
 
 interface DailyAllowance {
@@ -40,6 +46,7 @@ export const computeDailyAllowance = ({
   dayOfMonth,
   daysInMonth,
   isCurrentMonth,
+  billsStillDue = 0,
 }: DailyAllowanceInput): DailyAllowance => {
   if (monthlyBudget <= 0 || daysInMonth <= 0) {
     return {allowance: 0, budgetExhausted: monthlyBudget <= 0};
@@ -49,7 +56,7 @@ export const computeDailyAllowance = ({
     return {allowance: monthlyBudget / daysInMonth, budgetExhausted: false};
   }
 
-  const remainingBudget = monthlyBudget - spentBeforeToday;
+  const remainingBudget = monthlyBudget - spentBeforeToday - Math.max(billsStillDue, 0);
   const remainingDays = Math.max(daysInMonth - dayOfMonth + 1, 1);
 
   return {
@@ -76,6 +83,12 @@ interface BudgetStatus {
   /** The daily allowance (adaptive in the current month) and what is left of it today. */
   dailyBudget: number;
   dailyLeft: number;
+  /** Recurring expenses still to come this month (0 without Pro, and in any month but the current one). */
+  billsStillDue: number;
+  /** What is left once those are paid (≥ 0). Equal to `left` when there are none. */
+  free: number;
+  /** The bar's lighter segment for the bills, 0–100, never past the end of the bar. */
+  billsFill: number;
 }
 
 /**
@@ -90,6 +103,7 @@ export const budgetStatus = ({
   dayOfMonth,
   daysInMonth,
   isCurrentMonth,
+  billsStillDue = 0,
 }: {
   budget: number;
   /** The month's spending, net of its refunds (R2). */
@@ -99,26 +113,34 @@ export const budgetStatus = ({
   dayOfMonth: number;
   daysInMonth: number;
   isCurrentMonth: boolean;
+  /** Recurring expenses still to come (Pro). Ignored outside the current month. */
+  billsStillDue?: number;
 }): BudgetStatus => {
   const balance = keptOf(budget, spent);
   const split = splitForAllowance(spent, spentToday);
+  const ratio = budget > 0 ? (spent / budget) * 100 : 0;
+  const bills = isCurrentMonth ? Math.max(billsStillDue, 0) : 0;
   const {allowance} = computeDailyAllowance({
     monthlyBudget: budget,
     spentBeforeToday: split.spentBeforeToday,
     dayOfMonth,
     daysInMonth,
     isCurrentMonth,
+    billsStillDue: bills,
   });
-  const ratio = budget > 0 ? (spent / budget) * 100 : 0;
+  const fill = Math.min(Math.max(ratio, 0), 100);
   return {
     amount: budget,
     exceeded: balance < 0,
     left: Math.max(balance, 0),
     over: Math.max(-balance, 0),
     percent: Math.min(Math.round(ratio), 999),
-    fill: Math.min(Math.max(ratio, 0), 100),
+    fill,
     dailyBudget: allowance,
     dailyLeft: fromMoneyUnits(toMoneyUnits(allowance) - toMoneyUnits(split.spentToday)),
+    billsStillDue: bills,
+    free: Math.max(fromMoneyUnits(toMoneyUnits(balance) - toMoneyUnits(bills)), 0),
+    billsFill: budget > 0 ? Math.min((bills / budget) * 100, 100 - fill) : 0,
   };
 };
 

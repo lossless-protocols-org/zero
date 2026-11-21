@@ -1,15 +1,17 @@
 /**
- * Every backup any version of zero ever wrote must restore into schema v5
- * with nothing lost or changed (2.8 Phase 1; owner, 2026-11-06: "all the
- * previous versioned exports should work properly with no mistakes").
+ * Every backup any version of zero ever wrote must restore into the current
+ * schema with nothing lost or changed (2.8 Phase 1; owner, 2026-11-06: "all
+ * the previous versioned exports should work properly with no mistakes"; 3.0:
+ * a v1 export must import into v3 without a crash).
  *
  * For each file: validate → refuse nothing → upgrade → restore through the
  * real importService (LokiJS harness) → compare with figures computed from
  * the RAW FILE, not from the planner: entry counts, exact money totals per
- * category, debts, budgets, the user; then v5 specifics (one default account
- * holding every expense, timestamps from each date, no incomes or refunds
- * invented). Finally export → restore → export must be identical, so a v5
- * file is a fixed point.
+ * category, debts, budgets, the user; then account specifics (one default
+ * account; each entry on the account the file names, else the default;
+ * timestamps from each date; no incomes, refunds, transfers or checkpoints
+ * invented); every income category the file has, kept (3.0). Finally export
+ * → restore → export must be identical, so a current file is a fixed point.
  *
  * Files: the committed synthetic set in __tests__/contract/fixtures/legacy (one per
  * export version, each with that version's known quirks), plus, when
@@ -42,8 +44,11 @@ interface RawFile {
       createdAt?: number;
       refunds?: Array<{amount: number}>;
     }>;
-    incomes?: Array<{amount: number; category: {name: string}}>;
-    debts: unknown[];
+    incomes?: Array<{amount: number; category: {name: string}; account?: string}>;
+    debts: Array<{account?: string}>;
+    accounts?: Array<{name: string; isDefault: boolean}>;
+    transfers?: Array<{amount: number; fromAccount: string; toAccount: string}>;
+    checkpoints?: Array<{balance: number; account: string}>;
     budgets?: Array<{month: string; budgetType: string; category?: {name: string}}>;
   };
 }
@@ -60,7 +65,8 @@ type Row = Partial<
     | 'account_id'
     | 'created_at'
     | 'date'
-    | 'is_default',
+    | 'is_default'
+    | 'balance',
     unknown
   >
 >;
@@ -120,31 +126,34 @@ const exportNow = async (): Promise<unknown> => {
   return {key: 'zeroAAAAAAAAAAAAAAAA', version: CURRENT_EXPORT_VERSION, data: draft};
 };
 
-describe('every backup ever written restores into schema v5 unchanged', () => {
+describe('every backup ever written restores into the current schema unchanged', () => {
   jest.setTimeout(300_000);
 
-  it('has a fixture for every export version (v0 unversioned through v4)', () => {
+  it('has a fixture for every export version (v0 unversioned through the current one)', () => {
     const versions = files
       .filter(f => f.includes(`${path.sep}fixtures${path.sep}`))
       .map(f => (JSON.parse(fs.readFileSync(f, 'utf8')) as RawFile).version ?? 0)
       .sort();
-    expect(versions).toEqual([0, 1, 2, 3, 4]);
+    expect(versions).toEqual(Array.from({length: CURRENT_EXPORT_VERSION + 1}, (_, version) => version));
   });
 
   it.each(files.map(f => [path.basename(f), f] as const))('%s', async (_name, file) => {
     const raw = JSON.parse(fs.readFileSync(file, 'utf8')) as RawFile; // a backup file: shape checked by validate below
     await restore(raw);
 
-    const [users, categories, expenses, debts, budgets, accounts, refunds, incomes] = await Promise.all([
-      rows('users'),
-      rows('categories'),
-      rows('expenses'),
-      rows('debts'),
-      rows('budgets'),
-      rows('accounts'),
-      rows('refunds'),
-      rows('incomes'),
-    ]);
+    const [users, categories, expenses, debts, budgets, accounts, refunds, incomes, transfers, checkpoints] =
+      await Promise.all([
+        rows('users'),
+        rows('categories'),
+        rows('expenses'),
+        rows('debts'),
+        rows('budgets'),
+        rows('accounts'),
+        rows('refunds'),
+        rows('incomes'),
+        rows('transfers'),
+        rows('checkpoints'),
+      ]);
 
     // Nothing lost.
     expect(users.map(u => u.username)).toEqual([raw.data.users[0]?.username]);
@@ -172,10 +181,23 @@ describe('every backup ever written restores into schema v5 unchanged', () => {
       expect({key, present: restoredKeys.has(key)}).toEqual({key, present: true});
     }
 
-    // v5: one default account holds every expense; timestamps come from each date; nothing invented.
-    expect(accounts.map(a => [a.is_default, a.name])).toEqual([[true, 'Cash']]);
-    const accountId = accounts[0]?.id;
-    expect(expenses.every(e => e.account_id === accountId)).toBe(true);
+    // Accounts: the file's (one of them the default), else one default 'Cash'. Every expense on
+    // the account it names, else on the default.
+    const fileAccounts = raw.data.accounts ?? [];
+    const defaultName = fileAccounts.find(a => a.isDefault)?.name ?? 'Cash';
+    expect(accounts.filter(a => a.is_default).map(a => a.name)).toEqual([defaultName]);
+    // Plus any account a transfer, checkpoint or debt names that the list left out: made, not lost.
+    const namedByV6 = [
+      ...(raw.data.transfers ?? []).flatMap(t => [t.fromAccount, t.toAccount]),
+      ...(raw.data.checkpoints ?? []).map(c => c.account),
+      ...raw.data.debts.flatMap(d => (d.account === undefined ? [] : [d.account])),
+    ];
+    const listed = fileAccounts.length > 0 ? fileAccounts.map(a => a.name) : ['Cash'];
+    expect(accounts.map(a => String(a.name)).sort()).toEqual([...new Set([...listed, ...namedByV6])].sort());
+    const accountNameById = new Map(accounts.map(a => [a.id, String(a.name)]));
+    const accountOfExpense = (e: (typeof expenses)[number]): string => String(accountNameById.get(e.account_id));
+    const fileAccountByTitle = raw.data.expenses.map(e => (e as {account?: string}).account ?? defaultName).sort();
+    expect(expenses.map(accountOfExpense).sort()).toEqual(fileAccountByTitle);
     // A file's own timestamp is kept; only a file without one gets it from the date.
     const expectedStamps = raw.data.expenses.map(e => e.createdAt ?? epochFromIsoDate(e.date)).sort();
     expect(expenses.map(e => Number(e.created_at)).sort()).toEqual(expectedStamps);
@@ -189,7 +211,39 @@ describe('every backup ever written restores into schema v5 unchanged', () => {
     expect(incomes).toHaveLength(fileIncomes.length);
     expect(units(incomes)).toBe(units(fileIncomes));
 
-    // v5 is a fixed point: export → restore → export is identical.
+    // Every income category kept (3.0; 2.8 merged extras into one), each entry on its own.
+    const fileIncomeCategories = new Set([
+      ...raw.data.categories.filter(c => c.kind === 'income').map(c => c.name),
+      ...fileIncomes.map(i => i.category.name),
+    ]);
+    const restoredIncomeCategories = categories.filter(c => c.kind === 'income').map(c => String(c.name));
+    for (const name of fileIncomeCategories) {
+      expect({name, kept: restoredIncomeCategories.includes(name)}).toEqual({name, kept: true});
+    }
+    const incomeTotals = (list: ReadonlyArray<{name: string; amount: number}>) =>
+      list.reduce<Record<string, number>>((byName, {name, amount}) => {
+        byName[name] = (byName[name] ?? 0) + toMoneyUnits(amount);
+        return byName;
+      }, {});
+    expect(
+      incomeTotals(incomes.map(i => ({name: String(nameById.get(i.category_id)), amount: Number(i.amount)}))),
+    ).toEqual(incomeTotals(fileIncomes.map(i => ({name: i.category.name, amount: i.amount}))));
+
+    // v6 positions: as many as the file holds, to the paisa, and debts on the account they name.
+    // A transfer from an account to itself moves nothing and is left out (and said so).
+    const fileTransfers = (raw.data.transfers ?? []).filter(t => t.fromAccount !== t.toAccount);
+    const fileCheckpoints = raw.data.checkpoints ?? [];
+    expect(transfers).toHaveLength(fileTransfers.length);
+    expect(units(transfers)).toBe(units(fileTransfers));
+    expect(checkpoints).toHaveLength(fileCheckpoints.length);
+    expect(checkpoints.map(c => toMoneyUnits(Number(c.balance))).sort()).toEqual(
+      fileCheckpoints.map(c => toMoneyUnits(c.balance)).sort(),
+    );
+    expect(debts.map(d => (d.account_id ? String(accountNameById.get(d.account_id)) : null)).sort()).toEqual(
+      raw.data.debts.map(d => d.account ?? null).sort(),
+    );
+
+    // The current format is a fixed point: export → restore → export is identical.
     const first = await exportNow();
     await restore(JSON.parse(JSON.stringify(first)));
     const second = await exportNow();

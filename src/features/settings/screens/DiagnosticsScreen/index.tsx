@@ -21,6 +21,10 @@ import {goBack} from '../../../../platform/navigationUtils';
 import {formatDisplayDate} from '../../../../platform/dateFormat';
 import {gs, hitSlop} from '../../../../ui/globalStyles';
 import {getReportMeta} from '../../../../platform/reportMeta';
+import {getFirstSeenVersion} from '../../../../platform/firstSeenVersion';
+import {getStoreStatus} from '../../../../pro/entitlementStore';
+import {storeDiagnosticLines} from '../../storeDiagnostics';
+import {usePositionCheck} from '../../hooks/usePositionCheck';
 
 /**
  * Reads the on-device error log. Nothing here is transmitted anywhere — the
@@ -33,8 +37,14 @@ export const DiagnosticsScreen = () => {
   const {showDialog, showAlert} = useDialog();
   const [entries, setEntries] = useState(() => getErrorLog());
 
+  // What zero decided about Pro and what the store last said (3.0), as it stood when this
+  // screen opened. Shown here and added to a shared report: nothing else can say why a tier is wrong.
+  const storeLines = useMemo(() => storeDiagnosticLines(getStoreStatus(), getFirstSeenVersion()), []);
+  // R16 and the balance timing (3.0 P8), worked out when the screen opens.
+  const positionLines = usePositionCheck();
+
   // Same facts the post-crash prompt attaches, so reports look alike whoever sends them.
-  const meta = useMemo<ReportMeta>(getReportMeta, []);
+  const meta = useMemo<ReportMeta>(() => ({...getReportMeta(), notes: storeLines}), [storeLines]);
 
   // Nothing is sent automatically: this hands the text to the OS share sheet
   // only when the user taps, and only they choose where it goes.
@@ -86,6 +96,36 @@ export const DiagnosticsScreen = () => {
       <PrimaryText size={12} color={colors.secondaryText} style={gs.mb10}>
         {t('diagnostics.subtitle')}
       </PrimaryText>
+
+      <View
+        accessible
+        accessibilityLabel={[t('diagnostics.store'), ...storeLines].join('. ')}
+        style={[gs.rounded12, gs.px14, gs.py12, gs.mb10, {backgroundColor: colors.containerColor}]}>
+        <PrimaryText size={11} weight="semibold" color={colors.secondaryText} style={gs.mb5}>
+          {t('diagnostics.store')}
+        </PrimaryText>
+        {storeLines.map(line => (
+          <PrimaryText key={line} size={12} selectable>
+            {line}
+          </PrimaryText>
+        ))}
+      </View>
+
+      {positionLines.length > 0 ? (
+        <View
+          accessible
+          accessibilityLabel={[t('diagnostics.positions'), ...positionLines].join('. ')}
+          style={[gs.rounded12, gs.px14, gs.py12, gs.mb10, {backgroundColor: colors.containerColor}]}>
+          <PrimaryText size={11} weight="semibold" color={colors.secondaryText} style={gs.mb5}>
+            {t('diagnostics.positions')}
+          </PrimaryText>
+          {positionLines.map(line => (
+            <PrimaryText key={line} size={12} selectable>
+              {line}
+            </PrimaryText>
+          ))}
+        </View>
+      ) : null}
 
       {entries.length === 0 ? (
         <EmptyState type="Insights" colors={colors} message={t('diagnostics.empty')} />

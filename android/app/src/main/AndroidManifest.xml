@@ -21,6 +21,13 @@
         android:maxSdkVersion="32"
         tools:replace="android:maxSdkVersion" />
 
+    <!-- 3.0 (plan P9): reminders for recurring entries, local notifications only.
+         POST_NOTIFICATIONS is asked for once, when a rule with a reminder is first
+         saved (Android 13+); RECEIVE_BOOT_COMPLETED lets zero arm its own alarms
+         again after a restart. Neither reads anything. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
       android:requestLegacyExternalStorage="true"
       android:name=".MainApplication"
@@ -61,6 +68,15 @@
         android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
         android:windowSoftInputMode="adjustResize|stateAlwaysVisible" />
 
+      <!-- Reminders (3.0, P9): an alarm posts one; a restart or an update arms them again. -->
+      <receiver android:name=".reminders.ReminderReceiver" android:exported="false" />
+      <receiver android:name=".reminders.RearmReceiver" android:exported="false">
+        <intent-filter>
+          <action android:name="android.intent.action.BOOT_COMPLETED" />
+          <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        </intent-filter>
+      </receiver>
+
       <!-- "Add expense" tile in the Quick Settings shade. Only the system can bind it. -->
       <service
         android:name=".quickadd.QuickAddTileService"
@@ -93,5 +109,16 @@
             android:name="android.appwidget.provider"
             android:resource="@xml/zero_widget_info" />
       </receiver>
+      <!-- 3.0 (P12): lets the app the user picks in the share sheet read the one PDF report
+           being shared, through a one-time grant. Not exported: nothing can ask for a file. -->
+      <provider
+          android:name="androidx.core.content.FileProvider"
+          android:authorities="${applicationId}.reports"
+          android:exported="false"
+          android:grantUriPermissions="true">
+        <meta-data
+            android:name="android.support.FILE_PROVIDER_PATHS"
+            android:resource="@xml/report_paths" />
+      </provider>
     </application>
 </manifest>

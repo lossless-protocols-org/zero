@@ -154,6 +154,30 @@ export const formatDisplayDate = (
   return parsed.isValid() ? formatter.format(parsed.toDate()) : parsed.format();
 };
 
+/**
+ * A month as the user sees it (3.0, plan P11): the month's name and year
+ * ("November 2026") when months start on the 1st; otherwise its first and
+ * last day ("7 Nov – 6 Dec"), with the year when it is not `thisYear`
+ * ("7 Dec 2025 – 6 Jan 2026" names both when they differ).
+ */
+export const formatMonthLabel = (
+  period: {start: string; next: string},
+  style: 'monthYear' | 'monthYearLong' = 'monthYearLong',
+  thisYear: number = new Date().getFullYear(),
+  locale: string = getFormatLocale(),
+): string => {
+  // A month from the 1st is named; any other start day is shown by its days.
+  if (Number(period.start.slice(8, 10)) === 1) {
+    return formatDisplayDate(period.start, style, locale);
+  }
+  const last = parseDate(period.next).subtract(1, 'day').format('YYYY-MM-DD');
+  const startYear = Number(period.start.slice(0, 4));
+  const lastYear = Number(last.slice(0, 4));
+  const from = formatDisplayDate(period.start, startYear === lastYear ? 'dayMonth' : 'date', locale);
+  const to = formatDisplayDate(last, lastYear === thisYear && startYear === lastYear ? 'dayMonth' : 'date', locale);
+  return `${from} – ${to}`;
+};
+
 // Use cached locale data - no array recreation on each call
 export const getMonthNames = (): string[] => MONTHS;
 export const getMonthNamesShort = (): string[] => MONTHS_SHORT;

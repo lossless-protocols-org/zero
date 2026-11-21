@@ -29,6 +29,8 @@ react {
     //   skip the bundling of the JS bundle and the assets. Default is "debug", "debugOptimized".
     //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
     // debuggableVariants = ["liteDebug", "liteDebugOptimized", "prodDebug", "prodDebugOptimized"]
+    //   zero has the `store` flavours (play, foss) below, so the debug variants are named here.
+    debuggableVariants = ["playDebug", "playDebugOptimized", "fossDebug", "fossDebugOptimized"]
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
@@ -84,9 +86,19 @@ def enableProguardInReleaseBuilds = true
  * "zero QA" (src/qa/res), so it installs beside the store build and never
  * touches its data (its launcher shortcuts: src/qa/res/xml). iOS has the same
  * split (ZERO_BUNDLE_ID, "zero QA").
- * `./gradlew assembleQa`.
+ * `./gradlew assemblePlayQa`.
  */
 def qaIdSuffix = ".qa"
+
+/**
+ * Two builds of one app (3.0 plan, P2): `play` is the store build and is the
+ * only one that will ever link Google Play Billing (src/play); `foss` is the
+ * build without it (src/foss) and is what proves the app needs no store code.
+ * They are identical until billing lands, and CI checks the permissions of
+ * each against its own allow list (scripts/check-no-read.mjs --flavour).
+ * Every variant now carries its flavour: assemblePlayRelease, bundlePlayRelease,
+ * assemblePlayQa, testPlayDebugUnitTest, lintPlayDebug, and the same for Foss.
+ */
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -100,6 +112,17 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 24
         versionName "2.8.0"
+    }
+
+    flavorDimensions "store"
+    productFlavors {
+        play {
+            dimension "store"
+            isDefault = true
+        }
+        foss {
+            dimension "store"
+        }
     }
 
     // 16 KB page size support (required for Android 15+ / Play submissions):
@@ -151,21 +174,24 @@ android {
         debug {
             signingConfig signingConfigs.debug
         }
+        release {
+            // Signed only when the upload keystore is here. Without it (CI) the build is an
+            // explicit unsigned release, app-<flavour>-release-unsigned.apk, used to check the merged
+            // manifest (scripts/check-no-read.mjs --apk); it can never be uploaded by mistake.
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : null
+            minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+        // After `release`, not before it: initWith copies what release holds at that point. Declared
+        // first (as it was until 3.0), QA was copied before R8 was switched on and shipped unshrunk,
+        // three times the size of the store build and not the code a user runs.
         qa {
             initWith release
             applicationIdSuffix qaIdSuffix
             versionNameSuffix "-qa"
             signingConfig signingConfigs.debug
             matchingFallbacks = ["release"]
-        }
-        release {
-            // Signed only when the upload keystore is here. Without it (CI) the build is an
-            // explicit unsigned release, app-release-unsigned.apk, used to check the merged
-            // manifest (scripts/check-no-read.mjs --apk); it can never be uploaded by mistake.
-            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : null
-            minifyEnabled enableProguardInReleaseBuilds
-            shrinkResources enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
 }
@@ -178,6 +204,22 @@ dependencies {
         throw new GradleException("zero ships on Hermes only: keep hermesEnabled=true in gradle.properties.")
     }
     implementation("com.facebook.react:hermes-android")
+
+    // Google Play Billing (3.0), in the store flavour only: the foss build links no store code
+    // (__tests__/arch/storeCodeInPlayOnly.test.ts).
+    //
+    // Without Google's usage uploader. The billing library itself asks for one permission,
+    // com.android.vending.BILLING, and talks to the Play Store app over IPC. INTERNET and
+    // ACCESS_NETWORK_STATE come only from the two datatransport libraries below, which upload
+    // the library's own usage statistics from inside the app. Left out, the library logs
+    // "Skipping logging since initialization failed" and carries on (proved on a Moto g84,
+    // Android 15, library 9.1.0: docs/NATIVE.md). This is not a configuration Google supports:
+    // every version bump of the line below re-runs that check before it ships, and
+    // scripts/check-no-read.mjs fails the build if a network permission comes back.
+    playImplementation("com.android.billingclient:billing:9.1.0") {
+        exclude group: "com.google.android.datatransport", module: "transport-backend-cct"
+        exclude group: "com.google.android.datatransport", module: "transport-runtime"
+    }
 
     // Local JVM tests for the widget's Kotlin (src/test): test classpath only,
     // nothing ships. org.json is the real library because android.jar's copy

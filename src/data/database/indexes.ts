@@ -40,3 +40,28 @@ export const INCOMES_USER_DATE_INDEX_SQL =
  */
 export const EXPENSES_TITLE_KEY_INDEX_SQL =
   'create index if not exists "expenses_title_key_date" on "expenses" (lower(trim("title")), "date");';
+
+/**
+ * Schema v6 (3.0): an account's balance reads every flow and transfer of that
+ * account up to a day (ZERO_SYSTEM_DESIGN.md §2.1, §7: `(user_id, account_id,
+ * date)` on each). Without these, each balance would scan the user's whole
+ * history once per account. The two new tables carry their own (v6Tables.ts).
+ */
+export const EXPENSES_ACCOUNT_DATE_INDEX_SQL =
+  'create index if not exists "expenses_user_id_account_id_date" on "expenses" ("user_id", "account_id", "date");';
+export const INCOMES_ACCOUNT_DATE_INDEX_SQL =
+  'create index if not exists "incomes_user_id_account_id_date" on "incomes" ("user_id", "account_id", "date");';
+export const REFUNDS_ACCOUNT_DATE_INDEX_SQL =
+  'create index if not exists "refunds_user_id_account_id_date" on "refunds" ("user_id", "account_id", "date");';
+export const TRANSFERS_ACCOUNT_DATE_INDEXES_SQL =
+  'create index if not exists "transfers_user_id_from_account_id_date" on "transfers" ("user_id", "from_account_id", "date");' +
+  'create index if not exists "transfers_user_id_to_account_id_date" on "transfers" ("user_id", "to_account_id", "date");';
+export const CHECKPOINTS_ACCOUNT_DATE_INDEX_SQL =
+  'create index if not exists "checkpoints_user_id_account_id_date" on "checkpoints" ("user_id", "account_id", "date");';
+
+/**
+ * Schema v6, plan P9: the materialiser reads each user's rules due by today
+ * (`next_run <= today`) on every open; a rule that ended has next_run null.
+ */
+export const RECURRING_RULES_NEXT_RUN_INDEX_SQL =
+  'create index if not exists "recurring_rules_user_id_next_run" on "recurring_rules" ("user_id", "next_run");';

@@ -3,7 +3,8 @@ import {useAppSelector} from '../../../store/hooks';
 import {selectUserId} from '../../../store/slices/userIdSlice';
 import {selectCurrencyCode} from '../../../store/slices/currencyDataSlice';
 import {selectActiveCategories} from '../../../store/slices/categoryDataSlice';
-import {createExpense, updateExpenseById} from '../../../data/services/expenseService';
+import {createExpense, getExpenseAccountId, updateExpenseById} from '../../../data/services/expenseService';
+import {useEntryAccount} from '../../../ui/hooks/useEntryAccount';
 import type {CategoryData, ExpenseWithCategory} from '../../../domain/types';
 import {ensureYearInCache} from '../../../data/services/availableYearsCache';
 import {findCategoryIdForTitle} from '../../../data/services/expenseService';
@@ -47,10 +48,30 @@ export const useExpenseForm = (editing?: EditedExpense, draft?: QuickAddDraft) =
   const [selectedCategories, setSelectedCategories] = useState<CategoryData[]>(
     editing ? matchCategory(categories, editing.category) : [],
   );
-  const [createdAt, setCreatedAt] = useState(editing?.date ?? getISODateTime());
+  const [createdAt, setCreatedAt] = useState(editing?.date ?? draft?.date ?? getISODateTime());
   const [expenseTitle, setExpenseTitle] = useState(editing?.title ?? draft?.title ?? '');
   const [expenseDescription, setExpenseDescription] = useState(editing?.description ?? '');
   const [expenseAmount, setExpenseAmount] = useState(editing ? String(editing.amount) : (draft?.amount ?? ''));
+  // Pro's account row. An edit shows the expense's own account; it is sent only if the user picks another (L6).
+  const [currentAccountId, setCurrentAccountId] = useState<string | null>(null);
+  const editingId = editing?.id;
+  useEffect(() => {
+    if (!editingId) {
+      return;
+    }
+    let live = true;
+    getExpenseAccountId(editingId)
+      .then(id => {
+        if (live) {
+          setCurrentAccountId(id);
+        }
+      })
+      .catch((error: unknown) => appendErrorLog(error, false));
+    return () => {
+      live = false;
+    };
+  }, [editingId]);
+  const account = useEntryAccount(currentAccountId, draft?.accountId);
 
   // Limits follow the currency: a yen has no decimals, COP amounts run into
   // the millions. A flat 1,000,000 cap blocked ordinary expenses (B6).
@@ -153,9 +174,12 @@ export const useExpenseForm = (editing?: EditedExpense, draft?: QuickAddDraft) =
           Number(expenseAmount),
           expenseDescription,
           createdAt,
+          account.chosen,
         );
       } else {
-        await createExpense(userId, expenseTitle, Number(expenseAmount), expenseDescription, category.id, createdAt);
+        await createExpense(userId, expenseTitle, Number(expenseAmount), expenseDescription, category.id, createdAt, {
+          accountId: account.chosen,
+        });
       }
     } catch (error) {
       if (editing && error instanceof RefundRuleError) {
@@ -176,6 +200,7 @@ export const useExpenseForm = (editing?: EditedExpense, draft?: QuickAddDraft) =
     expenseAmount,
     expenseDescription,
     createdAt,
+    account.chosen,
     reportSaveFailure,
     explainRefundRule,
   ]);
@@ -191,7 +216,7 @@ export const useExpenseForm = (editing?: EditedExpense, draft?: QuickAddDraft) =
   const knownBeforeAdd = useRef<ReadonlySet<string> | null>(null);
   const addCategory = useCallback(() => {
     knownBeforeAdd.current = new Set(categories.map(category => category.id));
-    navigate('AddCategoryScreen');
+    navigate('AddCategoryScreen', {});
   }, [categories]);
   useEffect(() => {
     const known = knownBeforeAdd.current;
@@ -220,6 +245,7 @@ export const useExpenseForm = (editing?: EditedExpense, draft?: QuickAddDraft) =
   }, []);
 
   return {
+    account,
     categories,
     selectedCategories,
     toggleCategorySelection,

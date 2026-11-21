@@ -1,23 +1,28 @@
-import type {Model} from '@nozbe/watermelondb';
+import {Q, type Model} from '@nozbe/watermelondb';
 import {database} from '../database/database';
 import {MODEL_CLASSES} from '../database/models/modelClasses';
 
+/** Every table, from the registered models, so a new table cannot be forgotten by the wipe or the count. */
+const TABLES = MODEL_CLASSES.map(model => model.table);
+
+/**
+ * Tables whose rows a new user gets without entering anything: the user row, the seeded
+ * categories, the currency and the default account. Every other table holds what the user put in.
+ */
+const SEEDED_TABLES: ReadonlySet<string> = new Set(['users', 'categories', 'currencies', 'accounts']);
+
 export interface RecordCounts {
-  users: number;
-  expenses: number;
-  categories: number;
-  debts: number;
-  debtors: number;
-  budgets: number;
-  currencies: number;
-  accounts: number;
-  refunds: number;
-  incomes: number;
+  /** Rows per table, for every table the database has. */
+  byTable: Record<string, number>;
+  /**
+   * Rows the user entered: every table but the seeded ones, plus any account beyond the
+   * default and any income category beyond the one each user is given (more come only from Pro
+   * or a Pro backup). A table added later counts here by default, so its rows are never wiped
+   * unasked.
+   */
+  entered: number;
   total: number;
 }
-
-/** Every table, from the registered models, so a new table cannot be forgotten by the wipe. */
-const TABLES = MODEL_CLASSES.map(model => model.table);
 
 const countOf = (table: string): Promise<number> => database.get(table).query().fetchCount();
 
@@ -27,21 +32,19 @@ const countOf = (table: string): Promise<number> => database.get(table).query().
  * onboarding is empty; a lost onboarding flag makes that assumption false.
  */
 export const countAllRecords = async (): Promise<RecordCounts> => {
-  const [users, expenses, categories, debts, debtors, budgets, currencies, accounts, refunds, incomes] =
-    await Promise.all([
-      countOf('users'),
-      countOf('expenses'),
-      countOf('categories'),
-      countOf('debts'),
-      countOf('debtors'),
-      countOf('budgets'),
-      countOf('currencies'),
-      countOf('accounts'),
-      countOf('refunds'),
-      countOf('incomes'),
-    ]);
-  const total = users + expenses + categories + debts + debtors + budgets + currencies + accounts + refunds + incomes;
-  return {users, expenses, categories, debts, debtors, budgets, currencies, accounts, refunds, incomes, total};
+  const [counts, ownAccounts, incomeCategories] = await Promise.all([
+    Promise.all(TABLES.map(countOf)),
+    database.get('accounts').query(Q.where('is_default', false)).fetchCount(),
+    database.get('categories').query(Q.where('kind', 'income')).fetchCount(),
+  ]);
+  const byTable = Object.fromEntries(TABLES.map((table, i) => [table, counts[i] ?? 0]));
+  const extraIncomeCategories = Math.max(0, incomeCategories - (byTable['users'] ?? 0));
+  const entered =
+    TABLES.filter(table => !SEEDED_TABLES.has(table)).reduce((sum, table) => sum + (byTable[table] ?? 0), 0) +
+    ownAccounts +
+    extraIncomeCategories;
+  const total = Object.values(byTable).reduce((sum, n) => sum + n, 0);
+  return {byTable, entered, total};
 };
 
 /**

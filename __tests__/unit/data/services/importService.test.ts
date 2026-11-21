@@ -42,6 +42,9 @@ const backup = (overrides: Partial<ExportData> = {}): ExportData => ({
   budgets: [{amount: 30000, month: 'recurring:2026-08', budgetType: 'monthly'}],
   accounts: [],
   incomes: [],
+  transfers: [],
+  checkpoints: [],
+  recurring: [],
   ...overrides,
 });
 
@@ -177,6 +180,7 @@ describe('importAllData', () => {
           amount: 1,
           description: '',
           categoryName: 'No such category',
+          recurringRef: null,
           date: '2026-08-04',
           accountName: 'Cash',
           createdAt: 0,

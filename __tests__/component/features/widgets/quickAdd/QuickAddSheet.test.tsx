@@ -17,6 +17,7 @@ import {QuickAddSheet} from '../../../../../src/features/widgets/quickAdd/QuickA
 import type {QuickAddHost} from '../../../../../src/features/widgets/quickAdd/host';
 import * as services from '../../../../harness/services';
 import {renderWithTheme} from '../../../../harness/render';
+import {periodFor} from '../../../../../src/domain/period';
 
 jest.mock('react-i18next', () => require('../../../../harness/mocks/reactI18next'));
 
@@ -65,7 +66,7 @@ it('saves what was typed in the chosen category, then closes', async () => {
   expect(save).toBeEnabled();
   await fireEvent.press(save);
   await finishLeaving();
-  const saved = await services.getAllExpensesByMonth(userId, '2026-11');
+  const saved = await services.getAllExpensesByMonth(userId, periodFor('2026-11'));
   expect(saved.map(e => [e.title, e.amount, e.category?.id])).toEqual([['Top up', 45, fuel]]);
   expect(host.close).toHaveBeenCalledTimes(1);
 });
@@ -81,7 +82,7 @@ it('Close leaves without saving', async () => {
   await fireEvent.press(closeButton);
   await finishLeaving();
   expect(host.close).toHaveBeenCalledTimes(1);
-  expect(await services.getAllExpensesByMonth(userId, '2026-11')).toEqual([]);
+  expect(await services.getAllExpensesByMonth(userId, periodFor('2026-11'))).toEqual([]);
 });
 
 it('before onboarding, only offers to open zero', async () => {

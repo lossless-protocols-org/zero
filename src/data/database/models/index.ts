@@ -8,3 +8,6 @@ export {Budget} from './Budget';
 export {Account} from './Account';
 export {Refund} from './Refund';
 export {Income} from './Income';
+export {Transfer} from './Transfer';
+export {Checkpoint} from './Checkpoint';
+export {RecurringRule} from './RecurringRule';

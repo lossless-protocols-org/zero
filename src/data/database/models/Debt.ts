@@ -17,6 +17,8 @@ export class Debt extends Model {
   @text('user_id') userId!: string;
   @text('date') date!: string;
   @text('type') type!: string;
+  /** v6: the account the money moved through, or null when it touched none (every debt before 3.0). */
+  @text('account_id') accountId!: string | null;
   @readonly @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 

@@ -11,11 +11,11 @@ import {
   normalizeBackupPath,
 } from '../../../../../src/data/backup/import/loadBackupFile';
 
-const reader = (contents: string) => {
+const reader = (contents: string, base64 = Buffer.from(contents, 'utf8').toString('base64')) => {
   const calls: string[] = [];
-  const readFile = async (path: string): Promise<string> => {
-    calls.push(path);
-    return contents;
+  const readFile = async (path: string, encoding: 'utf8' | 'base64'): Promise<string> => {
+    calls.push(encoding === 'utf8' ? path : `${path} as base64`);
+    return encoding === 'utf8' ? contents : base64;
   };
   return {calls, readFile};
 };
@@ -45,7 +45,7 @@ describe('loadBackupFile', () => {
     const {calls, readFile} = reader('{"a":1}');
     await expect(
       loadBackupFile({uri: 'file:///a.json', name: 'a.json', size: MAX_IMPORT_BYTES}, readFile),
-    ).resolves.toEqual({ok: true, json: {a: 1}});
+    ).resolves.toEqual({ok: true, kind: 'json', json: {a: 1}});
     await expect(
       loadBackupFile({uri: 'file:///a.json', name: 'a.json', size: MAX_IMPORT_BYTES + 1}, readFile),
     ).resolves.toEqual({
@@ -53,7 +53,8 @@ describe('loadBackupFile', () => {
       reason: 'tooLarge',
       sizeBytes: MAX_IMPORT_BYTES + 1,
     });
-    expect(calls).toHaveLength(1);
+    // The bytes first (is it encrypted?), then the text: two reads of the one file that fits.
+    expect(calls).toHaveLength(2);
     expect(MAX_IMPORT_BYTES).toBe(25 * 1024 * 1024);
   });
 
@@ -61,9 +62,10 @@ describe('loadBackupFile', () => {
     const {calls, readFile} = reader('{"a":1}');
     await expect(loadBackupFile({uri: 'file:///a.json', name: 'a.json', size: null}, readFile)).resolves.toEqual({
       ok: true,
+      kind: 'json',
       json: {a: 1},
     });
-    expect(calls).toEqual(['///a.json']);
+    expect(calls).toEqual(['///a.json as base64', '///a.json']);
   });
 
   it('reports a bad path and bad JSON as distinct reasons', async () => {
@@ -97,5 +99,17 @@ describe('loadBackupFile', () => {
     );
     expect(!result.ok && result.reason).toBe('unreadable');
     expect(calls).toEqual([]);
+  });
+
+  it('an encrypted backup (P10) is recognised by its first bytes, whatever its name, and read again as bytes', async () => {
+    // A text read of these bytes throws in react-native-fs (strict UTF-8): they are only ever read as base64.
+    const bytes = Buffer.from([0x5a, 0x45, 0x52, 0x4f, 0x42, 0x41, 0x4b, 0x01, 0x01, 0x00, 0xff, 0xfe]).toString(
+      'base64',
+    );
+    const {calls, readFile} = reader('(never read as text)', bytes);
+    await expect(
+      loadBackupFile({uri: 'file:///zero-backup-2026-11-11.zbak', name: 'renamed.json', size: 10}, readFile),
+    ).resolves.toEqual({ok: true, kind: 'encrypted', base64: bytes});
+    expect(calls).toEqual(['///zero-backup-2026-11-11.zbak as base64']);
   });
 });

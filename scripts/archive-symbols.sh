@@ -33,11 +33,11 @@ fail() {
 [[ -e "$dest" ]] && fail "$dest already exists."
 [[ -z "$archive" || -d "$archive" ]] || fail "not an Xcode archive folder: $archive"
 
-aab="$outputs/bundle/release/app-release.aab"
-apk="$outputs/apk/release/app-release.apk"
-map="$root/android/app/build/generated/sourcemaps/react/release/index.android.bundle.map"
+aab="$outputs/bundle/playRelease/app-play-release.aab"
+apk="$outputs/apk/play/release/app-play-release.apk"
+map="$root/android/app/build/generated/sourcemaps/react/playRelease/index.android.bundle.map"
 # R8 is on from 2.8: without this file no Java/Kotlin frame can be read back.
-r8map="$outputs/mapping/release/mapping.txt"
+r8map="$outputs/mapping/playRelease/mapping.txt"
 for file in "$aab" "$apk" "$map" "$r8map"; do
   [[ -f "$file" ]] || fail "missing $file — build it first (bun run android:release, android:release:apk)."
 done

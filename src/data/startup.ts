@@ -12,7 +12,6 @@ export {hasMigrationFailed, retryMigrations} from './dataMigrations/runner';
  * Called once on app startup before any screens render.
  *
  * Responsibilities:
- * - Record the pre-3.0 flag (`firstSeenAppVersion`, written once)
  * - Run pending data migrations (sequential, versioned, idempotent; the
  *   runner records its own failures and never throws)
  * - Open the database once so a failure is observed before any screen
@@ -22,6 +21,9 @@ export {hasMigrationFailed, retryMigrations} from './dataMigrations/runner';
  *   over a database that could not open. The probe also catches a file that
  *   opens but fails on its first read (a corrupt page), which `onSetUpError`
  *   never sees.
+ *
+ * - Record the pre-3.0 flag (`firstSeenAppVersion`, written once), from
+ *   whether the opened database already holds a user
  *
  * Returns the error that makes the database unusable, or null. `App` logs it
  * (once, as fatal) and shows DatabaseErrorFallback.
@@ -48,17 +50,20 @@ export const isSchemaUpgradePending = (): boolean =>
   isOnboardedPreference.get() && openedSchemaVersion.get() < schema.version;
 
 const openBackend = async (): Promise<Error | null> => {
-  // Plan §5.6: the pre-3.0 flag, written once on the first launch of 2.8+.
-  recordFirstSeenVersion();
   await runMigrations();
+  let users: number;
   try {
-    await database.get('users').query().fetchCount();
+    users = await database.get('users').query().fetchCount();
   } catch (error) {
     return getDatabaseError() ?? (error instanceof Error ? error : new Error(String(error)));
   }
   const failure = getDatabaseError();
   if (!failure) {
     openedSchemaVersion.set(schema.version);
+    // The pre-3.0 flag, written once. After the database has opened, because an install that
+    // already holds a user predates the flag itself (platform/firstSeenVersion); a start that
+    // cannot open the database records nothing and the next one decides.
+    recordFirstSeenVersion(users > 0);
   }
   return failure;
 };

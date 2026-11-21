@@ -19,6 +19,10 @@ import {appendErrorLog} from '../../../platform/errorLog';
 import {setQuickAddDraft} from '../../../ui/quickAddDraft';
 import {publishWidgetSnapshot} from '../publish';
 import {useFormatAmount} from '../../../ui/hooks/useFormatAmount';
+import {capsOf} from '../../../pro/features';
+import {getAppliedPro} from '../../../pro/proGate';
+import {projectIncomeCategories} from '../../../pro/projection';
+import {monthKeyOf} from '../../../pro/monthStart';
 
 export type QuickAddKind = 'expense' | 'income';
 
@@ -86,7 +90,11 @@ export const useQuickAdd = (
     const load = kind === 'income' ? getAllCategoriesByUserId(userId, 'income') : getQuickCategories(userId);
     load
       .then(list => {
-        const active = list.filter(c => c.categoryStatus !== false);
+        // Income chips as this tier lists them: one without Pro (src/pro/projection.ts).
+        const active =
+          kind === 'income'
+            ? projectIncomeCategories(list, capsOf(getAppliedPro())).listed
+            : list.filter(c => c.categoryStatus !== false);
         setCategories(active);
         // A chip that no longer exists (deleted since the widget drew it) falls back to the first.
         setCategoryId(current => (active.some(c => c.id === current) ? current : (active[0]?.id ?? '')));
@@ -121,12 +129,12 @@ export const useQuickAdd = (
           throw new Error(`quick add: not a day: ${day}`);
         }
         await createIncome(userId, {categoryId: category.id, amount: value, date: day, note: text.trim()});
-        await dispatch(fetchIncomesByMonth(formatDate(now, 'YYYY-MM')));
+        await dispatch(fetchIncomesByMonth(monthKeyOf(now)));
       } else {
         const title = (text.trim() || name(category)).slice(0, TITLE_MAX);
         await createExpense(userId, title, value, '', category.id, now);
         ensureYearInCache(userId, Number.parseInt(formatDate(now, 'YYYY'), 10));
-        await dispatch(fetchExpensesByMonth(formatDate(now, 'YYYY-MM')));
+        await dispatch(fetchExpensesByMonth(monthKeyOf(now)));
       }
     } catch (error) {
       appendErrorLog(error, false);

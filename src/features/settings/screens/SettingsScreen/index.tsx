@@ -8,14 +8,19 @@ import {PrimaryView} from '../../../../ui/atoms/PrimaryView';
 import {PrimaryText} from '../../../../ui/atoms/PrimaryText';
 import {useFormatAmount} from '../../../../ui/hooks/useFormatAmount';
 import {getWeekdayNames} from '../../../../platform/dateFormat';
+import {WEEK_START_NAME_INDEX} from '../../../../platform/weekStart';
 import {gs, hitSlop} from '../../../../ui/globalStyles';
 import {DataErrorBanner} from '../../../../ui/atoms/DataErrorBanner';
 import {SettingsRow} from '../../components/SettingsRow';
 import {SettingsSection} from '../../components/SettingsSection';
+import {ProSection} from '../../components/ProSection';
 import {logRejection} from '../../../../platform/errorLog';
 import {useExportFile} from './useExportFile';
 import {useSettingsSheets} from './useSettingsSheets';
 import {MigrationRetryCard} from './MigrationRetryCard';
+import {ProSlot} from '../../../../ui/atoms/ProSlot';
+import {useAutoBackupSummary} from '../../../../ui/hooks/useAutoBackupSummary';
+import {useMonthStartSetting} from '../../hooks/useMonthStartSetting';
 
 export const SettingsScreen = () => {
   const {t} = useTranslation();
@@ -27,13 +32,14 @@ export const SettingsScreen = () => {
     openBudgetSheet,
     openCurrencySheet,
     openNoiseFloor,
-    openProInfo,
     openWeekStartPicker,
     openThemePicker,
     openNameSheet,
     openLanguagePicker,
   } = useSettingsSheets(settings);
-  const weekStartLabel = getWeekdayNames()[preferences.weekStart.day === 'monday' ? 1 : 0];
+  const autoBackup = useAutoBackupSummary();
+  const monthStart = useMonthStartSetting();
+  const weekStartLabel = getWeekdayNames()[WEEK_START_NAME_INDEX[preferences.weekStart.day]];
 
   const handleOpenDiagnostics = useCallback(() => {
     navigate('DiagnosticsScreen');
@@ -63,6 +69,8 @@ export const SettingsScreen = () => {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={gs.pb80}>
         <MigrationRetryCard onRetry={data.retryMigrations} />
+
+        <ProSection />
 
         <SettingsSection title={t('settings.sectionPersonalization')}>
           <SettingsRow
@@ -113,6 +121,16 @@ export const SettingsScreen = () => {
             value={weekStartLabel}
             onPress={openWeekStartPicker}
           />
+          {/* 3.0 (P11): the day the user's month starts on (salary day). Pro; without it months are calendar months. */}
+          <ProSlot feature="monthStart">
+            <SettingsRow
+              icon="calendar"
+              label={t('settings.monthStart')}
+              subtitle={t('settings.monthStartSubtitle')}
+              value={monthStart.label}
+              onPress={monthStart.open}
+            />
+          </ProSlot>
           {/* Issue #40: a stray swipe deleted a loan record. Off = edit/delete
               move behind a long-press menu on every list row. */}
           <SettingsRow
@@ -171,6 +189,15 @@ export const SettingsScreen = () => {
         </SettingsSection>
 
         <SettingsSection title={t('settings.sectionData')}>
+          {/* 3.0 (P10): Pro's automatic encrypted backup. Restoring one is never gated (onboarding). */}
+          <ProSlot feature="cloudBackup">
+            <SettingsRow
+              icon={autoBackup.problem ? 'shield-alert' : 'shield-check'}
+              label={t('settings.autoBackup')}
+              subtitle={autoBackup.text}
+              onPress={() => navigate('AutoBackupScreen')}
+            />
+          </ProSlot>
           <SettingsRow
             icon="download"
             label={t('settings.exportData')}
@@ -231,12 +258,6 @@ export const SettingsScreen = () => {
           />
           <SettingsRow icon="shield" label={t('settings.privacyPolicy')} onPress={links.privacyPolicy} />
           <SettingsRow icon="file-text" label={t('settings.termsAndConditions')} onPress={links.terms} />
-          <SettingsRow
-            icon="sparkles"
-            label={t('settings.zeroPro')}
-            subtitle={t('settings.zeroProSubtitle')}
-            onPress={openProInfo}
-          />
           <SettingsRow icon="info" label={t('settings.version')} value={`v${appVersion}`} />
         </SettingsSection>
 

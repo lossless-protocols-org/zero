@@ -84,3 +84,6 @@ yarn-error.log
 /handbook
 # graphify knowledge graph (regenerated locally with `graphify update .`)
 graphify-out/
+
+# Swift packages built on their own (ios/ZeroShared, ios/ZeroBackup: `swift test`)
+.build/

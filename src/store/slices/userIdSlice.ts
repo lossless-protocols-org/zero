@@ -1,6 +1,7 @@
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
 import type {RootState} from '../rootReducer';
 import {getAllUsers} from '../../data/services/userService';
+import {setStoredMonthStartDay} from '../../pro/monthStart';
 
 /** rejectWithValue payload when the users table is empty (M2). */
 export const NO_USER_ROW = 'No user row';
@@ -31,6 +32,8 @@ export const fetchUserData = createAsyncThunk<UserData, void, {state: RootState;
         // logs and surfaces this rejection.
         return rejectWithValue(NO_USER_ROW);
       }
+      // P11: the day their month starts on, for the one read point of every month (src/pro/monthStart.ts).
+      setStoredMonthStartDay(user.monthStartDay);
       return {
         userId: String(user.id),
         userName: user.username,

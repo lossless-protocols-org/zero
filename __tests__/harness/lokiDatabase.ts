@@ -37,5 +37,5 @@ export const lokiDatabaseModule = (dbName = 'zeroTest') => {
     }),
     modelClasses: MODEL_CLASSES,
   });
-  return {database: db, getDatabaseError: (): Error | null => null};
+  return {database: db, getDatabaseError: (): Error | null => null, runsSql: false};
 };

@@ -1,63 +1,79 @@
-import {ScrollView, TouchableOpacity, View} from 'react-native';
+import {ScrollView, View} from 'react-native';
 import {AddFab} from '../../../../ui/atoms/AddFab';
-import {SegmentedTabs} from '../../../../ui/atoms/SegmentedTabs';
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {HeaderContainer} from '../../../../ui/molecules/HeaderContainer';
 import {navigate} from '../../../../platform/navigationUtils';
-import {DebtorList} from '../../components/DebtorList';
 import {useMoney} from './useMoney';
 import {ReceivedSection} from '../../components/ReceivedSection';
+import {HeldAccounts} from '../../components/HeldAccounts';
+import {SegmentedTabs} from '../../../../ui/atoms/SegmentedTabs';
+import {useProFeature} from '../../../../ui/hooks/useProFeature';
+import {CLASS_ICON, CLASS_LABEL, CLASS_MEANING} from '../../../../ui/accountWords';
 import {useDialog} from '../../../../ui/context/DialogContext';
 import {SheetManager} from 'react-native-actions-sheet';
-import {formatDisplayDate} from '../../../../platform/dateFormat';
+import {formatMonthLabel} from '../../../../platform/dateFormat';
 import {logRejection} from '../../../../platform/errorLog';
 import {PrimaryView} from '../../../../ui/atoms/PrimaryView';
-import {PrimaryText} from '../../../../ui/atoms/PrimaryText';
-import {Amount} from '../../../../ui/atoms/Amount';
-import {EmptyState} from '../../../../ui/atoms/EmptyState';
-import {useFormatAmount} from '../../../../ui/hooks/useFormatAmount';
 import {DataErrorBanner} from '../../../../ui/atoms/DataErrorBanner';
-import {useDataError} from '../../../../ui/hooks/useDataError';
 import {gs} from '../../../../ui/globalStyles';
+import {useIncomeCategories} from '../../../../ui/hooks/useIncomeCategories';
+import {useOpenEntry} from '../../../../ui/hooks/useOpenEntry';
 
 /** Thunk domains the Money tab loads from. */
-const MONEY_DOMAINS = ['debtor', 'debt', 'user', 'income'];
+const MONEY_DOMAINS = ['user', 'income'];
 
-type MoneyPart = 'received' | 'debts';
+type MoneyView = 'accounts' | 'in';
+const HELD_CLASSES = ['spend', 'save'] as const;
 
 /**
- * The Money tab (2.8; was Debts): the Money book of ZERO_SYSTEM_DESIGN.md §2 —
- * what came in and who owes whom — kept apart from spending, which stays on
- * Home. Two tabs, one part at a time (owner: debts used to sit under a long
- * scroll of money in). The add button adds what the open tab shows. 3.0 adds
- * accounts and the net-worth header here.
+ * The Money tab: what is held (approved A2; round two item 4). One screen
+ * has one time frame, so the tab has two views. For everyone, Money in: what
+ * came in during a month and what was kept, exactly the free app's tab. With
+ * Pro, a second view beside it and shown first, Accounts: what is in hand
+ * now, the accounts to spend from and the money put away, and net worth as a
+ * foot line. Without Pro there is no control and no Accounts view (L8). The
+ * plus adds what the view lists: an account (it asks which kind), or money in.
  */
 export const MoneyScreen = () => {
   const {
     colors,
     month,
     availableYears,
-    previousYearMonth,
+    period,
+    previousPeriod,
     incomes,
     incomeCategories,
     received,
     kept,
     canCopyLastMonth,
     copyLastMonth,
-    allDebts,
-    debtorType,
-    setDebtorType,
-    personDebtors,
-    otherAccountsDebtors,
-    totalDebts,
-    debtors,
   } = useMoney();
+  // Without Pro every money-in row is drawn under one category (src/pro/projection.ts).
+  const incomeView = useIncomeCategories();
   const {t} = useTranslation();
-  const formatAmount = useFormatAmount();
+  // An entry a recurring rule made asks "this one or the rule?" first (Pro, P9).
+  const {openIncome, showsRepeat} = useOpenEntry();
   const {showAlert} = useDialog();
   const {yearMonth} = month;
-  const [part, setPart] = useState<MoneyPart>('received');
+  const accountsOn = useProFeature('accounts');
+  const [picked, setPicked] = useState<MoneyView>('accounts');
+  const view: MoneyView = accountsOn ? picked : 'in';
+
+  const addAccount = useCallback(() => {
+    void SheetManager.show('add-choice-sheet', {
+      payload: {
+        title: t('money.addToMoney'),
+        choices: HELD_CLASSES.map(accountClass => ({
+          name: accountClass,
+          icon: CLASS_ICON[accountClass],
+          label: t(CLASS_LABEL[accountClass]),
+          hint: t(CLASS_MEANING[accountClass]),
+          onPress: () => navigate('AccountFormScreen', {accountClass}),
+        })),
+      },
+    });
+  }, [t]);
 
   const handleCopy = useCallback(() => {
     logRejection(
@@ -80,108 +96,6 @@ export const MoneyScreen = () => {
     });
   }, [month.selectedMonthIndex, month.selectedYear, month.handleMonthYearSelect, availableYears]);
 
-  // A failed load is not "no debts yet": the banner says so.
-  const dataError = useDataError(MONEY_DOMAINS);
-
-  const overallLabel = useMemo(() => {
-    if (totalDebts > 0) return t('debts.youOweOthers');
-    if (totalDebts < 0) return t('debts.othersOweYou');
-    return t('debts.allSettled');
-  }, [totalDebts, t]);
-
-  const amountColor = useMemo(() => {
-    if (totalDebts > 0) return colors.accentOrange;
-    if (totalDebts < 0) return colors.accentGreen;
-    return colors.primaryText;
-  }, [totalDebts, colors]);
-
-  const DebtsHeader = useMemo(
-    () => (
-      <View style={gs.mx16}>
-        <View style={[gs.py12, gs.px14, gs.rounded12, gs.mb15, gs.center, {backgroundColor: colors.containerColor}]}>
-          <PrimaryText size={11} weight="medium" color={colors.secondaryText} style={gs.mb5}>
-            {overallLabel}
-          </PrimaryText>
-          <Amount size={28} weight="bold" color={amountColor}>
-            {formatAmount(Math.abs(totalDebts))}
-          </Amount>
-          <View style={[gs.rowCenter, gs.gap6, gs.mt6]}>
-            <PrimaryText size={11} color={colors.secondaryText} variant="number">
-              {t('debts.personCount', {count: personDebtors.length})}
-            </PrimaryText>
-            <PrimaryText size={11} color={colors.secondaryText}>
-              ·
-            </PrimaryText>
-            <PrimaryText size={11} color={colors.secondaryText} variant="number">
-              {t('debts.accountCount', {count: otherAccountsDebtors.length})}
-            </PrimaryText>
-          </View>
-        </View>
-
-        <View style={[gs.row, gs.gap8, gs.mb15]}>
-          <TouchableOpacity
-            onPress={() => setDebtorType('people')}
-            accessibilityRole="tab"
-            accessibilityState={{selected: debtorType === 'people'}}
-            activeOpacity={0.7}
-            style={[
-              gs.py8,
-              gs.minTouch,
-              gs.px14,
-              gs.rounded12,
-              {
-                backgroundColor: debtorType === 'people' ? colors.primaryText : colors.secondaryAccent,
-              },
-            ]}>
-            <PrimaryText
-              size={13}
-              weight="semibold"
-              color={debtorType === 'people' ? colors.buttonText : colors.secondaryText}>
-              {t('debts.tabPerson')}
-            </PrimaryText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setDebtorType('accounts')}
-            accessibilityRole="tab"
-            accessibilityState={{selected: debtorType === 'accounts'}}
-            activeOpacity={0.7}
-            style={[
-              gs.py8,
-              gs.minTouch,
-              gs.px14,
-              gs.rounded12,
-              {
-                backgroundColor: debtorType === 'accounts' ? colors.primaryText : colors.secondaryAccent,
-              },
-            ]}>
-            <PrimaryText
-              size={13}
-              weight="semibold"
-              color={debtorType === 'accounts' ? colors.buttonText : colors.secondaryText}>
-              {t('debts.tabAccounts')}
-            </PrimaryText>
-          </TouchableOpacity>
-        </View>
-        {/* No debtors yet: the debts part shows its empty state; Received above still works. */}
-        {debtors.length === 0 && !dataError ? <EmptyState colors={colors} type={'Debts'} /> : null}
-      </View>
-    ),
-    [
-      debtors.length,
-      dataError,
-      amountColor,
-      colors,
-      formatAmount,
-      debtorType,
-      overallLabel,
-      otherAccountsDebtors.length,
-      personDebtors.length,
-      setDebtorType,
-      t,
-      totalDebts,
-    ],
-  );
-
   return (
     <PrimaryView colors={colors} useBottomPadding={false} useSidePadding={false}>
       <View style={[gs.px16, gs.mb15]}>
@@ -190,48 +104,54 @@ export const MoneyScreen = () => {
       <View style={gs.px16}>
         <DataErrorBanner domains={MONEY_DOMAINS} />
       </View>
-      <View style={[gs.px16, gs.mb15]}>
-        <SegmentedTabs<MoneyPart>
-          tabs={[
-            {key: 'received', label: t('money.receivedSection')},
-            {key: 'debts', label: t('money.debtsSection'), count: debtors.length},
-          ]}
-          value={part}
-          onChange={setPart}
-          colors={colors}
-        />
-      </View>
-      {part === 'received' ? (
-        <ScrollView contentContainerStyle={[gs.px16, gs.pb100]} showsVerticalScrollIndicator={false}>
+      {accountsOn ? (
+        <View style={[gs.px16, gs.mb15]}>
+          <SegmentedTabs<MoneyView>
+            tabs={[
+              {key: 'accounts', label: t('money.viewAccounts')},
+              {key: 'in', label: t('money.received')},
+            ]}
+            value={view}
+            onChange={setPicked}
+            colors={colors}
+          />
+        </View>
+      ) : null}
+      <ScrollView contentContainerStyle={[gs.px16, gs.pb100]} showsVerticalScrollIndicator={false}>
+        {view === 'accounts' ? (
+          <HeldAccounts />
+        ) : (
           <ReceivedSection
             colors={colors}
-            monthLabel={formatDisplayDate(`${month.yearMonth}-01`, 'monthYearLong')}
+            monthLabel={formatMonthLabel(period)}
             canGoForward={month.canGoForward}
             onShiftMonth={month.shiftMonth}
             onOpenMonthPicker={openMonthPicker}
             incomes={incomes}
             categories={incomeCategories}
+            oneCategory={incomeView.oneCategory}
             received={received}
             kept={kept}
-            copyFromMonth={canCopyLastMonth ? formatDisplayDate(`${previousYearMonth}-01`, 'monthYear') : null}
+            copyFromMonth={canCopyLastMonth ? formatMonthLabel(previousPeriod, 'monthYear') : null}
             onCopyLastMonth={handleCopy}
-            onOpen={incomeId => navigate('UpdateIncomeScreen', {incomeId})}
+            showRepeat={showsRepeat}
+            onOpen={incomeId => {
+              const income = incomes.find(row => row.id === incomeId);
+              void openIncome({id: incomeId, recurringId: income?.recurringId});
+            }}
           />
-        </ScrollView>
+        )}
+      </ScrollView>
+      {view === 'accounts' ? (
+        <AddFab kind="account" onPress={addAccount} label={t('accounts.add')} colors={colors} />
       ) : (
-        <DebtorList
+        <AddFab
+          kind="income"
+          onPress={() => navigate('AddIncomeScreen', {yearMonth})}
+          label={t('money.addIncome')}
           colors={colors}
-          debtors={debtorType === 'people' ? personDebtors : otherAccountsDebtors}
-          allDebts={allDebts}
-          ListHeaderComponent={DebtsHeader}
         />
       )}
-      <AddFab
-        kind={part === 'received' ? 'income' : 'person'}
-        onPress={() => (part === 'received' ? navigate('AddIncomeScreen', {yearMonth}) : navigate('AddDebtorScreen'))}
-        label={part === 'received' ? t('money.addIncome') : t('debts.addDebtor')}
-        colors={colors}
-      />
     </PrimaryView>
   );
 };

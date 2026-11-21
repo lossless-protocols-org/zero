@@ -22,6 +22,8 @@ export class Account extends Model {
   @field('sort_order') sortOrder!: number;
   @text('icon') icon!: string;
   @text('color') color!: string;
+  /** v6: the user's own one-word label, or null. Read through `cleanAccountKind`; no sum reads it. */
+  @text('kind') kind!: string | null;
   @readonly @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 

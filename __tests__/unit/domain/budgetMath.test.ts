@@ -153,3 +153,36 @@ describe('budgetStatus (Home and Reports, one rule, exact units)', () => {
     });
   });
 });
+
+// UX revamp v2: recurring expenses still to come are not free to spend (Pro).
+describe('bills still due', () => {
+  const base = {budget: 75_000, spent: 22_676, spentToday: 0, dayOfMonth: 7, daysInMonth: 30, isCurrentMonth: true};
+
+  it('without bills nothing changes: free is what is left, and the daily figure is left over the days', () => {
+    const status = budgetStatus(base);
+    expect(status).toMatchObject({left: 52_324, billsStillDue: 0, free: 52_324, billsFill: 0});
+    expect(Math.round(status.dailyBudget)).toBe(2180);
+  });
+
+  it('bills come off before what is left is spread over the days', () => {
+    const status = budgetStatus({...base, billsStillDue: 34_859});
+    expect(status).toMatchObject({left: 52_324, billsStillDue: 34_859, free: 17_465});
+    expect(Math.round(status.dailyBudget)).toBe(728);
+    // The bar: 30% spent, then the bills' share of the budget.
+    expect(Math.round(status.fill)).toBe(30);
+    expect(Math.round(status.billsFill)).toBe(46);
+  });
+
+  it('bills larger than what is left leave nothing free, never a negative figure', () => {
+    const status = budgetStatus({...base, billsStillDue: 60_000});
+    expect(status.free).toBe(0);
+    expect(status.dailyBudget).toBe(0);
+    expect(status.fill + status.billsFill).toBeLessThanOrEqual(100);
+  });
+
+  it('another month ignores them: the past keeps its plain average', () => {
+    const status = budgetStatus({...base, isCurrentMonth: false, billsStillDue: 34_859});
+    expect(status).toMatchObject({billsStillDue: 0, free: 52_324, billsFill: 0});
+    expect(status.dailyBudget).toBe(2500);
+  });
+});

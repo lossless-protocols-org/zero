@@ -36,6 +36,7 @@ const text: WidgetText = {
 const figures = (over: Partial<WidgetFigures> = {}): WidgetFigures => ({
   monthKey: '2026-11',
   todayKey: '2026-11-06',
+  monthStartDay: 1,
   monthLabel: 'November',
   locale: 'en-IN',
   spentMonth: 45_029,

@@ -17,6 +17,11 @@ internal data class WidgetSnapshot(
     val locale: String,
     val monthKey: String,
     val todayKey: String,
+    /**
+     * The day of the month the user's month starts on, 1 to 28 (3.0, P11; 1 for everyone else).
+     * [monthKey] names the month it starts in: with 7, "2026-11" is 7 Nov to 6 Dec.
+     */
+    val monthStartDay: Int = 1,
     val monthLabel: String,
     val spentMonth: String,
     val spentToday: String,
@@ -56,7 +61,7 @@ internal data class WidgetSnapshot(
    */
   fun asOf(now: Calendar): WidgetSnapshot? {
     if (!ready) return this
-    val month = monthKeyOf(now)
+    val month = periodKeyOf(now, monthStartDay)
     val today = dayKeyOf(now)
     if (monthKey == month && todayKey == today) return this
     // The clock went back past the day these figures belong to (a manual
@@ -67,7 +72,7 @@ internal data class WidgetSnapshot(
     return copy(
         monthKey = month,
         todayKey = today,
-        monthLabel = monthName(now, locale),
+        monthLabel = monthLabelFor(month, monthStartDay, locale, now),
         spentMonth = zero,
         spentToday = zero,
         budget = null,
@@ -101,6 +106,9 @@ internal data class WidgetSnapshot(
             locale = o.getString("locale"),
             monthKey = o.getString("monthKey"),
             todayKey = o.getString("todayKey"),
+            // Absent in a snapshot written before 3.0, and anything but 1 to 28 is not a day
+            // every month has: both read as the 1st.
+            monthStartDay = o.optInt("monthStartDay", 1).let { if (it in 1..28) it else 1 },
             monthLabel = o.getString("monthLabel"),
             spentMonth = o.getString("spentMonth"),
             spentToday = o.getString("spentToday"),
@@ -152,6 +160,36 @@ internal data class WidgetSnapshot(
 
     fun dayKeyOf(c: Calendar): String =
         String.format(Locale.US, "%s-%02d", monthKeyOf(c), c.get(Calendar.DAY_OF_MONTH))
+
+    /**
+     * The key of the month [c] falls in when months start on [startDay]: its calendar month,
+     * or the one before while the day is still before the start day (src/domain/period.ts).
+     */
+    fun periodKeyOf(c: Calendar, startDay: Int): String {
+      if (c.get(Calendar.DAY_OF_MONTH) >= startDay) return monthKeyOf(c)
+      val index = c.get(Calendar.YEAR) * 12 + c.get(Calendar.MONTH) - 1
+      return String.format(Locale.US, "%04d-%02d", index / 12, index % 12 + 1)
+    }
+
+    /**
+     * What a month is called on the widget: its name when months start on the 1st, else its
+     * first and last day ("7 Nov – 6 Dec"), as the app's own label reads.
+     */
+    fun monthLabelFor(monthKey: String, startDay: Int, languageTag: String, now: Calendar): String {
+      val first = (now.clone() as Calendar).apply {
+        clear()
+        set(monthKey.substring(0, 4).toInt(), monthKey.substring(5, 7).toInt() - 1, startDay)
+      }
+      if (startDay == 1) return monthName(first, languageTag)
+      val last = (first.clone() as Calendar).apply {
+        add(Calendar.MONTH, 1)
+        add(Calendar.DAY_OF_MONTH, -1)
+      }
+      val locale = Locale.forLanguageTag(languageTag)
+      val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMM")
+      val format = SimpleDateFormat(pattern, locale).apply { timeZone = now.timeZone }
+      return "${format.format(first.time)} – ${format.format(last.time)}"
+    }
 
     /** The month's stand-alone name ("November"), capitalised as the app shows it. */
     fun monthName(c: Calendar, languageTag: String): String {

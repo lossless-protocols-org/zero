@@ -10,9 +10,16 @@ import {useThemeColors} from '../ui/hooks/useThemeColors';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ReportsScreen} from '../features/reports/screens/ReportsScreen';
 import {MoneyScreen} from '../features/money/screens/MoneyScreen';
+import {DebtsScreen} from '../features/money/screens/DebtsScreen';
 import {CategoryScreen} from '../features/categories/screens/CategoryScreen';
 import {SettingsScreen} from '../features/settings/screens/SettingsScreen';
 import {DiagnosticsScreen} from '../features/settings/screens/DiagnosticsScreen';
+import {WhatsNewScreen} from '../features/pro/screens/WhatsNewScreen';
+import {setProScreenOpen} from '../pro/proGate';
+import {useAppliedPro} from '../ui/hooks/useProFeature';
+import {ProAnnouncements} from './ProAnnouncements';
+import {isProRoute} from './proLinks';
+import {PRO_SCREENS} from './ProStack';
 import {AddTransactionsScreen} from '../features/spending/screens/AddTransactionsScreen';
 import {QuickAddScreen} from '../features/widgets/screens/QuickAddScreen';
 import {UpdateTransactionScreen} from '../features/spending/screens/UpdateTransactionScreen';
@@ -90,6 +97,20 @@ const MoneyIcon = ({color}: {color: string}) => {
   );
 };
 
+const DebtsIcon = ({color}: {color: string}) => {
+  const {t} = useTranslation();
+  return (
+    <View style={[gs.center, gs.minW70]}>
+      <View style={[gs.h26, gs.center]}>
+        <Icon name="users-2" size={ICON_SIZE} color={color} />
+      </View>
+      <Text {...TAB_LABEL_TEXT} style={[gs.text10, gs.fontMedium, gs.noFontPadding, gs.textCenter, gs.mt2, {color}]}>
+        {t('tabs.debts')}
+      </Text>
+    </View>
+  );
+};
+
 const CategoriesIcon = ({color}: {color: string}) => {
   const {t} = useTranslation();
   return (
@@ -150,42 +171,70 @@ const TabStack = () => {
         // (it read the route name: "ReportsScreen, tab, 2 of 4").
         options={{headerShown: false, tabBarIcon: ReportsIcon, tabBarAccessibilityLabel: t('tabs.reports')}}
       />
-      <Tab.Screen
-        name="CategoryScreen"
-        component={CategoryScreen}
-        options={{headerShown: false, tabBarIcon: CategoriesIcon, tabBarAccessibilityLabel: t('tabs.categories')}}
-      />
-      {/* 2.8: the Debts tab became Money (Money in | Debts tabs); 3.0 adds accounts here. */}
+      {/* Held and owed (A2): Money is what is held, Debts is what is owed. 2.8 had both under Money. */}
       <Tab.Screen
         name="MoneyScreen"
         component={MoneyScreen}
         options={{headerShown: false, tabBarIcon: MoneyIcon, tabBarAccessibilityLabel: t('tabs.money')}}
       />
+      <Tab.Screen
+        name="DebtsScreen"
+        component={DebtsScreen}
+        options={{headerShown: false, tabBarIcon: DebtsIcon, tabBarAccessibilityLabel: t('tabs.debts')}}
+      />
+      <Tab.Screen
+        name="CategoryScreen"
+        component={CategoryScreen}
+        options={{headerShown: false, tabBarIcon: CategoriesIcon, tabBarAccessibilityLabel: t('tabs.categories')}}
+      />
     </Tab.Navigator>
   );
 };
 
+/**
+ * Tells the gate whether a Pro screen is open: a downgrade waits until none is. Anywhere in the
+ * stack, not only on top: a Pro form with a picker or a widget link opened over it is still open,
+ * and removing it underneath would throw away what was typed.
+ */
+const proScreenListeners = {
+  state: (event: {data: {state: {routes: Array<{name: string}>}}}) => {
+    setProScreenOpen(event.data.state.routes.some(route => isProRoute(route.name)));
+  },
+};
+
 export const HomeStack = () => {
+  // L8: Pro screens are in the navigator only while Pro is applied. Without it they do not exist.
+  const pro = useAppliedPro();
   return (
-    <Stack.Navigator screenOptions={screenOptions}>
-      <Stack.Screen name="TabStack" component={TabStack} />
-      <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
-      <Stack.Screen name="AddTransactionsScreen" component={AddTransactionsScreen} />
-      <Stack.Screen name="QuickAddScreen" component={QuickAddScreen} options={quickAddOptions} />
-      <Stack.Screen name="UpdateTransactionScreen" component={UpdateTransactionScreen} />
-      <Stack.Screen name="RefundScreen" component={RefundScreen} />
-      <Stack.Screen name="AddIncomeScreen" component={AddIncomeScreen} />
-      <Stack.Screen name="UpdateIncomeScreen" component={UpdateIncomeScreen} />
-      <Stack.Screen name="AddCategoryScreen" component={AddCategoryScreen} />
-      <Stack.Screen name="UpdateCategoryScreen" component={UpdateCategoryScreen} />
-      <Stack.Screen name="EverydayTransactionScreen" component={EverydayTransactionScreen} />
-      <Stack.Screen name="CategoryTransactionScreen" component={CategoryTransactionScreen} />
-      <Stack.Screen name="AddDebtorScreen" component={AddDebtorScreen} />
-      <Stack.Screen name="IndividualDebtsScreen" component={IndividualDebtsScreen} />
-      <Stack.Screen name="AddDebtsScreen" component={AddDebtsScreen} />
-      <Stack.Screen name="UpdateDebtScreen" component={UpdateDebtScreen} />
-      <Stack.Screen name="UpdateDebtorScreen" component={UpdateDebtorScreen} />
-      <Stack.Screen name="DiagnosticsScreen" component={DiagnosticsScreen} />
-    </Stack.Navigator>
+    <>
+      <ProAnnouncements />
+      <Stack.Navigator screenOptions={screenOptions} screenListeners={proScreenListeners}>
+        <Stack.Screen name="TabStack" component={TabStack} />
+        <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+        <Stack.Screen name="AddTransactionsScreen" component={AddTransactionsScreen} />
+        <Stack.Screen name="QuickAddScreen" component={QuickAddScreen} options={quickAddOptions} />
+        <Stack.Screen name="UpdateTransactionScreen" component={UpdateTransactionScreen} />
+        <Stack.Screen name="RefundScreen" component={RefundScreen} />
+        <Stack.Screen name="AddIncomeScreen" component={AddIncomeScreen} />
+        <Stack.Screen name="UpdateIncomeScreen" component={UpdateIncomeScreen} />
+        <Stack.Screen name="AddCategoryScreen" component={AddCategoryScreen} />
+        <Stack.Screen name="UpdateCategoryScreen" component={UpdateCategoryScreen} />
+        <Stack.Screen name="EverydayTransactionScreen" component={EverydayTransactionScreen} />
+        <Stack.Screen name="CategoryTransactionScreen" component={CategoryTransactionScreen} />
+        <Stack.Screen name="AddDebtorScreen" component={AddDebtorScreen} />
+        <Stack.Screen name="IndividualDebtsScreen" component={IndividualDebtsScreen} />
+        <Stack.Screen name="AddDebtsScreen" component={AddDebtsScreen} />
+        <Stack.Screen name="UpdateDebtScreen" component={UpdateDebtScreen} />
+        <Stack.Screen name="UpdateDebtorScreen" component={UpdateDebtorScreen} />
+        <Stack.Screen name="DiagnosticsScreen" component={DiagnosticsScreen} />
+        <Stack.Screen name="WhatsNewScreen" component={WhatsNewScreen} />
+        {pro
+          ? PRO_SCREENS.map(({name, component}) => (
+              // A Pro route's name and params are declared by the phase that adds it (plan P8 onward).
+              <Stack.Screen key={name} name={name as keyof HomeStackParamList} component={component} />
+            ))
+          : null}
+      </Stack.Navigator>
+    </>
   );
 };

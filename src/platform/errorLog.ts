@@ -33,6 +33,8 @@ export interface ReportMeta {
   osVersion: string;
   brand?: string;
   model?: string;
+  /** Extra lines for the header, such as what zero decided about Pro (Diagnostics adds them). */
+  notes?: string[];
 }
 
 /**
@@ -72,6 +74,7 @@ export const formatErrorReport = (entries: ErrorLogEntry[], meta: ReportMeta): s
     `app: zero ${meta.appVersion}`,
     `device: ${[meta.brand, meta.model].filter(Boolean).join(' ') || 'unknown'}`,
     `os: ${meta.os} ${meta.osVersion}`,
+    ...(meta.notes ?? []),
     'contains: error messages and code locations only. No transactions, categories, names or amounts.',
   ].join('\n');
   const body = entries

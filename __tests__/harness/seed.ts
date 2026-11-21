@@ -21,12 +21,14 @@ const SCRIPT = fromRoot('scripts', 'seed-backup.mjs');
  * a hash of the generator, so editing it regenerates. Written to a temporary
  * name first, so parallel workers never read a half-written file.
  */
-const seedBackupPath = (count: number): string => {
+const seedBackupPath = (count: number, accounts: boolean): string => {
   const version = createHash('sha1').update(readFileSync(SCRIPT)).digest('hex').slice(0, 12);
-  const file = path.join(tmpdir(), `zero-seed-${count}-${SEED_ANCHOR}-${version}.json`);
+  const variant = accounts ? '-accounts' : '';
+  const file = path.join(tmpdir(), `zero-seed-${count}${variant}-${SEED_ANCHOR}-${version}.json`);
   if (!existsSync(file)) {
     const partial = `${file}.${process.pid}.tmp`;
-    execFileSync('node', [SCRIPT, String(count), '--compact', '--anchor', SEED_ANCHOR, '--out', partial], {
+    const flags = ['--compact', '--anchor', SEED_ANCHOR, '--out', partial, ...(accounts ? ['--accounts'] : [])];
+    execFileSync('node', [SCRIPT, String(count), ...flags], {
       stdio: 'pipe',
     });
     renameSync(partial, file);
@@ -34,5 +36,9 @@ const seedBackupPath = (count: number): string => {
   return file;
 };
 
-/** The seed backup with `count` expenses, parsed. Callers validate it with the app's own reader. */
-export const seedBackup = (count: number): unknown => JSON.parse(readFileSync(seedBackupPath(count), 'utf8'));
+/**
+ * The seed backup with `count` expenses, parsed. Callers validate it with the app's own reader.
+ * `accounts`: the 3.0 variant (envelope v6) with a bank, a card, an investment, 200 transfers and 12 checkpoints.
+ */
+export const seedBackup = (count: number, {accounts = false}: {accounts?: boolean} = {}): unknown =>
+  JSON.parse(readFileSync(seedBackupPath(count, accounts), 'utf8'));

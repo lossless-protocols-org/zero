@@ -1,4 +1,4 @@
-import {normalizeAmountInput} from '../../../src/domain/amountInput';
+import {normalizeAmountInput, normalizeSignedAmountInput} from '../../../src/domain/amountInput';
 
 describe('normalizeAmountInput', () => {
   it('treats a comma from a European numeric keyboard as the decimal point', () => {
@@ -57,5 +57,15 @@ describe('normalizeAmountInput — currency decimals', () => {
 
   it('leaves input alone when no precision is given', () => {
     expect(normalizeAmountInput('12.3456')).toBe('12.3456');
+  });
+});
+
+describe('normalizeSignedAmountInput', () => {
+  it('keeps one leading minus and reads a comma as the decimal mark', () => {
+    expect(normalizeSignedAmountInput('-1200,50')).toBe('-1200.50');
+    expect(normalizeSignedAmountInput('−300')).toBe('-300');
+    expect(normalizeSignedAmountInput('12-3')).toBe('123');
+    expect(normalizeSignedAmountInput('1400,505', 2)).toBe('1400.50');
+    expect(normalizeSignedAmountInput('-1500,5', 0)).toBe('-15005');
   });
 });

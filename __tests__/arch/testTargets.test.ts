@@ -19,9 +19,9 @@ const EXTENSIONS = ['.ts', '.tsx'];
 
 /**
  * Modules with exported logic and no test at their mirrored path, counted on
- * 2026-11-09. Lower it when you add one of their tests; never raise it.
+ * 2026-11-09 (114 after P10, 113 after P12, 2026-11-12). Lower it when you add one of their tests; never raise it.
  */
-const UNTESTED_CEILING = 115;
+const UNTESTED_CEILING = 113;
 
 const walk = (dir: string): string[] =>
   fs.existsSync(dir)

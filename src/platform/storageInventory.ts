@@ -14,6 +14,15 @@ import {StorageService} from './storage';
 export const KEPT_KEYS: ReadonlySet<string> = new Set([
   // the install
   'firstSeenAppVersion',
+  // who is paying (3.0): a purchase belongs to the store account, not to the data being
+  // deleted. It is only a copy of the store's answer and is replaced by the next one.
+  'pro_entitlement',
+  // 3.0: what this install has already been told once (the what's-new screen, the notice for
+  // one ending of Pro). Deleting the data must not make the app say it again.
+  'whats_new_3_0_seen',
+  'pro_ended_notice_for',
+  // P9: the phone was already asked to show reminders; the OS keeps that answer past a wipe too.
+  'reminders_permission_asked',
   // set to false by the wipe itself, so the onboarding stack takes over
   'isOnboarded',
   // database migration state: the empty database is still on this schema
@@ -34,6 +43,8 @@ export const KEPT_KEYS: ReadonlySet<string> = new Set([
   'swipeActionsEnabled',
   'listSort',
   'widgetShowAmounts',
+  // P10: how many days of automatic backups the folder keeps, a preference like the rest
+  'backup_keep_days',
   // a measurement of this device's keyboard, not a choice
   'quickAddKeyboardHeight',
 ]);
@@ -49,6 +60,11 @@ export const CLEARED_PREFIXES: readonly string[] = [
   'swipe_tutorial_seen_',
   // redux-persist's store from before 2.7.1; nothing reads it
   'persist:root',
+  // P10: whether automatic backup is on, and its last result. A wipe turns it off: the next
+  // backup would otherwise replace today's file with the emptied data. (A restore runs only
+  // in onboarding, after a wipe or on a new install.) The folder and key are native and stay;
+  // turning it on again asks for the passphrase.
+  'auto_backup_',
 ];
 
 /** Removes every key not in KEPT_KEYS; returns the removed keys (for tests and Diagnostics). */

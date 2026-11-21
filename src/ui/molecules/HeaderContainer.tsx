@@ -11,9 +11,11 @@ import {useTranslation} from 'react-i18next';
 
 interface HeaderContainerProps {
   headerText: string;
+  /** One more action of this screen's own, drawn before Settings (Reports: share what is shown). */
+  action?: React.ReactNode;
 }
 
-const HeaderContainerComponent: React.FC<HeaderContainerProps> = ({headerText}) => {
+const HeaderContainerComponent: React.FC<HeaderContainerProps> = ({headerText, action}) => {
   const colors = useThemeColors();
   const {t} = useTranslation();
   const {userName} = useUserName();
@@ -39,13 +41,16 @@ const HeaderContainerComponent: React.FC<HeaderContainerProps> = ({headerText}) 
           {headerText}
         </PrimaryText>
       </View>
-      <TouchableOpacity
-        onPress={() => navigate('SettingsScreen')}
-        hitSlop={hitSlop}
-        accessibilityRole="button"
-        accessibilityLabel={t('settings.title')}>
-        <Icon name="settings" size={22} color={colors.secondaryText} />
-      </TouchableOpacity>
+      <View style={[gs.rowCenter, gs.gap16]}>
+        {action ?? null}
+        <TouchableOpacity
+          onPress={() => navigate('SettingsScreen')}
+          hitSlop={hitSlop}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.title')}>
+          <Icon name="settings" size={22} color={colors.secondaryText} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };

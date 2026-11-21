@@ -1,0 +1,1436 @@
+{
+  "spending": {
+    "title": "Spending report",
+    "subtitle": "7 Nov – 6 Dec 2026",
+    "footer": "Made on this phone with zero · 12 Nov 2026",
+    "direction": "ltr",
+    "blocks": [
+      {
+        "type": "stats",
+        "items": [
+          {
+            "label": "Spent",
+            "value": "₹5,560.3"
+          },
+          {
+            "label": "Avg/day",
+            "value": "₹185.343"
+          },
+          {
+            "label": "Money in",
+            "value": "₹50,000"
+          },
+          {
+            "label": "Kept",
+            "value": "₹44,439.7"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "Refunded: ₹1,500"
+      },
+      {
+        "type": "text",
+        "text": "Budget: ₹5,000. ₹560.3 over."
+      },
+      {
+        "type": "heading",
+        "text": "By category"
+      },
+      {
+        "type": "bars",
+        "rows": [
+          {
+            "label": "Food",
+            "value": "₹3,000.3",
+            "fraction": 1
+          },
+          {
+            "label": "Shoes",
+            "value": "₹2,500",
+            "fraction": 0.8332500083325001
+          },
+          {
+            "label": "Uncategorised",
+            "value": "₹60",
+            "fraction": 0.01999800019998
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "columns": [
+          {
+            "title": "Category",
+            "align": "start",
+            "weight": 5
+          },
+          {
+            "title": "Amount",
+            "align": "end",
+            "weight": 3
+          },
+          {
+            "title": "Share",
+            "align": "end",
+            "weight": 2
+          }
+        ],
+        "rows": [
+          [
+            "Food",
+            "₹3,000.3",
+            "54%"
+          ],
+          [
+            "Shoes",
+            "₹2,500",
+            "45%"
+          ],
+          [
+            "Uncategorised",
+            "₹60",
+            "1%"
+          ]
+        ],
+        "total": [
+          "Total",
+          "₹5,560.3",
+          ""
+        ]
+      },
+      {
+        "type": "heading",
+        "text": "Entries"
+      },
+      {
+        "type": "table",
+        "columns": [
+          {
+            "title": "Date",
+            "align": "start",
+            "weight": 2
+          },
+          {
+            "title": "Title",
+            "align": "start",
+            "weight": 5
+          },
+          {
+            "title": "Category",
+            "align": "start",
+            "weight": 3
+          },
+          {
+            "title": "Amount",
+            "align": "end",
+            "weight": 3
+          }
+        ],
+        "rows": [
+          [
+            "11-07",
+            "Chai",
+            "Food",
+            "₹0.1"
+          ],
+          [
+            "11-08",
+            "Groceries",
+            "Food",
+            "₹3,000"
+          ],
+          [
+            "11-10",
+            "Boots",
+            "Shoes",
+            "₹4,000"
+          ],
+          [
+            "11-20",
+            "Refund: Boots",
+            "Shoes",
+            "-₹1,500"
+          ],
+          [
+            "11-20",
+            "Parking",
+            "Uncategorised",
+            "₹60"
+          ],
+          [
+            "12-06",
+            "Chai",
+            "Food",
+            "₹0.2"
+          ]
+        ],
+        "total": [
+          "Total",
+          "",
+          "",
+          "₹5,560.3"
+        ]
+      }
+    ]
+  },
+  "long": {
+    "title": "Spending report",
+    "subtitle": "November 2026",
+    "footer": "Made on this phone with zero · 12 Nov 2026",
+    "direction": "ltr",
+    "blocks": [
+      {
+        "type": "stats",
+        "items": [
+          {
+            "label": "Spent",
+            "value": "₹22,230"
+          },
+          {
+            "label": "Avg/day",
+            "value": "₹741"
+          },
+          {
+            "label": "Money in",
+            "value": "₹50,000"
+          },
+          {
+            "label": "Kept",
+            "value": "₹27,770"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "Refunded: ₹1,500"
+      },
+      {
+        "type": "text",
+        "text": "Budget: ₹5,000. ₹17,230 over."
+      },
+      {
+        "type": "heading",
+        "text": "By category"
+      },
+      {
+        "type": "bars",
+        "rows": [
+          {
+            "label": "Food",
+            "value": "₹15,787",
+            "fraction": 1
+          },
+          {
+            "label": "Shoes",
+            "value": "₹6,443",
+            "fraction": 0.40812060556153795
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "columns": [
+          {
+            "title": "Category",
+            "align": "start",
+            "weight": 5
+          },
+          {
+            "title": "Amount",
+            "align": "end",
+            "weight": 3
+          },
+          {
+            "title": "Share",
+            "align": "end",
+            "weight": 2
+          }
+        ],
+        "rows": [
+          [
+            "Food",
+            "₹15,787",
+            "71%"
+          ],
+          [
+            "Shoes",
+            "₹6,443",
+            "29%"
+          ]
+        ],
+        "total": [
+          "Total",
+          "₹22,230",
+          ""
+        ]
+      },
+      {
+        "type": "heading",
+        "text": "Entries"
+      },
+      {
+        "type": "table",
+        "columns": [
+          {
+            "title": "Date",
+            "align": "start",
+            "weight": 2
+          },
+          {
+            "title": "Title",
+            "align": "start",
+            "weight": 5
+          },
+          {
+            "title": "Category",
+            "align": "start",
+            "weight": 3
+          },
+          {
+            "title": "Amount",
+            "align": "end",
+            "weight": 3
+          }
+        ],
+        "rows": [
+          [
+            "11-01",
+            "A long title that has to wrap inside its column, entry number 0",
+            "Shoes",
+            "₹100"
+          ],
+          [
+            "11-01",
+            "Entry 30",
+            "Shoes",
+            "₹130"
+          ],
+          [
+            "11-01",
+            "Entry 60",
+            "Shoes",
+            "₹160"
+          ],
+          [
+            "11-01",
+            "A long title that has to wrap inside its column, entry number 90",
+            "Shoes",
+            "₹190"
+          ],
+          [
+            "11-01",
+            "Entry 120",
+            "Shoes",
+            "₹220"
+          ],
+          [
+            "11-02",
+            "Entry 1",
+            "Food",
+            "₹101"
+          ],
+          [
+            "11-02",
+            "Entry 31",
+            "Food",
+            "₹131"
+          ],
+          [
+            "11-02",
+            "Entry 61",
+            "Food",
+            "₹161"
+          ],
+          [
+            "11-02",
+            "Entry 91",
+            "Food",
+            "₹191"
+          ],
+          [
+            "11-02",
+            "Entry 121",
+            "Food",
+            "₹221"
+          ],
+          [
+            "11-03",
+            "Entry 2",
+            "Food",
+            "₹102"
+          ],
+          [
+            "11-03",
+            "Entry 32",
+            "Food",
+            "₹132"
+          ],
+          [
+            "11-03",
+            "Entry 62",
+            "Food",
+            "₹162"
+          ],
+          [
+            "11-03",
+            "Entry 92",
+            "Food",
+            "₹192"
+          ],
+          [
+            "11-03",
+            "Entry 122",
+            "Food",
+            "₹222"
+          ],
+          [
+            "11-04",
+            "Entry 3",
+            "Shoes",
+            "₹103"
+          ],
+          [
+            "11-04",
+            "Entry 33",
+            "Shoes",
+            "₹133"
+          ],
+          [
+            "11-04",
+            "A long title that has to wrap inside its column, entry number 63",
+            "Shoes",
+            "₹163"
+          ],
+          [
+            "11-04",
+            "Entry 93",
+            "Shoes",
+            "₹193"
+          ],
+          [
+            "11-04",
+            "Entry 123",
+            "Shoes",
+            "₹223"
+          ],
+          [
+            "11-05",
+            "Entry 4",
+            "Food",
+            "₹104"
+          ],
+          [
+            "11-05",
+            "Entry 34",
+            "Food",
+            "₹134"
+          ],
+          [
+            "11-05",
+            "Entry 64",
+            "Food",
+            "₹164"
+          ],
+          [
+            "11-05",
+            "Entry 94",
+            "Food",
+            "₹194"
+          ],
+          [
+            "11-05",
+            "Entry 124",
+            "Food",
+            "₹224"
+          ],
+          [
+            "11-06",
+            "Entry 5",
+            "Food",
+            "₹105"
+          ],
+          [
+            "11-06",
+            "Entry 35",
+            "Food",
+            "₹135"
+          ],
+          [
+            "11-06",
+            "Entry 65",
+            "Food",
+            "₹165"
+          ],
+          [
+            "11-06",
+            "Entry 95",
+            "Food",
+            "₹195"
+          ],
+          [
+            "11-06",
+            "Entry 125",
+            "Food",
+            "₹225"
+          ],
+          [
+            "11-07",
+            "Entry 6",
+            "Shoes",
+            "₹106"
+          ],
+          [
+            "11-07",
+            "A long title that has to wrap inside its column, entry number 36",
+            "Shoes",
+            "₹136"
+          ],
+          [
+            "11-07",
+            "Entry 66",
+            "Shoes",
+            "₹166"
+          ],
+          [
+            "11-07",
+            "Entry 96",
+            "Shoes",
+            "₹196"
+          ],
+          [
+            "11-07",
+            "A long title that has to wrap inside its column, entry number 126",
+            "Shoes",
+            "₹226"
+          ],
+          [
+            "11-08",
+            "Entry 7",
+            "Food",
+            "₹107"
+          ],
+          [
+            "11-08",
+            "Entry 37",
+            "Food",
+            "₹137"
+          ],
+          [
+            "11-08",
+            "Entry 67",
+            "Food",
+            "₹167"
+          ],
+          [
+            "11-08",
+            "Entry 97",
+            "Food",
+            "₹197"
+          ],
+          [
+            "11-08",
+            "Entry 127",
+            "Food",
+            "₹227"
+          ],
+          [
+            "11-09",
+            "Entry 8",
+            "Food",
+            "₹108"
+          ],
+          [
+            "11-09",
+            "Entry 38",
+            "Food",
+            "₹138"
+          ],
+          [
+            "11-09",
+            "Entry 68",
+            "Food",
+            "₹168"
+          ],
+          [
+            "11-09",
+            "Entry 98",
+            "Food",
+            "₹198"
+          ],
+          [
+            "11-09",
+            "Entry 128",
+            "Food",
+            "₹228"
+          ],
+          [
+            "11-10",
+            "A long title that has to wrap inside its column, entry number 9",
+            "Shoes",
+            "₹109"
+          ],
+          [
+            "11-10",
+            "Entry 39",
+            "Shoes",
+            "₹139"
+          ],
+          [
+            "11-10",
+            "Entry 69",
+            "Shoes",
+            "₹169"
+          ],
+          [
+            "11-10",
+            "A long title that has to wrap inside its column, entry number 99",
+            "Shoes",
+            "₹199"
+          ],
+          [
+            "11-10",
+            "Entry 129",
+            "Shoes",
+            "₹229"
+          ],
+          [
+            "11-11",
+            "Entry 10",
+            "Food",
+            "₹110"
+          ],
+          [
+            "11-11",
+            "Entry 40",
+            "Food",
+            "₹140"
+          ],
+          [
+            "11-11",
+            "Entry 70",
+            "Food",
+            "₹170"
+          ],
+          [
+            "11-11",
+            "Entry 100",
+            "Food",
+            "₹200"
+          ],
+          [
+            "11-11",
+            "Entry 130",
+            "Food",
+            "₹230"
+          ],
+          [
+            "11-12",
+            "Entry 11",
+            "Food",
+            "₹111"
+          ],
+          [
+            "11-12",
+            "Entry 41",
+            "Food",
+            "₹141"
+          ],
+          [
+            "11-12",
+            "Entry 71",
+            "Food",
+            "₹171"
+          ],
+          [
+            "11-12",
+            "Entry 101",
+            "Food",
+            "₹201"
+          ],
+          [
+            "11-12",
+            "Entry 131",
+            "Food",
+            "₹231"
+          ],
+          [
+            "11-13",
+            "Entry 12",
+            "Shoes",
+            "₹112"
+          ],
+          [
+            "11-13",
+            "Entry 42",
+            "Shoes",
+            "₹142"
+          ],
+          [
+            "11-13",
+            "A long title that has to wrap inside its column, entry number 72",
+            "Shoes",
+            "₹172"
+          ],
+          [
+            "11-13",
+            "Entry 102",
+            "Shoes",
+            "₹202"
+          ],
+          [
+            "11-13",
+            "Entry 132",
+            "Shoes",
+            "₹232"
+          ],
+          [
+            "11-14",
+            "Entry 13",
+            "Food",
+            "₹113"
+          ],
+          [
+            "11-14",
+            "Entry 43",
+            "Food",
+            "₹143"
+          ],
+          [
+            "11-14",
+            "Entry 73",
+            "Food",
+            "₹173"
+          ],
+          [
+            "11-14",
+            "Entry 103",
+            "Food",
+            "₹203"
+          ],
+          [
+            "11-14",
+            "Entry 133",
+            "Food",
+            "₹233"
+          ],
+          [
+            "11-15",
+            "Entry 14",
+            "Food",
+            "₹114"
+          ],
+          [
+            "11-15",
+            "Entry 44",
+            "Food",
+            "₹144"
+          ],
+          [
+            "11-15",
+            "Entry 74",
+            "Food",
+            "₹174"
+          ],
+          [
+            "11-15",
+            "Entry 104",
+            "Food",
+            "₹204"
+          ],
+          [
+            "11-15",
+            "Entry 134",
+            "Food",
+            "₹234"
+          ],
+          [
+            "11-16",
+            "Entry 15",
+            "Shoes",
+            "₹115"
+          ],
+          [
+            "11-16",
+            "A long title that has to wrap inside its column, entry number 45",
+            "Shoes",
+            "₹145"
+          ],
+          [
+            "11-16",
+            "Entry 75",
+            "Shoes",
+            "₹175"
+          ],
+          [
+            "11-16",
+            "Entry 105",
+            "Shoes",
+            "₹205"
+          ],
+          [
+            "11-16",
+            "A long title that has to wrap inside its column, entry number 135",
+            "Shoes",
+            "₹235"
+          ],
+          [
+            "11-17",
+            "Entry 16",
+            "Food",
+            "₹116"
+          ],
+          [
+            "11-17",
+            "Entry 46",
+            "Food",
+            "₹146"
+          ],
+          [
+            "11-17",
+            "Entry 76",
+            "Food",
+            "₹176"
+          ],
+          [
+            "11-17",
+            "Entry 106",
+            "Food",
+            "₹206"
+          ],
+          [
+            "11-17",
+            "Entry 136",
+            "Food",
+            "₹236"
+          ],
+          [
+            "11-18",
+            "Entry 17",
+            "Food",
+            "₹117"
+          ],
+          [
+            "11-18",
+            "Entry 47",
+            "Food",
+            "₹147"
+          ],
+          [
+            "11-18",
+            "Entry 77",
+            "Food",
+            "₹177"
+          ],
+          [
+            "11-18",
+            "Entry 107",
+            "Food",
+            "₹207"
+          ],
+          [
+            "11-18",
+            "Entry 137",
+            "Food",
+            "₹237"
+          ],
+          [
+            "11-19",
+            "A long title that has to wrap inside its column, entry number 18",
+            "Shoes",
+            "₹118"
+          ],
+          [
+            "11-19",
+            "Entry 48",
+            "Shoes",
+            "₹148"
+          ],
+          [
+            "11-19",
+            "Entry 78",
+            "Shoes",
+            "₹178"
+          ],
+          [
+            "11-19",
+            "A long title that has to wrap inside its column, entry number 108",
+            "Shoes",
+            "₹208"
+          ],
+          [
+            "11-19",
+            "Entry 138",
+            "Shoes",
+            "₹238"
+          ],
+          [
+            "11-20",
+            "Refund: Boots",
+            "Shoes",
+            "-₹1,500"
+          ],
+          [
+            "11-20",
+            "Entry 19",
+            "Food",
+            "₹119"
+          ],
+          [
+            "11-20",
+            "Entry 49",
+            "Food",
+            "₹149"
+          ],
+          [
+            "11-20",
+            "Entry 79",
+            "Food",
+            "₹179"
+          ],
+          [
+            "11-20",
+            "Entry 109",
+            "Food",
+            "₹209"
+          ],
+          [
+            "11-20",
+            "Entry 139",
+            "Food",
+            "₹239"
+          ],
+          [
+            "11-21",
+            "Entry 20",
+            "Food",
+            "₹120"
+          ],
+          [
+            "11-21",
+            "Entry 50",
+            "Food",
+            "₹150"
+          ],
+          [
+            "11-21",
+            "Entry 80",
+            "Food",
+            "₹180"
+          ],
+          [
+            "11-21",
+            "Entry 110",
+            "Food",
+            "₹210"
+          ],
+          [
+            "11-22",
+            "Entry 21",
+            "Shoes",
+            "₹121"
+          ],
+          [
+            "11-22",
+            "Entry 51",
+            "Shoes",
+            "₹151"
+          ],
+          [
+            "11-22",
+            "A long title that has to wrap inside its column, entry number 81",
+            "Shoes",
+            "₹181"
+          ],
+          [
+            "11-22",
+            "Entry 111",
+            "Shoes",
+            "₹211"
+          ],
+          [
+            "11-23",
+            "Entry 22",
+            "Food",
+            "₹122"
+          ],
+          [
+            "11-23",
+            "Entry 52",
+            "Food",
+            "₹152"
+          ],
+          [
+            "11-23",
+            "Entry 82",
+            "Food",
+            "₹182"
+          ],
+          [
+            "11-23",
+            "Entry 112",
+            "Food",
+            "₹212"
+          ],
+          [
+            "11-24",
+            "Entry 23",
+            "Food",
+            "₹123"
+          ],
+          [
+            "11-24",
+            "Entry 53",
+            "Food",
+            "₹153"
+          ],
+          [
+            "11-24",
+            "Entry 83",
+            "Food",
+            "₹183"
+          ],
+          [
+            "11-24",
+            "Entry 113",
+            "Food",
+            "₹213"
+          ],
+          [
+            "11-25",
+            "Entry 24",
+            "Shoes",
+            "₹124"
+          ],
+          [
+            "11-25",
+            "A long title that has to wrap inside its column, entry number 54",
+            "Shoes",
+            "₹154"
+          ],
+          [
+            "11-25",
+            "Entry 84",
+            "Shoes",
+            "₹184"
+          ],
+          [
+            "11-25",
+            "Entry 114",
+            "Shoes",
+            "₹214"
+          ],
+          [
+            "11-26",
+            "Entry 25",
+            "Food",
+            "₹125"
+          ],
+          [
+            "11-26",
+            "Entry 55",
+            "Food",
+            "₹155"
+          ],
+          [
+            "11-26",
+            "Entry 85",
+            "Food",
+            "₹185"
+          ],
+          [
+            "11-26",
+            "Entry 115",
+            "Food",
+            "₹215"
+          ],
+          [
+            "11-27",
+            "Entry 26",
+            "Food",
+            "₹126"
+          ],
+          [
+            "11-27",
+            "Entry 56",
+            "Food",
+            "₹156"
+          ],
+          [
+            "11-27",
+            "Entry 86",
+            "Food",
+            "₹186"
+          ],
+          [
+            "11-27",
+            "Entry 116",
+            "Food",
+            "₹216"
+          ],
+          [
+            "11-28",
+            "A long title that has to wrap inside its column, entry number 27",
+            "Shoes",
+            "₹127"
+          ],
+          [
+            "11-28",
+            "Entry 57",
+            "Shoes",
+            "₹157"
+          ],
+          [
+            "11-28",
+            "Entry 87",
+            "Shoes",
+            "₹187"
+          ],
+          [
+            "11-28",
+            "A long title that has to wrap inside its column, entry number 117",
+            "Shoes",
+            "₹217"
+          ],
+          [
+            "11-29",
+            "Entry 28",
+            "Food",
+            "₹128"
+          ],
+          [
+            "11-29",
+            "Entry 58",
+            "Food",
+            "₹158"
+          ],
+          [
+            "11-29",
+            "Entry 88",
+            "Food",
+            "₹188"
+          ],
+          [
+            "11-29",
+            "Entry 118",
+            "Food",
+            "₹218"
+          ],
+          [
+            "11-30",
+            "Entry 29",
+            "Food",
+            "₹129"
+          ],
+          [
+            "11-30",
+            "Entry 59",
+            "Food",
+            "₹159"
+          ],
+          [
+            "11-30",
+            "Entry 89",
+            "Food",
+            "₹189"
+          ],
+          [
+            "11-30",
+            "Entry 119",
+            "Food",
+            "₹219"
+          ]
+        ],
+        "total": [
+          "Total",
+          "",
+          "",
+          "₹22,230"
+        ]
+      }
+    ]
+  },
+  "trends": {
+    "title": "Trends",
+    "subtitle": "Sep 2026 – Nov 2026",
+    "footer": "Made on this phone with zero · 12 Nov 2026",
+    "direction": "ltr",
+    "blocks": [
+      {
+        "type": "stats",
+        "items": [
+          {
+            "label": "Spent",
+            "value": "₹3,500.3"
+          },
+          {
+            "label": "Money in",
+            "value": "₹10,000"
+          },
+          {
+            "label": "Kept",
+            "value": "₹6,499.7"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "text": "Spent"
+      },
+      {
+        "type": "bars",
+        "rows": [
+          {
+            "label": "Sep 2026",
+            "value": "₹1,000.1",
+            "fraction": 0.5
+          },
+          {
+            "label": "Oct 2026",
+            "value": "₹2,000.2",
+            "fraction": 1
+          },
+          {
+            "label": "Nov 2026",
+            "value": "₹500",
+            "fraction": 0.24997500249975002
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "columns": [
+          {
+            "title": "Month",
+            "align": "start",
+            "weight": 4
+          },
+          {
+            "title": "Spent",
+            "align": "end",
+            "weight": 3
+          },
+          {
+            "title": "Money in",
+            "align": "end",
+            "weight": 3
+          },
+          {
+            "title": "Kept",
+            "align": "end",
+            "weight": 3
+          }
+        ],
+        "rows": [
+          [
+            "Sep 2026",
+            "₹1,000.1",
+            "₹5,000",
+            "₹3,999.9"
+          ],
+          [
+            "Oct 2026",
+            "₹2,000.2",
+            "₹5,000",
+            "₹2,999.8"
+          ],
+          [
+            "Nov 2026",
+            "₹500",
+            "₹0",
+            "-₹500"
+          ]
+        ],
+        "total": [
+          "Total",
+          "₹3,500.3",
+          "₹10,000",
+          "₹6,499.7"
+        ]
+      },
+      {
+        "type": "heading",
+        "text": "What stood out"
+      },
+      {
+        "type": "text",
+        "text": "Food was your biggest category in October: 75% of spending."
+      },
+      {
+        "type": "heading",
+        "text": "By category"
+      },
+      {
+        "type": "table",
+        "columns": [
+          {
+            "title": "Category",
+            "align": "start",
+            "weight": 5
+          },
+          {
+            "title": "Amount",
+            "align": "end",
+            "weight": 3
+          },
+          {
+            "title": "Share",
+            "align": "end",
+            "weight": 2
+          }
+        ],
+        "rows": [
+          [
+            "Food",
+            "₹2,600.3",
+            "74%"
+          ],
+          [
+            "Uncategorised",
+            "₹500",
+            "14%"
+          ],
+          [
+            "Shoes",
+            "₹400",
+            "11%"
+          ]
+        ],
+        "total": [
+          "Total",
+          "₹3,500.3",
+          ""
+        ]
+      }
+    ]
+  },
+  "rtl": {
+    "title": "تقرير الإنفاق",
+    "subtitle": "٧ نوفمبر – ٦ ديسمبر ٢٠٢٦",
+    "footer": "Made on this phone with zero · 12 Nov 2026",
+    "direction": "rtl",
+    "blocks": [
+      {
+        "type": "stats",
+        "items": [
+          {
+            "label": "Spent",
+            "value": "₹3,250"
+          },
+          {
+            "label": "Avg/day",
+            "value": "₹108.333"
+          },
+          {
+            "label": "Money in",
+            "value": "₹50,000"
+          },
+          {
+            "label": "Kept",
+            "value": "₹46,750"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "Budget: ₹5,000. ₹1,750 left."
+      },
+      {
+        "type": "heading",
+        "text": "By category"
+      },
+      {
+        "type": "bars",
+        "rows": [
+          {
+            "label": "طعام",
+            "value": "₹3,250",
+            "fraction": 1
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "columns": [
+          {
+            "title": "Category",
+            "align": "start",
+            "weight": 5
+          },
+          {
+            "title": "Amount",
+            "align": "end",
+            "weight": 3
+          },
+          {
+            "title": "Share",
+            "align": "end",
+            "weight": 2
+          }
+        ],
+        "rows": [
+          [
+            "طعام",
+            "₹3,250",
+            "100%"
+          ]
+        ],
+        "total": [
+          "Total",
+          "₹3,250",
+          ""
+        ]
+      },
+      {
+        "type": "heading",
+        "text": "Entries"
+      },
+      {
+        "type": "table",
+        "columns": [
+          {
+            "title": "Date",
+            "align": "start",
+            "weight": 2
+          },
+          {
+            "title": "Title",
+            "align": "start",
+            "weight": 5
+          },
+          {
+            "title": "Category",
+            "align": "start",
+            "weight": 3
+          },
+          {
+            "title": "Amount",
+            "align": "end",
+            "weight": 3
+          }
+        ],
+        "rows": [
+          [
+            "11-08",
+            "بقالة",
+            "طعام",
+            "₹3,000"
+          ],
+          [
+            "11-09",
+            "किराना",
+            "طعام",
+            "₹250"
+          ]
+        ],
+        "total": [
+          "Total",
+          "",
+          "",
+          "₹3,250"
+        ]
+      }
+    ]
+  }
+}

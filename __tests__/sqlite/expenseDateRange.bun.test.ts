@@ -20,7 +20,11 @@ import encodeQuery from '@nozbe/watermelondb/adapters/sqlite/encodeQuery';
 import {encodeSchema} from '@nozbe/watermelondb/adapters/sqlite/encodeSchema';
 import {schema} from '../../src/data/database/schema';
 import {migrations} from '../../src/data/database/migrations';
-import {monthDateClauses, dayDateClauses} from '../../src/data/services/expenseDateRange';
+import {periodClauses, dayDateClauses} from '../../src/data/services/expenseDateRange';
+import {periodFor} from '../../src/domain/period';
+
+/** A calendar month as the services ask for it (P11: a period; the start day is worked out above the data layer). */
+const monthDateClauses = (yearMonth: string) => periodClauses(periodFor(yearMonth));
 import {performance} from 'node:perf_hooks';
 import {seedBackup} from '../harness/seed';
 

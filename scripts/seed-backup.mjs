@@ -11,6 +11,10 @@
  *   node scripts/seed-backup.mjs 10000 --compact        → no indentation (what L4 would ship)
  *   node scripts/seed-backup.mjs 200 --out /tmp/x.json  → explicit path
  *   node scripts/seed-backup.mjs 200 --anchor 2026-11-01 → the five years end on that day
+ *   node scripts/seed-backup.mjs 10000 --accounts      → envelope v6 with positions (3.0, plan P8):
+ *     a bank, a card and an investment beside Cash, entries spread over them,
+ *     200 transfers (SIP, card bill, cash withdrawals) and 12 checkpoints whose
+ *     gaps are the true gaps against the file's own rows
  *
  * Deterministic for a given N and anchor (seeded PRNG), so two runs produce
  * the same file and timings are comparable. The anchor defaults to today, so
@@ -28,12 +32,17 @@ import {dirname, resolve} from 'node:path';
 const args = process.argv.slice(2);
 const count = Number.parseInt(args[0] ?? '', 10);
 if (!Number.isInteger(count) || count < 1) {
-  console.error('Usage: node scripts/seed-backup.mjs <expenses> [--compact] [--out <path>] [--anchor YYYY-MM-DD]');
+  console.error(
+    'Usage: node scripts/seed-backup.mjs <expenses> [--compact] [--out <path>] [--anchor YYYY-MM-DD] [--accounts]',
+  );
   process.exit(1);
 }
 const compact = args.includes('--compact');
+const withAccounts = args.includes('--accounts');
 const outFlag = args.indexOf('--out');
-const outPath = resolve(outFlag !== -1 ? args[outFlag + 1] : `references/seeds/zero_seed_${count}.json`);
+const outPath = resolve(
+  outFlag !== -1 ? args[outFlag + 1] : `references/seeds/zero_seed_${count}${withAccounts ? '_accounts' : ''}.json`,
+);
 const anchorFlag = args.indexOf('--anchor');
 const anchorArg = anchorFlag !== -1 ? args[anchorFlag + 1] : undefined;
 if (anchorArg !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(anchorArg)) {
@@ -225,12 +234,176 @@ for (let month = new Date(start.getFullYear(), start.getMonth() + 1, 1); month <
   month = new Date(month.getFullYear(), month.getMonth() + 1, 1);
 }
 
+// 3.0 positions (--accounts), drawn after everything above so the rest of the
+// file is the same as without the flag for a given N and anchor.
+const BANK = 'HDFC';
+const CARD = 'Amex';
+const FUND = 'Index fund';
+const accounts = [
+  {name: 'Cash', type: 'cash', openingBalance: 0, openingDate: null, isDefault: true, icon: 'wallet', color: '#6E8B3D'},
+  ...(withAccounts
+    ? [
+        {
+          name: BANK,
+          type: 'bank',
+          openingBalance: 25000,
+          openingDate: isoDay(start),
+          isDefault: false,
+          icon: 'landmark',
+          color: '#3A85B5',
+        },
+        {
+          name: CARD,
+          type: 'card',
+          openingBalance: 0,
+          openingDate: null,
+          isDefault: false,
+          icon: 'credit-card',
+          color: '#D06850',
+        },
+        {
+          name: FUND,
+          type: 'investment',
+          openingBalance: 100000,
+          openingDate: isoDay(start),
+          isDefault: false,
+          icon: 'trending-up',
+          color: '#3D9960',
+        },
+      ]
+    : []),
+].map((account, index) => ({
+  name: account.name,
+  type: account.type,
+  currency: 'INR',
+  openingBalance: account.openingBalance,
+  openingDate: account.openingDate,
+  isDefault: account.isDefault,
+  accountStatus: true,
+  sortOrder: index,
+  icon: account.icon,
+  color: account.color,
+}));
+const expenseAccount = new Map();
+const refundAccount = new Map();
+const incomeAccount = new Map();
+const debtAccount = new Map();
+const transfers = [];
+const checkpoints = [];
+if (withAccounts) {
+  expenses.forEach((expense, index) => {
+    const draw = rand();
+    if (draw < 0.25) expenseAccount.set(index, CARD);
+    else if (draw < 0.45) expenseAccount.set(index, BANK);
+  });
+  // A card refund now and then comes back to the bank (a refund's own account, v6).
+  for (const index of refundsByIndex.keys()) {
+    if (expenseAccount.get(index) === CARD && rand() < 0.3) refundAccount.set(index, BANK);
+  }
+  incomes.forEach((income, index) => {
+    if (income.note === 'Salary') incomeAccount.set(index, BANK);
+  });
+  debts.forEach((_debt, index) => {
+    if (rand() < 0.3) debtAccount.set(index, BANK);
+  });
+  const cardSpend = new Map(); // 'YYYY-MM' → card spending that month
+  expenses.forEach((expense, index) => {
+    if (expenseAccount.get(index) === CARD) {
+      const month = expense.date.slice(0, 7);
+      cardSpend.set(month, (cardSpend.get(month) ?? 0) + expense.amount);
+    }
+  });
+  const transfer = (from, to, amount, date, note) => {
+    if (amount > 0 && date <= isoDay(now)) transfers.push({fromAccount: from, toAccount: to, amount, date, note});
+  };
+  for (let month = new Date(start.getFullYear(), start.getMonth() + 1, 1); month < now;) {
+    const previous = yearMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+    transfer(
+      BANK,
+      CARD,
+      cardSpend.get(previous) ?? 0,
+      isoDay(new Date(month.getFullYear(), month.getMonth(), 5)),
+      'Card bill',
+    );
+    transfer(BANK, FUND, 5000, isoDay(new Date(month.getFullYear(), month.getMonth(), 10)), 'SIP');
+    transfer(
+      BANK,
+      'Cash',
+      between(3, 10) * 1000,
+      isoDay(new Date(month.getFullYear(), month.getMonth(), between(1, 28))),
+      'ATM',
+    );
+    month = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+  }
+  while (transfers.length < 200) {
+    transfer('Cash', BANK, between(1, 20) * 500, isoDay(new Date(start.getTime() + rand() * spanMs)), 'Deposit');
+  }
+  transfers.splice(200);
+  // The file's own rows replayed (as netWorthService reads them): each checkpoint's gap is
+  // its balance minus what the rows and the checkpoints before it give at the end of its day.
+  const units = amount => Math.round(amount * 10_000);
+  const events = new Map(accounts.map(account => [account.name, []]));
+  const on = (name, date, amount) => events.get(name ?? 'Cash').push({day: date.slice(0, 10), units: units(amount)});
+  expenses.forEach((e, i) => on(expenseAccount.get(i), e.date, -e.amount));
+  for (const [i, list] of refundsByIndex)
+    for (const r of list) on(refundAccount.get(i) ?? expenseAccount.get(i), r.date, r.amount);
+  incomes.forEach((income, i) => on(incomeAccount.get(i), income.date, income.amount));
+  debts.forEach((d, i) => {
+    if (debtAccount.has(i)) on(debtAccount.get(i), d.date, d.type === 'Borrow' ? d.amount : -d.amount);
+  });
+  for (const t of transfers) {
+    on(t.fromAccount, t.date, -t.amount);
+    on(t.toAccount, t.date, t.amount);
+  }
+  const balanceOn = (name, day) => {
+    const account = accounts.find(a => a.name === name);
+    const anchor = checkpoints.filter(c => c.account === name && c.date <= day).at(-1);
+    const after = anchor?.date ?? null;
+    const opening =
+      account.openingDate === null
+        ? after === null
+          ? units(account.openingBalance)
+          : 0
+        : (after === null || account.openingDate > after) && account.openingDate <= day
+          ? units(account.openingBalance)
+          : 0;
+    const flows = events
+      .get(name)
+      .filter(e => (after === null || e.day > after) && e.day <= day)
+      .reduce((s, e) => s + e.units, 0);
+    return (anchor ? units(anchor.balance) : 0) + opening + flows;
+  };
+  const checkpointDays = [];
+  for (let k = 1; k <= 12; k++) {
+    checkpointDays.push({
+      account: k % 3 === 0 ? BANK : FUND,
+      day: isoDay(new Date(start.getTime() + (spanMs * k) / 12.5)),
+    });
+  }
+  for (const {account, day} of checkpointDays) {
+    const derived = balanceOn(account, day);
+    // An investment drifts with the market; a bank account is off by what was never entered.
+    const balanceUnits =
+      account === FUND
+        ? Math.round((derived * (1000 + between(-30, 60))) / 1000 / 10_000) * 10_000
+        : derived - between(0, 2000) * 10_000;
+    checkpoints.push({
+      account,
+      balance: balanceUnits / 10_000,
+      date: day,
+      gap: (balanceUnits - derived) / 10_000,
+      kind: account === FUND ? 'revaluation' : 'adjustment',
+      note: account === FUND ? 'Statement' : 'Bank app',
+    });
+  }
+}
+
 // Key order is src/data/backup/export/validate.ts's schema order, so the export of
 // an imported seed is byte-identical to the seed (exportRoundTrip.test.ts).
 const stamped = row => ({createdAt: epochOf(row.date), updatedAt: epochOf(row.date)});
 const envelope = {
   key,
-  version: 5,
+  version: withAccounts ? 6 : 5,
   data: {
     users: [{username: 'Seed', email: ''}],
     categories: [...categories, ...incomeCategories],
@@ -238,29 +411,39 @@ const envelope = {
       const refunds = refundsByIndex.get(index);
       return {
         ...expense,
+        ...(expenseAccount.has(index) ? {account: expenseAccount.get(index)} : {}),
         ...stamped(expense),
-        ...(refunds ? {refunds: refunds.map(refund => ({...refund, ...stamped(refund)}))} : {}),
+        ...(refunds
+          ? {
+              refunds: refunds.map(refund => ({
+                ...refund,
+                ...stamped(refund),
+                ...(refundAccount.has(index) ? {account: refundAccount.get(index)} : {}),
+              })),
+            }
+          : {}),
       };
     }),
     currencies: [{code: 'INR', symbol: '₹', name: 'Indian Rupee'}],
     debtors,
-    debts: debts.map(debt => ({...debt, ...stamped(debt)})),
+    debts: debts.map((debt, index) => ({
+      ...debt,
+      ...stamped(debt),
+      ...(debtAccount.has(index) ? {account: debtAccount.get(index)} : {}),
+    })),
     budgets,
-    accounts: [
-      {
-        name: 'Cash',
-        type: 'cash',
-        currency: 'INR',
-        openingBalance: 0,
-        openingDate: null,
-        isDefault: true,
-        accountStatus: true,
-        sortOrder: 0,
-        icon: 'wallet',
-        color: '#6E8B3D',
-      },
-    ],
-    incomes: incomes.map(income => ({...income, ...stamped(income)})),
+    accounts,
+    incomes: incomes.map((income, index) => ({
+      ...income,
+      ...(incomeAccount.has(index) ? {account: incomeAccount.get(index)} : {}),
+      ...stamped(income),
+    })),
+    ...(withAccounts
+      ? {
+          transfers: transfers.map(t => ({...t, ...stamped(t)})),
+          checkpoints: checkpoints.map(c => ({...c, ...stamped(c)})),
+        }
+      : {}),
   },
 };
 
@@ -277,8 +460,11 @@ const rows =
   debtors.length +
   debts.length +
   budgets.length +
-  3;
+  accounts.length +
+  transfers.length +
+  checkpoints.length +
+  2;
 console.log(`${outPath}`);
 console.log(
-  `${bytes} bytes · ${expenses.length} expenses · ${refundsByIndex.size} refunds · ${incomes.length} incomes · ${rows} rows · ${(bytes / rows).toFixed(0)} B/row · ${compact ? 'compact' : 'indent 2'}`,
+  `${bytes} bytes · ${expenses.length} expenses · ${refundsByIndex.size} refunds · ${incomes.length} incomes · ${accounts.length} accounts · ${transfers.length} transfers · ${checkpoints.length} checkpoints · ${rows} rows · ${(bytes / rows).toFixed(0)} B/row · ${compact ? 'compact' : 'indent 2'}`,
 );

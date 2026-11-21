@@ -37,7 +37,7 @@ jobs:
         run: bun run check
 
   android-unit:
-    name: Android unit tests and Lint (widget reader, rendering, store, alarm, quick-add intents)
+    name: Android unit tests and Lint (widget, quick add, Google Play billing; both flavours)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -69,10 +69,10 @@ jobs:
       # New Lint errors fail; what existed on 2026-11-09 is in app/lint-baseline.xml (audit §6.3).
       - name: Android Lint
         working-directory: android
-        run: ./gradlew :app:lintDebug -q
+        run: ./gradlew :app:lintPlayDebug :app:lintFossDebug -q
 
   ios-shared:
-    name: Swift shared code (widget reader, money format, queue, Siri matching)
+    name: Swift code (widget reader, money format, queue, Siri matching, App Store billing)
     # ZeroShared uses iOS 26 APIs (SnippetIntent); Xcode 16 on macos-15 cannot build it.
     runs-on: macos-26
     timeout-minutes: 30
@@ -82,14 +82,26 @@ jobs:
       - name: Newest Xcode on the image
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)" && xcodebuild -version
 
-      # The Swift package's tests read contracts/, the fixtures the JS and Kotlin tests read.
+      # The Swift tests read contracts/, the fixtures the JS and Kotlin tests read. The billing
+      # tests run against Xcode's local test store: no network, no Apple account.
       - name: Swift tests
         run: sh scripts/test-ios.sh
 
   android-apk-privacy:
-    name: Release APK holds only allowed permissions
+    name: Release APK holds only allowed permissions and code (${{ matrix.flavour }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # Both builds, each against its own allow list (scripts/check-no-read.mjs): play may add Google
+        # Play Billing's one permission and must not contain Google's usage uploader; foss must contain
+        # no store code at all.
+        include:
+          - flavour: play
+            task: assemblePlayRelease
+          - flavour: foss
+            task: assembleFossRelease
     steps:
       - uses: actions/checkout@v4
 
@@ -116,9 +128,9 @@ jobs:
       # the merged manifest. One ABI keeps the native build short.
       - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+        run: ./gradlew ${{ matrix.task }} -PreactNativeArchitectures=arm64-v8a
 
-      # The merged manifest Play sees, including what transitive Gradle libraries add,
-      # which the source check cannot see.
+      # The merged manifest Play sees and the classes the APK defines, including what transitive
+      # Gradle libraries add, which the source check cannot see.
       - name: No-read gate on the APK
-        run: node scripts/check-no-read.mjs --apk android/app/build/outputs/apk/release/app-release-unsigned.apk
+        run: node scripts/check-no-read.mjs --flavour ${{ matrix.flavour }} --apk android/app/build/outputs/apk/${{ matrix.flavour }}/release/app-${{ matrix.flavour }}-release-unsigned.apk

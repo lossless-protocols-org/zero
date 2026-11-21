@@ -5,10 +5,10 @@ import {Category} from '../database/models/Category';
 import {sanitizeString, DEFAULTS} from '../../domain/sanitize';
 import {assertUserId} from './assertUserId';
 import type {CategoryData, CategoryKind} from '../../domain/types';
-import {FREE_INCOME_CATEGORIES} from '../../domain/freeTier';
 import {getExpenseRowsSince} from './expenseService';
 import {CATEGORY_SORT_STEP, sortOrderAt} from '../../domain/categoryOrder';
 import {toCategoryKind} from './categoryKind';
+import {formatDate, shiftIsoDay} from '../../domain/dates';
 import {
   DEFAULT_INCOME_CATEGORY_COLOR,
   DEFAULT_INCOME_CATEGORY_ICON,
@@ -59,7 +59,8 @@ const assertNameFree = async (userId: string, kind: CategoryKind, name: string, 
 
 /**
  * Creates a new category. Refuses a name an active category of the same kind
- * already has, and a second income category on Free (CategoryRuleError).
+ * already has (CategoryRuleError). Tier-blind (3.0, law L1): how many income
+ * categories a tier may add is the Categories screen's to decide, not the data's.
  */
 export const createCategory = async (
   name: string,
@@ -71,16 +72,6 @@ export const createCategory = async (
   assertUserId(userId, 'category');
   const id = nanoid(24);
   await database.write(async () => {
-    // Free has one income category (domain/freeTier): checked in the same writer as the create.
-    if (kind === 'income') {
-      const incomeCount = await database
-        .get<Category>('categories')
-        .query(Q.where('user_id', userId), Q.where('kind', 'income'))
-        .fetchCount();
-      if (incomeCount >= FREE_INCOME_CATEGORIES) {
-        throw new CategoryRuleError('incomeCategoryLimit');
-      }
-    }
     await assertNameFree(userId, kind, name);
     const sortOrder = await nextSortOrder(userId, kind);
     await database.get<Category>('categories').create(cat => {
@@ -99,7 +90,7 @@ export const createCategory = async (
 };
 
 /** The rule a category write broke. */
-type CategoryRule = 'lastIncomeCategory' | 'incomeCategoryLimit' | 'duplicateName';
+type CategoryRule = 'lastIncomeCategory' | 'duplicateName';
 
 export class CategoryRuleError extends Error {
   readonly rule: CategoryRule;
@@ -269,8 +260,7 @@ const QUICK_WINDOW_DAYS = 90;
 
 /** The first day ('YYYY-MM-DD', local) of the quick-category window ending at `now`. */
 export const quickWindowStart = (now: Date): string => {
-  const since = new Date(now.getTime() - QUICK_WINDOW_DAYS * 86_400_000);
-  return `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, '0')}-${String(since.getDate()).padStart(2, '0')}`;
+  return shiftIsoDay(formatDate(now), -QUICK_WINDOW_DAYS);
 };
 
 /**

@@ -1,0 +1,313 @@
+{
+  "key": "zeroAAAAAAAAAAAAAAAA",
+  "version": 6,
+  "data": {
+    "users": [
+      {
+        "username": "Kabir",
+        "email": ""
+      }
+    ],
+    "categories": [
+      {
+        "name": "Food",
+        "categoryStatus": true,
+        "icon": "utensils-crossed",
+        "color": "#6E8E55",
+        "kind": "expense",
+        "sortOrder": 10
+      },
+      {
+        "name": "Shopping",
+        "categoryStatus": true,
+        "icon": "shopping-bag",
+        "color": "#B5543A",
+        "kind": "expense",
+        "sortOrder": 20
+      },
+      {
+        "name": "Travel",
+        "categoryStatus": false,
+        "icon": "car",
+        "color": "#3A85B5",
+        "kind": "expense",
+        "sortOrder": 30
+      },
+      {
+        "name": "Income",
+        "categoryStatus": true,
+        "icon": "coins",
+        "color": "#3D9960",
+        "kind": "income",
+        "sortOrder": 10
+      },
+      {
+        "name": "Freelance",
+        "categoryStatus": true,
+        "icon": "briefcase",
+        "color": "#AA5500",
+        "kind": "income",
+        "sortOrder": 20
+      },
+      {
+        "name": "Rent in",
+        "categoryStatus": true,
+        "icon": "house",
+        "color": "#5566AA",
+        "kind": "income",
+        "sortOrder": 30
+      },
+      {
+        "name": "Old job",
+        "categoryStatus": false,
+        "icon": "coins",
+        "color": "#888888",
+        "kind": "income",
+        "sortOrder": 40
+      }
+    ],
+    "expenses": [
+      {
+        "title": "Lunch",
+        "amount": 250.5,
+        "description": "",
+        "category": {
+          "name": "Food"
+        },
+        "date": "2026-11-05T13:10:00",
+        "createdAt": 1762328400000,
+        "updatedAt": 1762328400000
+      },
+      {
+        "title": "Shoes",
+        "amount": 3000,
+        "description": "online",
+        "category": {
+          "name": "Shopping"
+        },
+        "date": "2026-11-10T18:05:00",
+        "createdAt": 1762797900000,
+        "updatedAt": 1762797900000,
+        "refunds": [
+          {
+            "amount": 1200,
+            "date": "2026-11-20T12:00:00",
+            "note": "size",
+            "createdAt": 1763640000000,
+            "updatedAt": 1763640000000
+          }
+        ],
+        "account": "Card"
+      },
+      {
+        "title": "Cab",
+        "amount": 420,
+        "description": "",
+        "category": {
+          "name": "Travel"
+        },
+        "date": "2026-10-02T09:00:00",
+        "createdAt": 1759395600000,
+        "updatedAt": 1759395600000
+      }
+    ],
+    "currencies": [
+      {
+        "code": "INR",
+        "symbol": "₹",
+        "name": "Indian Rupee"
+      }
+    ],
+    "debtors": [
+      {
+        "title": "Rohit",
+        "debtorStatus": true,
+        "icon": "user",
+        "type": "Person",
+        "color": "#3A85B5"
+      }
+    ],
+    "debts": [
+      {
+        "amount": 1800,
+        "description": "Movie tickets",
+        "debtor": {
+          "title": "Rohit"
+        },
+        "date": "2026-11-03T20:00:00",
+        "type": "Lend",
+        "createdAt": 1762200000000,
+        "updatedAt": 1762200000000
+      },
+      {
+        "amount": 2500,
+        "description": "Rent share",
+        "debtor": {
+          "title": "Rohit"
+        },
+        "date": "2026-11-04T09:00:00",
+        "type": "Borrow",
+        "createdAt": 1762246800000,
+        "updatedAt": 1762246800000,
+        "account": "Savings"
+      }
+    ],
+    "budgets": [
+      {
+        "amount": 45000,
+        "month": "recurring:2026-11",
+        "budgetType": "monthly"
+      },
+      {
+        "amount": 5000,
+        "month": "2026-11",
+        "budgetType": "category",
+        "category": {
+          "name": "Food"
+        }
+      }
+    ],
+    "accounts": [
+      {
+        "name": "Cash",
+        "type": "cash",
+        "currency": "INR",
+        "openingBalance": 0,
+        "openingDate": null,
+        "isDefault": true,
+        "accountStatus": true,
+        "sortOrder": 0,
+        "icon": "wallet",
+        "color": "#6E8B3D"
+      },
+      {
+        "name": "Savings",
+        "type": "bank",
+        "currency": "INR",
+        "openingBalance": 15000,
+        "openingDate": "2026-01-01",
+        "isDefault": false,
+        "accountStatus": true,
+        "sortOrder": 10,
+        "icon": "landmark",
+        "color": "#224466"
+      },
+      {
+        "name": "Card",
+        "type": "card",
+        "currency": "INR",
+        "openingBalance": -2000,
+        "openingDate": "2026-01-01",
+        "isDefault": false,
+        "accountStatus": true,
+        "sortOrder": 20,
+        "icon": "credit-card",
+        "color": "#663344"
+      }
+    ],
+    "incomes": [
+      {
+        "amount": 50000,
+        "date": "2026-11-01",
+        "category": {
+          "name": "Income"
+        },
+        "note": "Salary",
+        "createdAt": 1761955200000,
+        "updatedAt": 1761955200000
+      },
+      {
+        "amount": 2500.75,
+        "date": "2026-11-15",
+        "category": {
+          "name": "Income"
+        },
+        "note": "",
+        "createdAt": 1763164800000,
+        "updatedAt": 1763164800000
+      },
+      {
+        "amount": 12000,
+        "date": "2026-11-18",
+        "category": {
+          "name": "Freelance"
+        },
+        "note": "logo",
+        "account": "Savings",
+        "createdAt": 1763424000000,
+        "updatedAt": 1763424000000
+      },
+      {
+        "amount": 8000,
+        "date": "2026-11-02",
+        "category": {
+          "name": "Rent in"
+        },
+        "note": "",
+        "createdAt": 1762041600000,
+        "updatedAt": 1762041600000
+      }
+    ],
+    "transfers": [
+      {
+        "fromAccount": "Cash",
+        "toAccount": "Savings",
+        "amount": 750,
+        "date": "2026-11-06",
+        "note": "to savings",
+        "createdAt": 1762387200000,
+        "updatedAt": 1762387200000
+      },
+      {
+        "fromAccount": "Savings",
+        "toAccount": "Card",
+        "amount": 2000.5,
+        "date": "2026-11-25",
+        "note": "card bill",
+        "createdAt": 1764028800000,
+        "updatedAt": 1764028800000
+      },
+      {
+        "fromAccount": "Savings",
+        "toAccount": "Savings",
+        "amount": 5,
+        "date": "2026-11-26",
+        "note": "moves nothing",
+        "createdAt": 1764115200000,
+        "updatedAt": 1764115200000
+      }
+    ],
+    "checkpoints": [
+      {
+        "account": "Card",
+        "balance": -3800.25,
+        "date": "2026-11-28",
+        "gap": -30.25,
+        "kind": "adjustment",
+        "note": "statement",
+        "createdAt": 1764288000000,
+        "updatedAt": 1764288000000
+      },
+      {
+        "account": "Savings",
+        "balance": 30500,
+        "date": "2026-11-30",
+        "gap": 0,
+        "kind": "adjustment",
+        "note": "",
+        "createdAt": 1764460800000,
+        "updatedAt": 1764460800000
+      },
+      {
+        "account": "Wallet",
+        "balance": 640,
+        "date": "2026-11-29",
+        "gap": 0,
+        "kind": "adjustment",
+        "note": "not in the account list",
+        "createdAt": 1764374400000,
+        "updatedAt": 1764374400000
+      }
+    ]
+  }
+}

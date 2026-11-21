@@ -41,7 +41,10 @@ describe('the rules themselves', () => {
   const FIXTURE: Record<string, string> = {
     'src/domain/usesReact.ts': "import {useState} from 'react';\nexport const a = useState;",
     'src/domain/usesPlatform.ts': "import {p} from '../platform/p';\nexport const b = p;",
-    'src/domain/typeOnly.ts': "import type {S} from '../store/s';\nexport type T = S;",
+    // A type-only import is exempt from the layer rules (platform may name a store type)…
+    'src/platform/typeOnly.ts': "import type {S} from '../store/s';\nexport type T = S;",
+    // …except from the layers that own rows, which may not even name a type from above (L1).
+    'src/data/reexported.ts': "import type {S} from '../store/s';\nexport type R = S;",
     'src/domain/cycleA.ts': "import {c2} from './cycleB';\nexport const c1 = () => c2;",
     'src/domain/cycleB.ts': "import {c1} from './cycleA';\nexport const c2 = () => c1;",
     'src/platform/p.ts': "import i18n from 'i18next';\nexport const p = i18n;",
@@ -58,6 +61,23 @@ describe('the rules themselves', () => {
     'src/features/two/lib.ts': 'export const two = 2;',
     'src/features/two/types.ts': 'export type Two = number;',
     'src/features/widgets/bridge.ts': "import {spec} from '../../native/spec';\nexport const bridge = spec;",
+    // The 3.0 laws: L1 (not even a type), src/pro decides only, L8 (Pro features behind ProStack).
+    'src/pro/entitlement.ts': "import {useState} from 'react';\nexport const e = useState;\nexport type E = number;",
+    // The store's gateway may import its spec, like the widget bridge above.
+    'src/pro/billing.ts': "import {spec} from '../native/spec';\nexport const billing = spec;",
+    'src/data/tierAware.ts': "import type {E} from '../pro/entitlement';\nexport type T = E;",
+    'src/features/accounts/screens/A.tsx': 'export const A = 1;',
+    'src/navigation/Home.tsx': "import {A} from '../features/accounts/screens/A';\nexport const H = A;",
+    'src/navigation/ProStack.tsx': "import {A} from '../features/accounts/screens/A';\nexport const P = A;",
+    'src/domain/freeTier.ts': 'export const FREE = 1;',
+    'src/data/limits.ts': "import {FREE} from '../domain/freeTier';\nexport const limit = FREE;",
+    // The import planner's 2.8 debt was cleared in 3.0 (P7): it may no longer read the limit.
+    'src/data/backup/import/planner.ts': "import {FREE} from '../../../domain/freeTier';\nexport const merge = FREE;",
+    // Its last debt was cleared in P9: the category service may no longer read the limit either.
+    'src/data/services/categoryService.ts': "import {FREE} from '../../domain/freeTier';\nexport const cap = FREE;",
+    'src/domain/reexportsLimit.ts': "export {FREE} from './freeTier';",
+    'src/navigation/HomeStack.tsx': "import {P} from './ProStack';\nexport const Root = P;",
+    'src/navigation/Other.tsx': "import {P} from './ProStack';\nexport const O = P;",
     'tsconfig.json': JSON.stringify({compilerOptions: {strict: true, jsx: 'react-jsx'}}),
   };
 
@@ -80,12 +100,21 @@ describe('the rules themselves', () => {
         'components-through-hooks: src/ui/atoms/ReadsStore.tsx → src/store/s.ts',
         'domain-pure: src/domain/usesReact.ts → react',
         'feature-order-hooks: src/features/one/hooks/useUp.ts → src/features/one/screens/S.tsx',
+        'free-limits-not-in-data: src/data/backup/import/planner.ts → src/domain/freeTier.ts',
+        'free-limits-not-in-data: src/data/limits.ts → src/domain/freeTier.ts',
+        'free-limits-not-in-data: src/data/services/categoryService.ts → src/domain/freeTier.ts',
+        'free-limits-not-in-data: src/domain/reexportsLimit.ts → src/domain/freeTier.ts',
         'layer-domain: src/domain/usesPlatform.ts → src/platform/p.ts',
         'native-gateway: src/data/d.ts → src/native/spec.ts',
         'no-circular: src/domain/cycleA.ts → src/domain/cycleB.ts',
         'no-cross-feature: src/features/one/screens/S.tsx → src/features/two/lib.ts',
         'outside-every-layer: src/stray/x.ts → src/store/s.ts',
         'platform-no-react: src/platform/p.ts → i18next',
+        'pro-decides-only: src/pro/entitlement.ts → react',
+        'pro-features-behind-pro-stack: src/navigation/Home.tsx → src/features/accounts/screens/A.tsx',
+        'pro-stack-single-mount: src/navigation/Other.tsx → src/navigation/ProStack.tsx',
+        'tier-blind-data: src/data/reexported.ts → src/store/s.ts',
+        'tier-blind-data: src/data/tierAware.ts → src/pro/entitlement.ts',
       ]);
     } finally {
       fs.rmSync(dir, {recursive: true, force: true});

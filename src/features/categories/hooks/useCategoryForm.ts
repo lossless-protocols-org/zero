@@ -3,7 +3,7 @@ import {useAppDispatch, useAppSelector} from '../../../store/hooks';
 import {selectUserId} from '../../../store/slices/userIdSlice';
 import {fetchCategories, selectCategoryData, selectIncomeCategories} from '../../../store/slices/categoryDataSlice';
 import {createCategory, updateCategoryById} from '../../../data/services/categoryService';
-import type {CategoryChoice, CategoryData} from '../../../domain/types';
+import type {CategoryChoice, CategoryData, CategoryKind} from '../../../domain/types';
 import {useTranslation} from 'react-i18next';
 import {categorySchema} from '../../../i18n/validationSchema';
 import {displayCategoryName} from '../../../i18n/displayNames';
@@ -24,8 +24,13 @@ const resolveIconParam = (val?: string): string | null => {
   return val;
 };
 
-/** State and save for the add/edit category form; `editing` absent = add. */
-export const useCategoryForm = (editing?: EditedCategory) => {
+/**
+ * State and save for the add/edit category form; `editing` absent = add.
+ * `kind` (3.0): a new money-in category (Pro's Categories screen offers it);
+ * the default suggestions are expense categories, so an income one has none.
+ */
+export const useCategoryForm = (editing?: EditedCategory, kind: CategoryKind = 'expense') => {
+  const effectiveKind: CategoryKind = editing?.kind === 'income' ? 'income' : kind;
   const dispatch = useAppDispatch();
   const {t} = useTranslation();
   const [categoryName, setCategoryName] = useState(editing?.name ?? '');
@@ -39,7 +44,7 @@ export const useCategoryForm = (editing?: EditedCategory) => {
   const selectedCategoryNames = useMemo(() => new Set(selectedCategories.map(c => c.name)), [selectedCategories]);
 
   // Names are unique per kind (R5): an income category is checked against income categories.
-  const allCategories = useAppSelector(editing?.kind === 'income' ? selectIncomeCategories : selectCategoryData);
+  const allCategories = useAppSelector(effectiveKind === 'income' ? selectIncomeCategories : selectCategoryData);
   // Stored and shown names both count (M32): a seeded "Food" shows translated,
   // and the user can type that translation as a name of their own.
   const existingCategoryNamesSet = useMemo(
@@ -54,12 +59,12 @@ export const useCategoryForm = (editing?: EditedCategory) => {
   );
   const filteredCategories = useMemo(
     () =>
-      defaultCategories.filter(
+      (effectiveKind === 'income' ? [] : defaultCategories).filter(
         category =>
           !existingCategoryNamesSet.has(category.name) &&
           !existingCategoryNamesSet.has(displayCategoryName(category.name, t)),
       ),
-    [existingCategoryNamesSet, t],
+    [existingCategoryNamesSet, t, effectiveKind],
   );
 
   // Categories are referenced by NAME in backups and the Reports donut, so two
@@ -99,13 +104,13 @@ export const useCategoryForm = (editing?: EditedCategory) => {
 
   const handleAddCategory = useCallback(async () => {
     try {
-      await createCategory(trimmedName, userId, selectedIcon, selectedColor, 'expense');
+      await createCategory(trimmedName, userId, selectedIcon, selectedColor, effectiveKind);
     } catch (error) {
       await reportSaveFailure(error);
       return;
     }
     goBack(); // the new or changed category shows through the session follower
-  }, [trimmedName, userId, selectedIcon, selectedColor, reportSaveFailure]);
+  }, [trimmedName, userId, selectedIcon, selectedColor, effectiveKind, reportSaveFailure]);
 
   const handleAddFromDefaultCategory = useCallback(async () => {
     // Was the one handler here with no try/catch: a rejected createCategory
@@ -199,6 +204,7 @@ export const useCategoryForm = (editing?: EditedCategory) => {
   );
 
   return {
+    kind: effectiveKind,
     categoryName,
     setCategoryName,
     selectedIcon,

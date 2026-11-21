@@ -7,13 +7,14 @@ import {CustomBottomSheet} from '../atoms/CustomBottomSheet';
 import {PrimaryText} from '../atoms/PrimaryText';
 import {PrimaryButton} from '../atoms/PrimaryButton';
 import {getMonthNamesShort} from '../../platform/dateFormat';
-import {getCurrentYear} from '../../domain/dates';
 import {gs} from '../globalStyles';
+import {monthIndexOfKey, yearOfKey} from '../../domain/period';
+import {monthKeyNow} from '../../pro/monthStart';
 
 export const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'>> = React.memo(props => {
   const {t, i18n} = useTranslation();
   const colors = useThemeColors();
-  const {selectedMonth, selectedYear, availableYears, onSelect} = props.payload ?? {};
+  const {selectedMonth, selectedYear, availableYears, onSelect, onCustomRange} = props.payload ?? {};
 
   // Computed per render, not at module load: month names must follow a runtime
   // language change, and a cached "current year" goes stale on New Year's Eve.
@@ -21,7 +22,8 @@ export const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'
   // cannot see — i18n.language is the signal that it changed.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const monthsShort = useMemo(() => getMonthNamesShort(), [i18n.language]);
-  const currentYear = getCurrentYear();
+  // The year of the month today is in (P11): on 3 January, with months starting on the 7th, still last year's December.
+  const currentYear = yearOfKey(monthKeyNow());
 
   const [pickerYear, setPickerYear] = useState(selectedYear ?? currentYear);
   const [pickerMonthIndex, setPickerMonthIndex] = useState(selectedMonth ?? 0);
@@ -41,7 +43,8 @@ export const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'
       if (pickerYear > currentYear) {
         return true;
       }
-      return monthIndex > new Date().getMonth();
+      // The month today is in, as the user's month start day cuts it (P11).
+      return monthIndex > monthIndexOfKey(monthKeyNow());
     },
     [pickerYear, currentYear],
   );
@@ -122,6 +125,20 @@ export const MonthYearPickerSheet: React.FC<SheetProps<'month-year-picker-sheet'
         </View>
 
         <PrimaryButton onPress={handleConfirm} colors={colors} buttonTitle={t('common.done')} />
+        {onCustomRange ? (
+          <View style={gs.mt10}>
+            <PrimaryButton
+              onPress={() => {
+                void SheetManager.hide(props.sheetId);
+                onCustomRange();
+              }}
+              colors={colors}
+              buttonTitle={t('reports.rangeOpen')}
+              variant="outline"
+              icon="calendar"
+            />
+          </View>
+        ) : null}
       </View>
     </CustomBottomSheet>
   );

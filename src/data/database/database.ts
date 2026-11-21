@@ -63,3 +63,11 @@ const create = (): Database => {
  * failure is caught here and reported by startup.
  */
 export const database: Database = create();
+
+/**
+ * Whether raw SQL runs here: true on the device (SQLite). The jest harness's
+ * LokiJS stand-in says false, and services with a SQL fast path then take
+ * their JavaScript reference path, which the bun:sqlite suite checks the SQL
+ * against (data/services/positionSums.ts).
+ */
+export const runsSql = true;

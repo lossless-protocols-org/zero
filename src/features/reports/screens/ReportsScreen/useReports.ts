@@ -7,7 +7,7 @@ import {useThemeColors} from '../../../../ui/hooks/useThemeColors';
 import {useBudgetActions} from '../../../../ui/hooks/useBudgetActions';
 import {useMonthView} from '../../../../ui/hooks/useMonthView';
 import {usePreference} from '../../../../ui/hooks/usePreference';
-import {getWeekdayShortNames, formatDisplayDate} from '../../../../platform/dateFormat';
+import {getWeekdayShortNames, formatMonthLabel} from '../../../../platform/dateFormat';
 import {rotateWeekdays, weekStartPreference} from '../../../../platform/weekStart';
 
 /**
@@ -38,7 +38,7 @@ export const useReports = () => {
       ...month,
       label: monthLabel,
       // The header pill shares its row with two stat tiles: "Oct 2026", in the locale's form.
-      shortLabel: formatDisplayDate(`${yearMonth}-01`, 'monthYear'),
+      shortLabel: formatMonthLabel(month.period, 'monthYear'),
     },
     totals,
     budget: {status: budget, byCategory: categoryBudgets, save: handleBudgetSave, remove: handleBudgetRemove},

@@ -75,15 +75,7 @@ const DebtRow = memo(
           swipeRef={tutorialSwipeRef}
           openSwipeableRef={openSwipeableRef}
           edgeToEdge>
-          <View
-            style={[
-              gs.rounded12,
-              gs.rowBetweenCenter,
-              gs.px14,
-              gs.py10,
-              gs.mx16,
-              {backgroundColor: colors.containerColor},
-            ]}>
+          <View style={[gs.rounded12, gs.rowBetweenCenter, gs.px14, gs.py10, {backgroundColor: colors.containerColor}]}>
             <View style={[gs.flex1, gs.gap2]}>
               <PrimaryText weight="medium" numberOfLines={1}>
                 {description}

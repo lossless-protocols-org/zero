@@ -6,8 +6,9 @@ import {EXPENSE_YEARS_SQL, parseExpenseYears, type ExpenseYearRow} from './expen
 import {assertUserId} from './assertUserId';
 import {TITLE_HISTORY_SQL} from './titleHistory';
 import {titleKey} from '../../domain/titleKey';
-import {dayDateClauses, monthDateClauses} from './expenseDateRange';
-import {resolveDefaultAccount} from './accountService';
+import {dayDateClauses, periodClauses} from './expenseDateRange';
+import type {Period} from '../../domain/period';
+import {assertEntryAccount, resolveDefaultAccount} from './accountService';
 import {assertExpenseEditKeepsRefunds, prepareDestroyRefundsOf} from './refundService';
 import {isUsersCategoryOfKind} from './categoryKind';
 import {categoryRefsOf} from './categoryRefs';
@@ -23,6 +24,7 @@ const mapExpenseWithCategory = (e: Expense, categoryMap: ReadonlyMap<string, Cat
   userId: e.userId,
   date: e.date,
   category: categoryMap.get(e.categoryId),
+  recurringId: e.recurringId,
 });
 
 /**
@@ -33,6 +35,7 @@ const mapExpenseWithCategory = (e: Expense, categoryMap: ReadonlyMap<string, Cat
  */
 interface RawExpenseRow {
   id: string;
+  recurring_id?: string | null;
   title: string;
   amount: number;
   description: string | null;
@@ -84,6 +87,7 @@ const mapRawExpense = (row: RawExpenseRow, categoryMap: ReadonlyMap<string, Cate
   userId: row.user_id,
   date: row.date,
   category: categoryMap.get(row.category_id),
+  recurringId: row.recurring_id ?? null,
 });
 
 /** One expense with its category, or null when the id no longer exists (M19). */
@@ -93,6 +97,12 @@ export const getExpenseById = async (expenseId: string): Promise<ExpenseWithCate
     return null;
   }
   return mapExpenseWithCategory(expense, await categoryRefsOf(expense.userId));
+};
+
+/** The account an expense was paid from (3.0: the edit form's account row), or null when it no longer exists. */
+export const getExpenseAccountId = async (expenseId: string): Promise<string | null> => {
+  const [expense] = await database.get<Expense>('expenses').query(Q.where('id', expenseId)).fetch();
+  return expense?.accountId ?? null;
 };
 
 /** The rule an expense write broke. The forms validate first; this is the backstop (audit 2026-11-08 §4.3). */
@@ -137,7 +147,11 @@ export const createExpense = async (
    * under, so replaying the queue after a crash cannot save it twice; an
    * existing row with that id is left as it is).
    */
-  options: {id?: string} = {},
+  options: {
+    id?: string;
+    /** The account it was paid from (3.0, Pro's account row); without one, the user's default. Must be active. */
+    accountId?: string;
+  } = {},
 ): Promise<string> => {
   assertUserId(userId, 'expense');
   let expenseId = '';
@@ -148,8 +162,14 @@ export const createExpense = async (
     }
     assertAmount(amount);
     await assertExpenseCategory(userId, categoryId);
-    // Every expense is paid from an account (schema v5): the user's default.
-    const {accountId, prepared} = await resolveDefaultAccount(userId);
+    // Every expense is paid from an account (schema v5): the one chosen, else the user's default.
+    if (options.accountId !== undefined) {
+      await assertEntryAccount(userId, options.accountId);
+    }
+    const {accountId, prepared} =
+      options.accountId === undefined
+        ? await resolveDefaultAccount(userId)
+        : {accountId: options.accountId, prepared: []};
     // Uses WatermelonDB auto-generated ID (library default). This is intentional;
     // other services use nanoid(24) for historical reasons. Both are valid.
     const expense = database.get<Expense>('expenses').prepareCreate(exp => {
@@ -181,9 +201,14 @@ export const updateExpenseById = async (
   newAmount?: number,
   newDescription?: string,
   newDate?: string,
+  /** 3.0: moves it to another of the user's active accounts. Omitted, the account is untouched (L6). */
+  newAccountId?: string,
 ): Promise<void> => {
   await database.write(async () => {
     const expense = await database.get<Expense>('expenses').find(expenseId);
+    if (newAccountId !== undefined) {
+      await assertEntryAccount(expense.userId, newAccountId, expense.accountId);
+    }
     if (newAmount !== undefined) {
       assertAmount(newAmount);
     }
@@ -213,6 +238,9 @@ export const updateExpenseById = async (
       if (categoryId !== undefined) {
         exp.categoryId = categoryId;
       }
+      if (newAccountId !== undefined) {
+        exp.accountId = newAccountId;
+      }
     });
   });
 };
@@ -240,12 +268,12 @@ export const getAllExpensesByDate = async (userId: string, targetDate: string): 
 };
 
 /**
- * Gets all expenses for a user in a specific month: an index range on
+ * Gets all expenses for a user in a period (a month, or a picked range): an index range on
  * (user_id, date) since schema v4 (see expenseDateRange.ts).
  */
-export const getAllExpensesByMonth = async (userId: string, yearMonth: string): Promise<ExpenseWithCategory[]> => {
+export const getAllExpensesByMonth = async (userId: string, period: Period): Promise<ExpenseWithCategory[]> => {
   const [rows, categoryMap] = await Promise.all([
-    fetchExpenseRows(Q.where('user_id', userId), ...monthDateClauses(yearMonth)),
+    fetchExpenseRows(Q.where('user_id', userId), ...periodClauses(period)),
     categoryRefsOf(userId),
   ]);
   return rows.map(row => mapRawExpense(row, categoryMap));
@@ -257,10 +285,10 @@ export const getAllExpensesByMonth = async (userId: string, yearMonth: string): 
 export const getAllExpensesByCategoryAndMonth = async (
   userId: string,
   categoryId: string,
-  yearMonth: string,
+  period: Period,
 ): Promise<ExpenseWithCategory[]> => {
   const [rows, categoryMap] = await Promise.all([
-    fetchExpenseRows(Q.where('user_id', userId), Q.where('category_id', categoryId), ...monthDateClauses(yearMonth)),
+    fetchExpenseRows(Q.where('user_id', userId), Q.where('category_id', categoryId), ...periodClauses(period)),
     categoryRefsOf(userId),
   ]);
   return rows.map(row => mapRawExpense(row, categoryMap));
@@ -283,6 +311,21 @@ export const findCategoryIdForTitle = async (userId: string, title: string): Pro
     .unsafeFetchRaw()) as Array<{category_id?: unknown}>;
   const id = rows[0]?.category_id;
   return typeof id === 'string' && id !== '' ? id : null;
+};
+
+/**
+ * Whether the user has any expense dated before day `day` ('YYYY-MM-DD'): one
+ * index probe on (user_id, date). The month picker asks it for the first days
+ * of the earliest year when months do not start on the 1st (3.0, P11): those
+ * days belong to a month that started the December before.
+ */
+export const hasExpenseBefore = async (userId: string, day: string): Promise<boolean> => {
+  dayDateClauses(day); // a real calendar day, or a throw
+  const count = await database
+    .get<Expense>('expenses')
+    .query(Q.where('user_id', userId), Q.where('date', Q.lt(day)), Q.take(1))
+    .fetchCount();
+  return count > 0;
 };
 
 /**

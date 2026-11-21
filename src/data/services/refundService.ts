@@ -3,9 +3,11 @@ import type {Clause, Where} from '@nozbe/watermelondb/QueryDescription';
 import {database} from '../database/database';
 import {Expense} from '../database/models/Expense';
 import {Refund} from '../database/models/Refund';
-import {dayDateClauses, monthDateClauses} from './expenseDateRange';
+import {dayDateClauses, periodClauses} from './expenseDateRange';
+import type {Period} from '../../domain/period';
 import {fromMoneyUnits, toMoneyUnits} from '../../domain/money';
 import {categoryRefsOf} from './categoryRefs';
+import {assertEntryAccount} from './accountService';
 import type {RefundData, RefundListRow} from '../../domain/types';
 import {compareDateKeys, toDayKey} from '../../domain/dates';
 
@@ -101,21 +103,25 @@ export const prepareDestroyRefundsOf = async (expenseId: string): Promise<Refund
   (await refundsOf(expenseId)).map(r => r.prepareDestroyPermanently());
 
 /**
- * Records money that came back for an expense. The refund lands on the
- * expense's account (2.8 has one; 3.0 lets the user choose).
+ * Records money that came back for an expense. It lands on the expense's
+ * account unless another active account is named (3.0: the card refunded
+ * to the bank).
  */
 export const createRefund = async (
   expenseId: string,
-  input: {amount: number; date: string; note: string},
+  input: {amount: number; date: string; note: string; accountId?: string},
 ): Promise<string> => {
   let id = '';
   await database.write(async () => {
     const expense = await database.get<Expense>('expenses').find(expenseId);
     assertRefundFits(expense, input, await refundsOf(expenseId));
+    if (input.accountId !== undefined) {
+      await assertEntryAccount(expense.userId, input.accountId, expense.accountId);
+    }
     const refund = await database.get<Refund>('refunds').create(r => {
       r.userId = expense.userId;
       r.expenseId = expense.id;
-      r.accountId = expense.accountId;
+      r.accountId = input.accountId ?? expense.accountId;
       r.amount = input.amount;
       r.date = input.date;
       r.note = input.note;
@@ -127,11 +133,14 @@ export const createRefund = async (
 
 export const updateRefund = async (
   refundId: string,
-  patch: {amount?: number; date?: string; note?: string},
+  patch: {amount?: number; date?: string; note?: string; accountId?: string},
 ): Promise<void> => {
   await database.write(async () => {
     const refund = await database.get<Refund>('refunds').find(refundId);
     const expense = await database.get<Expense>('expenses').find(refund.expenseId);
+    if (patch.accountId !== undefined) {
+      await assertEntryAccount(refund.userId, patch.accountId, refund.accountId);
+    }
     const others = (await refundsOf(expense.id)).filter(r => r.id !== refund.id);
     assertRefundFits(expense, {amount: patch.amount ?? refund.amount, date: patch.date ?? refund.date}, others);
     await refund.update(r => {
@@ -143,6 +152,9 @@ export const updateRefund = async (
       }
       if (patch.note !== undefined) {
         r.note = patch.note;
+      }
+      if (patch.accountId !== undefined) {
+        r.accountId = patch.accountId;
       }
     });
   });
@@ -219,9 +231,9 @@ const refundRowsIn = async (userId: string, range: Clause[], categoryId?: string
   });
 };
 
-/** Refunds dated in a 'YYYY-MM' month, for Home, Reports and the budget figures. */
-export const getRefundRowsByMonth = (userId: string, yearMonth: string): Promise<RefundListRow[]> =>
-  refundRowsIn(userId, monthDateClauses(yearMonth));
+/** Refunds dated in a period (a month, or a picked range), for Home, Reports and the budget figures. */
+export const getRefundRowsByMonth = (userId: string, period: Period): Promise<RefundListRow[]> =>
+  refundRowsIn(userId, periodClauses(period));
 
 /** Refunds dated on one 'YYYY-MM-DD' day, for the day screen. */
 export const getRefundRowsByDate = (userId: string, day: string): Promise<RefundListRow[]> =>
@@ -231,8 +243,8 @@ export const getRefundRowsByDate = (userId: string, day: string): Promise<Refund
 export const getRefundRowsByCategoryAndMonth = (
   userId: string,
   categoryId: string,
-  yearMonth: string,
-): Promise<RefundListRow[]> => refundRowsIn(userId, monthDateClauses(yearMonth), categoryId);
+  period: Period,
+): Promise<RefundListRow[]> => refundRowsIn(userId, periodClauses(period), categoryId);
 
 /**
  * How much has come back on each expense the clauses select, whenever it came
@@ -256,9 +268,9 @@ const refundedAmountsOf = async (userId: string, expenseClauses: readonly Where[
   return Object.fromEntries([...units].map(([id, u]) => [id, fromMoneyUnits(u)]));
 };
 
-/** The badge amounts for a 'YYYY-MM' month's expenses (Home, Reports). */
-export const getRefundedAmountsByMonth = (userId: string, yearMonth: string): Promise<Record<string, number>> =>
-  refundedAmountsOf(userId, monthDateClauses(yearMonth));
+/** The badge amounts for a period's expenses (Home, Reports). */
+export const getRefundedAmountsByMonth = (userId: string, period: Period): Promise<Record<string, number>> =>
+  refundedAmountsOf(userId, periodClauses(period));
 
 /** The badge amounts for one 'YYYY-MM-DD' day's expenses (the day screen). */
 export const getRefundedAmountsByDate = (userId: string, day: string): Promise<Record<string, number>> =>
@@ -268,6 +280,6 @@ export const getRefundedAmountsByDate = (userId: string, day: string): Promise<R
 export const getRefundedAmountsByCategoryAndMonth = (
   userId: string,
   categoryId: string,
-  yearMonth: string,
+  period: Period,
 ): Promise<Record<string, number>> =>
-  refundedAmountsOf(userId, [Q.where('category_id', categoryId), ...monthDateClauses(yearMonth)]);
+  refundedAmountsOf(userId, [Q.where('category_id', categoryId), ...periodClauses(period)]);

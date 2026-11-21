@@ -24,6 +24,9 @@ const base: ExportData = {
   ],
   accounts: [],
   incomes: [],
+  transfers: [],
+  checkpoints: [],
+  recurring: [],
 };
 
 const envelope = (patch: (d: ExportData) => void): unknown => {
@@ -183,5 +186,148 @@ describe('validateExportEnvelope', () => {
         }),
       ).success,
     ).toBe(true); // base has one expense
+  });
+});
+
+describe('v6 (3.0): transfers, checkpoints, a debt’s account', () => {
+  const transfer = {fromAccount: 'Cash', toAccount: 'Savings', amount: 750, date: '2026-11-06', note: ''};
+  const checkpoint = {account: 'Card', balance: -1200.5, date: '2026-11-08', gap: -30.25, kind: 'adjustment', note: ''};
+  const withV6 = (patch: (d: ExportData) => void = () => {}) =>
+    envelope(d => {
+      d.transfers = [{...transfer}];
+      d.checkpoints = [{...checkpoint, kind: 'adjustment'}];
+      patch(d);
+    });
+
+  it('accepts them, a negative balance and gap included', () => {
+    expect(validateExportEnvelope(withV6()).success).toBe(true);
+  });
+
+  it('a file without them (every file before v6) reads as having none', () => {
+    const value = envelope(() => {}) as {data: Record<string, unknown>};
+    delete value.data['transfers'];
+    delete value.data['checkpoints'];
+    const result = validateExportEnvelope(value);
+    expect(result.success).toBe(true);
+    expect(result.data?.data).toMatchObject({transfers: [], checkpoints: []});
+  });
+
+  it('refuses a transfer too small to be one money unit, as the transfer service does', () => {
+    rejects(
+      withV6(d => {
+        d.transfers[0]!.amount = 1e-9;
+      }),
+      'data.transfers.0.amount',
+    );
+  });
+
+  it('refuses a transfer of nothing, or dated with a time, naming the row', () => {
+    rejects(
+      withV6(d => {
+        d.transfers[0]!.amount = 0;
+      }),
+      'data.transfers.0.amount',
+    );
+    rejects(
+      withV6(d => {
+        d.transfers[0]!.date = '2026-11-06T10:00:00';
+      }),
+      'data.transfers.0.date',
+    );
+  });
+
+  it('refuses a checkpoint of an unknown kind or an absurd balance, naming the row', () => {
+    rejects(
+      withV6(d => {
+        (d.checkpoints[0] as {kind: string}).kind = 'income';
+      }),
+      'data.checkpoints.0.kind',
+    );
+    rejects(
+      withV6(d => {
+        d.checkpoints[0]!.balance = -1e14;
+      }),
+      'data.checkpoints.0.balance',
+    );
+  });
+
+  it('a refund may name its own account, and need not (omitted: its expense’s)', () => {
+    const result = validateExportEnvelope(
+      withV6(d => {
+        d.expenses[0]!.refunds = [
+          {amount: 1, date: '2026-08-02', note: '', account: 'Savings'},
+          {amount: 1, date: '2026-08-02', note: ''},
+        ];
+      }),
+    );
+    expect(result.data?.data.expenses[0]?.refunds?.map(refund => refund.account)).toEqual(['Savings', undefined]);
+  });
+
+  it('a debt may name its account, and need not', () => {
+    const result = validateExportEnvelope(
+      withV6(d => {
+        d.debts = [
+          {amount: 1, description: '', debtor: {title: 'Rohit'}, date: '2026-11-05', type: 'Lend', account: 'Savings'},
+          {amount: 1, description: '', debtor: {title: 'Rohit'}, date: '2026-11-05', type: 'Lend'},
+        ];
+      }),
+    );
+    expect(result.data?.data.debts.map(debt => debt.account)).toEqual(['Savings', undefined]);
+  });
+});
+
+describe('v6 days are on the calendar', () => {
+  it('refuses a transfer or checkpoint dated 31 February, which no balance could be read on', () => {
+    const base6 = (patch: (d: ExportData) => void) =>
+      envelope(d => {
+        d.transfers = [{fromAccount: 'Cash', toAccount: 'Savings', amount: 1, date: '2026-11-06', note: ''}];
+        d.checkpoints = [{account: 'Card', balance: 1, date: '2026-11-08', gap: 0, kind: 'adjustment', note: ''}];
+        patch(d);
+      });
+    expect(validateExportEnvelope(base6(() => {})).success).toBe(true);
+    rejects(
+      base6(d => {
+        d.transfers[0]!.date = '2026-02-31';
+      }),
+      'data.transfers.0.date',
+    );
+    rejects(
+      base6(d => {
+        d.checkpoints[0]!.date = '2026-11-31';
+      }),
+      'data.checkpoints.0.date',
+    );
+  });
+});
+
+describe('v6 recurring rules (P9)', () => {
+  const rule = {
+    ref: 'r1',
+    target: 'expense' as const,
+    title: 'Rent',
+    category: {name: 'Fuel'},
+    account: 'Cash',
+    amount: 18000,
+    cadence: 'monthly' as const,
+    interval: 1,
+    startDate: '2026-11-01',
+    endDate: null,
+    nextIndex: 2,
+    remindDaysBefore: 1,
+    active: true,
+  };
+  const withRule = (patch: Partial<typeof rule> | Record<string, unknown>) =>
+    envelope(d => {
+      d.recurring = [{...rule, ...patch} as ExportData['recurring'][number]]; // the patch is a rule row's own fields
+    });
+
+  it('accepts a rule, and one whose amount varies', () => {
+    expect(validateExportEnvelope(withRule({})).success).toBe(true);
+    expect(validateExportEnvelope(withRule({amount: null})).success).toBe(true);
+  });
+
+  it('refuses a next index no schedule could reach, and a rule that ends before it starts', () => {
+    rejects(withRule({nextIndex: 1e9}), 'data.recurring.0.nextIndex');
+    rejects(withRule({endDate: '2026-10-01'}), 'data.recurring.0.endDate');
   });
 });

@@ -77,9 +77,9 @@ describe('export round trip', () => {
     const first = await exportViaScreen();
     jest.restoreAllMocks();
 
-    // v5: the two new flow tables are read raw too; none of the four is hydrated.
-    expect(rawTables.sort()).toEqual(['debts', 'expenses', 'incomes', 'refunds']);
-    for (const table of ['expenses', 'debts', 'refunds', 'incomes']) {
+    // v5: the two new flow tables are read raw too; v6: transfers and checkpoints; none is hydrated.
+    expect(rawTables.sort()).toEqual(['checkpoints', 'debts', 'expenses', 'incomes', 'refunds', 'transfers']);
+    for (const table of ['expenses', 'debts', 'refunds', 'incomes', 'transfers', 'checkpoints']) {
       expect(hydratedTables).not.toContain(table);
     }
 

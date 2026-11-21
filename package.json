@@ -10,9 +10,9 @@
     "url": "https://github.com/lossless-protocols-org/zero"
   },
   "scripts": {
-    "android": "react-native run-android",
-    "android:release": "cd android && ./gradlew bundleRelease",
-    "android:release:apk": "cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a",
+    "android": "react-native run-android --mode playDebug",
+    "android:release": "cd android && ./gradlew bundlePlayRelease",
+    "android:release:apk": "cd android && ./gradlew assemblePlayRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a",
     "size:android": "node scripts/size-android.mjs",
     "android:clean": "cd android && rm -rf app/.cxx app/build build && ./gradlew clean",
     "ios": "react-native run-ios",
@@ -26,7 +26,7 @@
     "test": "jest",
     "test:sqlite": "bun test ./__tests__/sqlite",
     "check": "bun run typecheck && bun run lint && bun run format:check && bun run test:coverage --ci && bun run test:sqlite && bun run check:no-read && node scripts/contrast-check.mjs",
-    "test:android": "cd android && ./gradlew :app:testDebugUnitTest -q",
+    "test:android": "cd android && ./gradlew :app:testPlayDebugUnitTest :app:testFossDebugUnitTest -q",
     "test:ios": "sh scripts/test-ios.sh",
     "test:e2e": "maestro test __tests__/e2e",
     "test:coverage": "jest --coverage",
@@ -35,7 +35,7 @@
     "check:layers": "depcruise src --config .dependency-cruiser.cjs",
     "check:exports": "knip && knip --production",
     "check:no-read": "node scripts/check-no-read.mjs",
-    "check:no-read:apk": "node scripts/check-no-read.mjs --apk android/app/build/outputs/apk/release/app-release.apk",
+    "check:no-read:apk": "node scripts/check-no-read.mjs --flavour play --apk android/app/build/outputs/apk/play/release/app-play-release.apk",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
@@ -128,7 +128,11 @@
     "ios": {
       "modulesProvider": {
         "NativeWidgetBridge": "ZeroWidgetBridge",
-        "NativePendingEntries": "ZeroPendingEntries"
+        "NativePendingEntries": "ZeroPendingEntries",
+        "NativeBilling": "ZeroBilling",
+        "NativeReminders": "ZeroReminders",
+        "NativeBackup": "ZeroBackup",
+        "NativeReportPdf": "ZeroReportPdf"
       }
     }
   }

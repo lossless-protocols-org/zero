@@ -15,13 +15,15 @@ import {Amount} from '../../../../ui/atoms/Amount';
 import {EmptyState} from '../../../../ui/atoms/EmptyState';
 import {useFormatAmount} from '../../../../ui/hooks/useFormatAmount';
 import {SheetManager} from 'react-native-actions-sheet';
-import {DailyBudgetRow} from '../../../../ui/atoms/DailyBudgetRow';
+import {BudgetMeter} from '../../../../ui/molecules/BudgetMeter';
 import {DataErrorBanner} from '../../../../ui/atoms/DataErrorBanner';
 import {useDataError} from '../../../../ui/hooks/useDataError';
 import {gs} from '../../../../ui/globalStyles';
 import {keptOf} from '../../../../domain/periodMath';
-import {formatPercent} from '../../../../platform/numberFormat';
 import {markTimeToInteractive} from '../../../../platform/startupMarker';
+
+/** The budget card's bills link: the list of what is coming up. */
+const openComingUp = () => navigate('RecurringScreen');
 
 /** Thunk domains Home loads from; a failure in any of them shows the banner. */
 const HOME_DOMAINS = ['expense', 'budget', 'user', 'currency', 'category'];
@@ -139,39 +141,7 @@ export const HomeScreen = () => {
           ) : null}
         </TouchableOpacity>
 
-        {budget ? (
-          <View style={[gs.px14, gs.py10, gs.rounded12, gs.mt6, {backgroundColor: colors.secondaryAccent}]}>
-            <View style={gs.rowBetweenCenter}>
-              <Amount size={12} weight="semibold" color={budget.exceeded ? colors.accentOrange : colors.primaryText}>
-                {budget.exceeded
-                  ? t('home.overBudget', {amount: formatAmount(budget.over)})
-                  : t('home.amountLeft', {amount: formatAmount(budget.left)})}
-              </Amount>
-              <PrimaryText size={11} variant="number" color={colors.secondaryText}>
-                {formatPercent(budget.percent)}
-              </PrimaryText>
-            </View>
-            <View style={[gs.rounded4, gs.h4, gs.mt8, {backgroundColor: colors.secondaryContainerColor}]}>
-              <View
-                style={[
-                  gs.rounded4,
-                  gs.h4,
-                  {
-                    width: `${budget.fill}%`,
-                    backgroundColor: budget.exceeded ? colors.accentOrange : colors.accentGreen,
-                  },
-                ]}
-              />
-            </View>
-            <View style={gs.mt6}>
-              <DailyBudgetRow
-                dailyBudget={budget.dailyBudget}
-                dailyLeft={budget.dailyLeft}
-                isCurrentMonth={month.isCurrent}
-              />
-            </View>
-          </View>
-        ) : null}
+        {budget ? <BudgetMeter status={budget} isCurrentMonth={month.isCurrent} onBillsPress={openComingUp} /> : null}
       </View>
     ),
     [month, totals, budget, colors, openMonthPicker, formatAmount, t, cardLabel, cardActions, onCardAction],

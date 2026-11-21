@@ -1,4 +1,5 @@
 import type {ThemeMode} from '../ui/context/ThemeContext';
+import type {WeekStartDay} from '../platform/weekStart';
 import React from 'react';
 import {registerSheet, type SheetDefinition, type SheetProps} from 'react-native-actions-sheet';
 import {IconPickerSheet} from '../features/categories/sheets/IconPickerSheet';
@@ -9,11 +10,17 @@ import {ChangeNameSheet} from '../ui/sheets/ChangeNameSheet';
 import {MonthYearPickerSheet} from '../ui/sheets/MonthYearPickerSheet';
 import {ThemePickerSheet} from '../features/settings/sheets/ThemePickerSheet';
 import {WeekStartPickerSheet} from '../features/settings/sheets/WeekStartPickerSheet';
+import {MonthStartPickerSheet} from '../features/settings/sheets/MonthStartPickerSheet';
 import {LanguagePickerSheet} from '../features/settings/sheets/LanguagePickerSheet';
 import {BudgetSheet} from '../ui/sheets/BudgetSheet';
 import type {BudgetScopeList} from '../domain/budgetScopes';
 import {RowActionsSheet} from '../ui/sheets/RowActionsSheet';
 import {ListSortSheet} from '../features/spending/sheets/ListSortSheet';
+import {UpgradeSheet} from '../features/pro/sheets/UpgradeSheet';
+import {ProEndedSheet} from '../features/pro/sheets/ProEndedSheet';
+import {AccountPickerSheet} from '../ui/sheets/AccountPickerSheet';
+import {AddChoiceSheet, type AddChoice} from '../ui/sheets/AddChoiceSheet';
+import type {AccountSummary} from '../data/services/accountService';
 import type {RowExtraAction} from '../ui/hooks/useRowActions';
 // Loaded at startup on purpose, and it must stay: see below.
 import '../ui/atoms/CustomBottomSheet';
@@ -47,16 +54,34 @@ registerSheet('theme-picker-sheet', (props: SheetProps<'theme-picker-sheet'>) =>
 registerSheet('week-start-picker-sheet', (props: SheetProps<'week-start-picker-sheet'>) => (
   <WeekStartPickerSheet {...props} />
 ));
+registerSheet('month-start-picker-sheet', (props: SheetProps<'month-start-picker-sheet'>) => (
+  <MonthStartPickerSheet {...props} />
+));
 registerSheet('language-picker-sheet', (props: SheetProps<'language-picker-sheet'>) => (
   <LanguagePickerSheet {...props} />
 ));
 registerSheet('budget-sheet', (props: SheetProps<'budget-sheet'>) => <BudgetSheet {...props} />);
 registerSheet('row-actions-sheet', (props: SheetProps<'row-actions-sheet'>) => <RowActionsSheet {...props} />);
 registerSheet('list-sort-sheet', (props: SheetProps<'list-sort-sheet'>) => <ListSortSheet {...props} />);
+registerSheet('upgrade-sheet', (props: SheetProps<'upgrade-sheet'>) => <UpgradeSheet {...props} />);
+registerSheet('pro-ended-sheet', (props: SheetProps<'pro-ended-sheet'>) => <ProEndedSheet {...props} />);
+registerSheet('add-choice-sheet', (props: SheetProps<'add-choice-sheet'>) => <AddChoiceSheet {...props} />);
+registerSheet('account-picker-sheet', (props: SheetProps<'account-picker-sheet'>) => <AccountPickerSheet {...props} />);
 
 declare module 'react-native-actions-sheet' {
   interface Sheets {
     'list-sort-sheet': SheetDefinition;
+    'upgrade-sheet': SheetDefinition;
+    'pro-ended-sheet': SheetDefinition;
+    'account-picker-sheet': SheetDefinition<{
+      payload: {
+        accounts?: AccountSummary[];
+        selectedId?: string;
+        onSelect?: (accountId: string) => void;
+        /** Adds a first row, id '', for "no account" (the debt form). */
+        noneLabel?: string;
+      };
+    }>;
     'icon-picker-sheet': SheetDefinition<{
       payload: {
         selectedIcon?: string;
@@ -95,6 +120,8 @@ declare module 'react-native-actions-sheet' {
         selectedYear?: number;
         availableYears?: number[];
         onSelect?: (monthIndex: number, year: number) => void;
+        /** Pro: offers "Custom range" under the months, as one more choice of period. */
+        onCustomRange?: () => void;
       };
     }>;
     'theme-picker-sheet': SheetDefinition<{
@@ -105,8 +132,14 @@ declare module 'react-native-actions-sheet' {
     }>;
     'week-start-picker-sheet': SheetDefinition<{
       payload: {
-        current?: 'sunday' | 'monday';
-        onSelect?: (day: 'sunday' | 'monday') => void;
+        current?: WeekStartDay;
+        onSelect?: (day: WeekStartDay) => void;
+      };
+    }>;
+    'month-start-picker-sheet': SheetDefinition<{
+      payload: {
+        current?: number;
+        onSelect?: (day: number) => void;
       };
     }>;
     'language-picker-sheet': SheetDefinition<{
@@ -125,6 +158,12 @@ declare module 'react-native-actions-sheet' {
         initialCategoryId?: string;
         onSave?: (amount: number, everyMonth: boolean, categoryId?: string) => void;
         onRemove?: (isRecurring: boolean, categoryId?: string) => void;
+      };
+    }>;
+    'add-choice-sheet': SheetDefinition<{
+      payload: {
+        title?: string;
+        choices?: readonly AddChoice[];
       };
     }>;
     'row-actions-sheet': SheetDefinition<{

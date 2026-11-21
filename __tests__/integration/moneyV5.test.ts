@@ -18,6 +18,7 @@ import {store} from '../../src/store/store';
 import {fetchUserData, selectUserId} from '../../src/store/slices/userIdSlice';
 import * as categoryService from '../../src/data/services/categoryService';
 import * as slice from '../../src/store/slices/expenseDataSlice';
+import {periodFor} from '../../src/domain/period';
 
 const {RefundRuleError} = refunds;
 const {IncomeRuleError} = incomes;
@@ -169,7 +170,7 @@ describe('incomes', () => {
   it('records an income on an income category and the default account', async () => {
     const {userId, income} = await setUp();
     await incomes.createIncome(userId, {categoryId: income, amount: 50000, date: '2026-11-07', note: 'Salary'});
-    const [row] = await incomes.getIncomesByMonth(userId, '2026-11');
+    const [row] = await incomes.getIncomesByMonth(userId, periodFor('2026-11'));
     expect(row).toMatchObject({amount: 50000, date: '2026-11-07', note: 'Salary', accountId: `acct_${userId}`});
   });
 
@@ -191,11 +192,14 @@ describe('incomes', () => {
     const {userId, income} = await setUp();
     await incomes.createIncome(userId, {categoryId: income, amount: 3000, date: '2026-10-14', note: 'logo'});
     await incomes.createIncome(userId, {categoryId: income, amount: 50000, date: '2026-10-07', note: 'Salary'});
-    expect((await incomes.getIncomesByMonth(userId, '2026-10')).map(i => i.date)).toEqual(['2026-10-14', '2026-10-07']);
+    expect((await incomes.getIncomesByMonth(userId, periodFor('2026-10'))).map(i => i.date)).toEqual([
+      '2026-10-14',
+      '2026-10-07',
+    ]);
 
-    expect(await incomes.copyIncomesFromMonth(userId, '2026-10', '2026-11')).toBe(2);
-    expect(await incomes.copyIncomesFromMonth(userId, '2026-10', '2026-11')).toBe(0);
-    const november = await incomes.getIncomesByMonth(userId, '2026-11');
+    expect(await incomes.copyIncomesFromMonth(userId, periodFor('2026-10'), periodFor('2026-11'))).toBe(2);
+    expect(await incomes.copyIncomesFromMonth(userId, periodFor('2026-10'), periodFor('2026-11'))).toBe(0);
+    const november = await incomes.getIncomesByMonth(userId, periodFor('2026-11'));
     expect(november.map(i => [i.date, i.amount, i.note]).sort()).toEqual([
       ['2026-11-01', 3000, 'logo'],
       ['2026-11-01', 50000, 'Salary'],
@@ -206,10 +210,13 @@ describe('incomes', () => {
     const {userId, income} = await setUp();
     const id = await incomes.createIncome(userId, {categoryId: income, amount: 100, date: '2026-11-07', note: ''});
     await incomes.updateIncome(id, {amount: 150, note: 'bonus'});
-    expect((await incomes.getIncomesByMonth(userId, '2026-11'))[0]).toMatchObject({amount: 150, note: 'bonus'});
+    expect((await incomes.getIncomesByMonth(userId, periodFor('2026-11')))[0]).toMatchObject({
+      amount: 150,
+      note: 'bonus',
+    });
     await expect(incomes.updateIncome(id, {amount: -1})).rejects.toMatchObject({rule: 'amountNotPositive'});
     await incomes.deleteIncome(id);
-    expect(await incomes.getIncomesByMonth(userId, '2026-11')).toEqual([]);
+    expect(await incomes.getIncomesByMonth(userId, periodFor('2026-11'))).toEqual([]);
   });
 });
 
@@ -226,14 +233,14 @@ describe('period summary: the seam', () => {
     await incomes.createIncome(userId, {categoryId: income, amount: 50000, date: '2026-11-07', note: 'Salary'});
     await incomes.createIncome(userId, {categoryId: income, amount: 8000, date: '2026-11-26', note: ''});
 
-    expect(await summary.getMonthSummary(userId, '2026-11')).toEqual({
+    expect(await summary.getMonthSummary(userId, periodFor('2026-11'))).toEqual({
       spent: 20 + 3000 + 2400 - 1200 - 500,
       refunded: 1700,
       received: 58000,
       kept: 58000 - 3720,
       count: 3,
     });
-    expect(await summary.getMonthSummary(userId, '2026-10')).toEqual({
+    expect(await summary.getMonthSummary(userId, periodFor('2026-10'))).toEqual({
       spent: 5000,
       refunded: 0,
       received: 0,
@@ -253,7 +260,7 @@ describe('period summary: the seam', () => {
     const {userId, food} = await setUp();
     await services.createExpense(userId, 'a', 0.1, '', food, '2026-11-03T08:30:00');
     await services.createExpense(userId, 'b', 0.2, '', food, '2026-11-03T08:31:00');
-    expect((await summary.getMonthSummary(userId, '2026-11')).spent).toBe(0.3);
+    expect((await summary.getMonthSummary(userId, periodFor('2026-11'))).spent).toBe(0.3);
   });
 });
 
@@ -271,12 +278,15 @@ describe('categories are typed', () => {
     expect(income.map(c => [c.name, c.kind, c.sortOrder])).toEqual([['Income', 'income', 10]]);
   });
 
-  it('Free refuses a second income category (domain/freeTier), archived ones counted', async () => {
+  it('the service is tier-blind (3.0, P9): a second income category is stored; Free’s one-category rule is the screen’s', async () => {
     const {userId} = await setUp();
-    const refusal = services.createCategory('Bonus', userId, null, null, 'income');
-    // The rule error, by its rule (categoryService is loaded further down this file).
-    await expect(refusal).rejects.toMatchObject({name: 'CategoryRuleError', rule: 'incomeCategoryLimit'});
-    expect(await services.getAllCategoriesByUserId(userId, 'income')).toHaveLength(1);
+    await services.createCategory('Bonus', userId, null, null, 'income');
+    expect((await services.getAllCategoriesByUserId(userId, 'income')).map(c => c.name)).toEqual(['Income', 'Bonus']);
+    // Names are still unique within the kind.
+    await expect(services.createCategory('bonus', userId, null, null, 'income')).rejects.toMatchObject({
+      name: 'CategoryRuleError',
+      rule: 'duplicateName',
+    });
   });
 });
 
@@ -286,7 +296,12 @@ describe('wipe and counts cover the v5 tables', () => {
     const shoes = await services.createExpense(userId, 'Shoes', 3000, '', shopping, '2026-11-10T18:05:00');
     await refunds.createRefund(shoes, {amount: 1, date: '2026-11-20T12:00:00', note: ''});
     await incomes.createIncome(userId, {categoryId: income, amount: 1, date: '2026-11-07', note: ''});
-    expect(await services.countAllRecords()).toMatchObject({accounts: 1, refunds: 1, incomes: 1, expenses: 1});
+    expect((await services.countAllRecords()).byTable).toMatchObject({
+      accounts: 1,
+      refunds: 1,
+      incomes: 1,
+      expenses: 1,
+    });
     await services.deleteAllData();
     expect((await services.countAllRecords()).total).toBe(0);
   });
@@ -301,23 +316,28 @@ describe('2.8 Phase 2: what the screens read', () => {
     await refunds.createRefund(coat, {amount: 100, date: '2026-12-01T10:00:00', note: ''});
     await refunds.createRefund(chai, {amount: 5, date: '2026-11-03T09:00:00', note: ''});
 
-    const november = await refunds.getRefundRowsByMonth(userId, '2026-11');
+    const november = await refunds.getRefundRowsByMonth(userId, periodFor('2026-11'));
     expect(november.map(r => [r.title, r.amount, r.category?.name]).sort()).toEqual([
       ['Chai', 5, 'Food'],
       ['Coat', 500, 'Shopping'],
     ]);
     expect((await refunds.getRefundRowsByDate(userId, '2026-11-03')).map(r => r.title)).toEqual(['Chai']);
     expect(
-      (await refunds.getRefundRowsByCategoryAndMonth(userId, shopping, '2026-11')).map(r => [r.title, r.note]),
+      (await refunds.getRefundRowsByCategoryAndMonth(userId, shopping, periodFor('2026-11'))).map(r => [
+        r.title,
+        r.note,
+      ]),
     ).toEqual([['Coat', 'tag']]);
     // The badge counts every refund of the expense, whatever month it came back in.
     // The coat is October's: November's badges are the chai's only, October's the coat's whole 600.
-    expect(await refunds.getRefundedAmountsByMonth(userId, '2026-11')).toEqual({[chai]: 5});
-    expect(await refunds.getRefundedAmountsByMonth(userId, '2026-10')).toEqual({[coat]: 600});
+    expect(await refunds.getRefundedAmountsByMonth(userId, periodFor('2026-11'))).toEqual({[chai]: 5});
+    expect(await refunds.getRefundedAmountsByMonth(userId, periodFor('2026-10'))).toEqual({[coat]: 600});
     expect(await refunds.getRefundedAmountsByDate(userId, '2026-11-03')).toEqual({[chai]: 5});
-    expect(await refunds.getRefundedAmountsByCategoryAndMonth(userId, food, '2026-10')).toEqual({});
-    expect(await refunds.getRefundedAmountsByCategoryAndMonth(userId, shopping, '2026-10')).toEqual({[coat]: 600});
-    expect(await refunds.getRefundedAmountsByMonth(userId, '2026-09')).toEqual({});
+    expect(await refunds.getRefundedAmountsByCategoryAndMonth(userId, food, periodFor('2026-10'))).toEqual({});
+    expect(await refunds.getRefundedAmountsByCategoryAndMonth(userId, shopping, periodFor('2026-10'))).toEqual({
+      [coat]: 600,
+    });
+    expect(await refunds.getRefundedAmountsByMonth(userId, periodFor('2026-09'))).toEqual({});
   });
 
   it('a new user has exactly one Income category from the start; the repair finds nothing to do', async () => {
